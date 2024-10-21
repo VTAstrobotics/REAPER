@@ -1,2 +1,0 @@
-# CAN interface
-SUBSYSTEM=="tty", ATTRS{idVendor}=="16d0" SYMLINK+="CAN-SERIAL-LINK"
