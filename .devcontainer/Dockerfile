@@ -1,19 +1,12 @@
-FROM osrf/ros:humble-desktop-full
+FROM ros:humble-ros-base-jammy
 
-# Create overlay workspace
-WORKDIR /workspaces/REAPER/src
-COPY packages.repos .
-
-# Rosdep update
-RUN rosdep update
-
-RUN vcs import < packages.repos; \
-    cd .. \
-    rosdep install --from-paths src --ignore-src -r -y \
-    source /opt/ros/${ROS_DISTRO}/setup.bash
-
-# Add sourcing ROS setup.bash to .bashrc
-RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
+# Basic ROS2 setup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-desktop=0.10.0-1* \
+    python3 \
+    python3-pip \
+    && pip3 install setuptools==58.2.0 \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Add nonroot user with same UID and GID as your host system
 # (copied from https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user#_creating-a-nonroot-user)
@@ -26,7 +19,6 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && apt-get install -y sudo \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
-
 # Switch from root to user
 USER $USERNAME
 
@@ -36,7 +28,7 @@ RUN sudo usermod --append --groups video $USERNAME
 # Update all packages (bloat, but dev container so we feel worth it. do not recommend for final container)
 RUN sudo apt update && sudo apt upgrade -y
 
-# Set environment variable for Pico MicroROS
+# MicroROS pico env var
 ENV PICO_SDK_PATH=$HOME/pico-sdk
 
 # MicroROS dependencies
@@ -45,9 +37,13 @@ RUN sudo apt install -y \
     doxygen \
     && git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
 
+# Rosdep update
+RUN rosdep update
+
 # Source the ROS setup file
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
-RUN echo "source /workspaces/PHOENIX/src/main_ws/install/setup.bash" >> ~/.bashrc
+RUN echo "source /workspaces/REAPER/src/main_ws/install/setup.bash" >> ~/.bashrc
+RUN echo "source /workspaces/REAPER/src/micro_ws/install/setup.bash" >> ~/.bashrc
 
 ###############################################################################
 #                                                                             #
@@ -64,3 +60,19 @@ RUN sudo apt-get install -y lsb-release \
     && sudo ./llvm.sh 16 \
     && sudo apt-get install -y clang-format-16 \
     && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
+
+#### Begin Navigation Stack #####
+RUN sudo apt-get install -y \
+    ros-humble-navigation2 \
+    ros-humble-nav2-bringup
+
+# install turtlebot demo, including gz, unless on a Jetson
+RUN if ! grep -q "Jetson" /proc/device-tree/model; then \
+        sudo apt-get install -y ros-humble-turtlebot3-gazebo; \
+    fi
+
+# set environment variables for navigation
+ENV TURTLEBOT3_MODEL=waffle \
+    GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models
+# ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
+#### End Navigation Stack #####
