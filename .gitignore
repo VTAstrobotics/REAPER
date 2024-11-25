@@ -1,0 +1,7 @@
+# git will ignore bloat resulting from build
+build/
+install/
+log/
+
+# git will ignore build.log
+build.log
