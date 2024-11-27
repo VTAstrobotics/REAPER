@@ -1,18 +1,9 @@
 {
-	"name": "osrf/ros:humble-desktop-full",
-    "build": {
-        "dockerfile": "Dockerfile"
-    },
-	"runArgs": [
-		// "--cap-add=SYS_PTRACE", // Allows the container to trace processes using ptrace system call
-		// "--security-opt=seccomp=unconfined", // Disables seccomp security profiles for the container
-		// "--ipc=host", // Shares the host's IPC namespace with the container
-		// "--network=host", // Shares the host's network namespace with the container
-		// "--pid=host", // Shares the host's PID namespace with the container
-		// "--privileged", // Gives the container full access to the host's devices and allows it to run with root privileges
-	],
+	"name": "REAPER Development Environment",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "dev-container",
     "workspaceMount": "source=${localWorkspaceFolder},target=/root/ros_ws/src/${localWorkspaceFolderBasename},type=bind",
-    "workspaceFolder": "/root/ros_ws/src",
+	"workspaceFolder": "/${localWorkspaceFolderBasename}",
 	"containerEnv": {
 		/* Uncomment to allow the container to access the X server on the host e.g. to run Rviz and other GUI tools
     	"DISPLAY": "${localEnv:DISPLAY}"
@@ -39,19 +30,27 @@
 			"type": "bind"
 		}
 		*/
+
+		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.bash_history,target=/home/vscode/.bash_history,type=bind",
+		"source=/dev/,target=/dev/,type=bind",
     ],
     "customizations": {
         "vscode": {
             "settings": {},
             "extensions": [
-                "mhutchie.git-graph",
-                // "eamodio.gitlens",
                 // "donjayamanne.githistory",
+				"eamodio.gitlens",
+                "mhutchie.git-graph",
+				"ms-azuretools.vscode-docker",
+				"ms-iot.vscode-ros",
                 // "ms-python.vscode-pylance",
                 // "ms-python.python"
 				// "ms-vscode.cpptools",
-				// "ms-vscode.cpptools-extension-pack"
+				"ms-vscode.cpptools-extension-pack",
+				"xaver.clang-format",
               ]
         }
-    }
+    },
+	"postStartCommand": "/bin/sh -c \"chmod 777 /workspaces/REAPER/.devcontainer/entrypoint.sh\" && /workspaces/REAPER/.devcontainer/entrypoint.sh",
+	"shutdownAction": "stopCompose",
   }
