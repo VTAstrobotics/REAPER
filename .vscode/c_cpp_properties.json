@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/opt/ros/humble/include/**",
+                "/home/cameron/Astrobotics/REAPER/src/control_mux/include/**",
+                "/home/cameron/Astrobotics/REAPER/src/conveyor/include/**",
+                "/home/cameron/Astrobotics/REAPER/src/dig_bucket/include/**",
+                "/home/cameron/Astrobotics/REAPER/src/dig_linkage/include/**",
+                "/home/cameron/Astrobotics/REAPER/src/drivetrain/include/**",
+                "/usr/include/**",
+                "/opt/ros/humble/include/rclcpp"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
