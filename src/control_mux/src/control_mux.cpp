@@ -34,11 +34,8 @@ class MinimalSubscriber : public rclcpp::Node
     void topic_callback(const sensor_msgs::msg::Joy msg) const
     {
       // handle all the buttons actually doing things
-      if(msg.data.axes[DIG_BUTTON]){
-        
-      }
     }
-    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
+    rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_;
 };
 
 int main(int argc, char * argv[])

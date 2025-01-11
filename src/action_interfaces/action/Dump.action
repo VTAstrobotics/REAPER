@@ -1,0 +1,5 @@
+float32 deposition_goal 
+---
+float32 est_deposit_goal 
+---
+float32 percent_done
