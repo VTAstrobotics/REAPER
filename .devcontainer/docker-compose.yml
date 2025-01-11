@@ -6,9 +6,13 @@ services:
       dockerfile: "Dockerfile"
     privileged: true
     network_mode: "host"
+    cap_add: 
+      - NET_ADMIN
     volumes:
       - ..:/workspace:cached
+      - /dev:/dev
     command: sleep infinity
+    
     #  "runArgs": [
 		#  "--cap-add=SYS_PTRACE", // Allows the container to trace processes using ptrace system call
 		#  "--security-opt=seccomp=unconfined", // Disables seccomp security profiles for the container
@@ -20,7 +24,7 @@ services:
   microros-agent:
     image: microros/micro-ros-agent:humble
     privileged: true
-    network_mode: "host"
+    network_mode: host
     volumes:
       - /dev:/dev
     command: serial --dev /dev/ttyACM0 -b 115200
