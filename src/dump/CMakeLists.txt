@@ -16,6 +16,7 @@ find_package(rclcpp_components REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(action_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
 
 find_package(unique_identifier_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -30,13 +31,20 @@ include_directories(
 message(STATUS "Include directories: ${CMAKE_INCLUDE_PATH}")
 
 
-add_executable(Dump_action src/dump_server.cpp)
+add_library(Dump_action SHARED src/dump_server.cpp)
+target_include_directories(Dump_action PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_compile_definitions(Dump_action PRIVATE
+"DUMP_ACTION_CPP_BUILDING_DLL")
 ament_target_dependencies(Dump_action
   "action_interfaces"
   "rclcpp"
   "rclcpp_action"
-  "rclcpp_components")
-
+  "rclcpp_components"
+  "std_msgs")
+rclcpp_components_register_node(Dump_action PLUGIN "dump_server::DumpActionServer" EXECUTABLE DumpActionServer)
 
 
 

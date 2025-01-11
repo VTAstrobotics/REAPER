@@ -7,9 +7,10 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 using namespace action_interfaces::action;
-namespace action_tutorials_cpp
+namespace dump_server 
 {
 class DumpActionServer : public rclcpp::Node
 {
@@ -24,10 +25,11 @@ public:
 
     this->action_server_ = rclcpp_action::create_server<Dump>(
       this,
-      "fibonacci",
+      "dump",
       std::bind(&DumpActionServer::handle_goal, this, _1, _2),
       std::bind(&DumpActionServer::handle_cancel, this, _1),
       std::bind(&DumpActionServer::handle_accepted, this, _1));
+          RCLCPP_INFO(this->get_logger(), "Action server is ready");
   }
 
 private:
@@ -60,40 +62,21 @@ private:
   void execute(const std::shared_ptr<GoalHandleDump> goal_handle)
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
-    rclcpp::Rate loop_rate(1);
+    rclcpp::Rate loop_rate(20);// this should be 20 hz which I can't imagine not being enough for the dump
     const auto goal = goal_handle->get_goal();
     auto feedback = std::make_shared<Dump::Feedback>();
-    auto & sequence = feedback->percent_done;
-    sequence.push_back(0);
-    sequence.push_back(1);
+    auto &amountDone = feedback->percent_done;
+
     auto result = std::make_shared<Dump::Result>();
-
-    for (int i = 1; (i < goal->order) && rclcpp::ok(); ++i) {
-      // Check if there is a cancel request
-      if (goal_handle->is_canceling()) {
-        result->sequence = sequence;
-        goal_handle->canceled(result);
-        RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        return;
-      }
-      // Update sequence
-      sequence.push_back(sequence[i] + sequence[i - 1]);
-      // Publish feedback
-      goal_handle->publish_feedback(feedback);
-      RCLCPP_INFO(this->get_logger(), "Publish feedback");
-
-      loop_rate.sleep();
-    }
-
-    // Check if goal is done
-    if (rclcpp::ok()) {
-      result->sequence = sequence;
+  
+  if (rclcpp::ok()) {
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
     }
+
   }
 };  // class DumpActionServer
 
 }  // namespace action_tutorials_cpp
 
-RCLCPP_COMPONENTS_REGISTER_NODE(action_tutorials_cpp::DumpActionServer)
+RCLCPP_COMPONENTS_REGISTER_NODE(dump_server::DumpActionServer)
