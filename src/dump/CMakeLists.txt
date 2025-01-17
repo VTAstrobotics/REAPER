@@ -43,12 +43,13 @@ ament_target_dependencies(Dump_action
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components"
-  "std_msgs")
+  "std_msgs"
+  "phoenix6"
+  )
 rclcpp_components_register_node(Dump_action PLUGIN "dump_server::DumpActionServer" EXECUTABLE DumpActionServer)
 
 
-
-
+add_definitions(-DUNIT_LIB_DISABLE_FMT -DUNIT_LIB_ENABLE_IOSTREAM)
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

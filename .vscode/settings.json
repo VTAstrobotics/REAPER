@@ -8,5 +8,17 @@
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
     ],
     "cmake.sourceDirectory": "/workspace/src/control_mux",
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "memory": "cpp",
+        "future": "cpp",
+        "istream": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "variant": "cpp",
+        "ranges": "cpp"
+    }
 }

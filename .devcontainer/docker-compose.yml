@@ -10,7 +10,7 @@ services:
       - NET_ADMIN
     volumes:
       - ..:/workspace:cached
-      - /dev:/dev
+      - /dev:/dev:bind
     command: sleep infinity
     
     #  "runArgs": [
@@ -22,9 +22,9 @@ services:
 		#  "--privileged", // Gives the container full access to the host's devices and allows it to run with root privileges
     #  ],
   microros-agent:
-    image: microros/micro-ros-agent:humble
-    privileged: true
-    network_mode: host
-    volumes:
-      - /dev:/dev
-    command: serial --dev /dev/ttyACM0 -b 115200
+     image: microros/micro-ros-agent:humble
+     privileged: true
+     network_mode: host
+     volumes:
+       - /dev:/dev
+     command: serial --dev /dev/ttyACM0 -b 115200
