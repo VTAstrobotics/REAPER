@@ -19,6 +19,8 @@
         "tuple": "cpp",
         "utility": "cpp",
         "variant": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "string": "cpp",
+        "string_view": "cpp"
     }
 }

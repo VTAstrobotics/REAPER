@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
-
+#include <cmath>
 #include "ctre/phoenix6/TalonFX.hpp"
 #include "ctre/phoenix6/CANBus.hpp"
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
@@ -42,7 +42,27 @@ namespace dump_server
     hardware::TalonFX conveyorMotor{20, "can0"};
     controls::DutyCycleOut conveyorDutyCycle{0};
     float volume_deposited{0};
-    explicit bool has_goal{false};
+    bool has_goal{false};
+    int loop_rate_hz{20};
+    std::shared_ptr<GoalHandleDump> Dump_Goal_Handle;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description = this->create_subscription<std_msgs::msg::Float32>(
+      "/dump/volume", 2, std::bind(&DumpActionServer::dump_volume_callback, this, std::placeholders::_1));
+    float starting_volume{-802000};// if this is negative 8020 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
+    
+
+    void dump_volume_callback(const std_msgs::msg::Float32 msg){
+      RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
+      if(abs(abs(starting_volume) - 802000) < 2){
+        starting_volume = msg.data;
+        RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
+
+      }
+      else{
+        volume_deposited = starting_volume - msg.data;
+        RCLCPP_INFO(this->get_logger(), "I have deposited %f", volume_deposited);
+
+      }
+    }
 
     rclcpp_action::GoalResponse handle_goal(
         const rclcpp_action::GoalUUID &uuid,
@@ -66,6 +86,9 @@ namespace dump_server
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
       (void)goal_handle;
+        conveyorDutyCycle.Output = 0;
+        conveyorMotor.SetControl(conveyorDutyCycle);
+
       return rclcpp_action::CancelResponse::ACCEPT;
     }
 
@@ -79,15 +102,16 @@ namespace dump_server
     void execute(const std::shared_ptr<GoalHandleDump> goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Executing goal");
-      rclcpp::Rate loop_rate(20); // this should be 20 hz which I can't imagine not being enough for the dump
+      rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
       const auto goal = goal_handle->get_goal();
       auto feedback = std::make_shared<Dump::Feedback>();
+      auto result = std::make_shared<Dump::Result>();
       while (volume_deposited <= goal->deposition_goal)
       {
         auto &amountDone = feedback->percent_done;
         double speed = goal->deposition_goal;
         auto result = std::make_shared<Dump::Result>();
-        ctre::phoenix::unmanaged::FeedEnable(50);
+        ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(loop_rate_hz), -1));
         conveyorDutyCycle.Output = speed;
         conveyorMotor.SetControl(conveyorDutyCycle);
         RCLCPP_INFO(this->get_logger(), "The motor should be running");
@@ -97,6 +121,7 @@ namespace dump_server
         has_goal = false;
      if (rclcpp::ok())
         {
+         result->est_deposit_goal = volume_deposited;
           goal_handle->succeed(result);
           RCLCPP_INFO(this->get_logger(), "Goal succeeded");
           volume_deposited = 0;
