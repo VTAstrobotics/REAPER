@@ -85,9 +85,7 @@ namespace dump_server
         const std::shared_ptr<GoalHandleDump> goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-      (void)goal_handle;
         conveyorDutyCycle.Output = 0;
-        conveyorMotor.SetControl(conveyorDutyCycle);
 
       return rclcpp_action::CancelResponse::ACCEPT;
     }
@@ -108,6 +106,14 @@ namespace dump_server
       auto result = std::make_shared<Dump::Result>();
       while (volume_deposited <= goal->deposition_goal)
       {
+        if (goal_handle->is_canceling()) {
+                RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+                goal_handle->canceled(result);
+                RCLCPP_INFO(this->get_logger(), "Goal canceled");
+                Dump_Goal_Handle = nullptr;  // Reset the active goal
+                return;
+            }
+
         auto &amountDone = feedback->percent_done;
         double speed = goal->deposition_goal;
         auto result = std::make_shared<Dump::Result>();
@@ -125,6 +131,8 @@ namespace dump_server
           goal_handle->succeed(result);
           RCLCPP_INFO(this->get_logger(), "Goal succeeded");
           volume_deposited = 0;
+          Dump_Goal_Handle = nullptr;
+
         }
     }
   }; // class DumpActionServer
