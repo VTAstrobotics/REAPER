@@ -105,6 +105,7 @@ namespace dump_server
       const auto goal = goal_handle->get_goal();
       auto feedback = std::make_shared<Dump::Feedback>();
       auto result = std::make_shared<Dump::Result>();
+      auto &amountDone = feedback->percent_done;
       while (volume_deposited <= goal->deposition_goal)
       {
         if (goal_handle->is_canceling()) {
@@ -116,15 +117,17 @@ namespace dump_server
                 return;
             }
 
-        auto &amountDone = feedback->percent_done;
         double speed = goal->deposition_goal;
         auto result = std::make_shared<Dump::Result>();
         ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(loop_rate_hz), -1));
         conveyorDutyCycle.Output = speed;
         conveyorMotor.SetControl(conveyorDutyCycle);
         RCLCPP_INFO(this->get_logger(), "The motor should be running");
+        amountDone = volume_deposited/goal->deposition_goal * 100;
 
+        goal_handle->publish_feedback(feedback);
         loop_rate.sleep();
+
       } 
         has_goal = false;
      if (rclcpp::ok())
