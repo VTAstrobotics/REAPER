@@ -86,7 +86,8 @@ namespace dump_server
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
         conveyorDutyCycle.Output = 0;
-
+        Dump_Goal_Handle = nullptr;
+        has_goal = false;
       return rclcpp_action::CancelResponse::ACCEPT;
     }
 
@@ -111,6 +112,7 @@ namespace dump_server
                 goal_handle->canceled(result);
                 RCLCPP_INFO(this->get_logger(), "Goal canceled");
                 Dump_Goal_Handle = nullptr;  // Reset the active goal
+                has_goal = false;
                 return;
             }
 
@@ -132,6 +134,7 @@ namespace dump_server
           RCLCPP_INFO(this->get_logger(), "Goal succeeded");
           volume_deposited = 0;
           Dump_Goal_Handle = nullptr;
+          has_goal = false;
 
         }
     }
