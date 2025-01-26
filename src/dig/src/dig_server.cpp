@@ -76,7 +76,7 @@ namespace dig_server
     // TODO: 2 NEO 550s via SparkMAX
 
     bool has_goal{false};
-    int LOOP_RATE_HZ{20};
+    int LOOP_RATE_HZ{60};
     std::shared_ptr<GoalHandleDig> dig_goal_handle;
 
     // subs to actuator position servers
