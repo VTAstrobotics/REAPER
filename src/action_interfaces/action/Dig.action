@@ -1,0 +1,11 @@
+# Request
+float32 dig_act_goal
+float32 dig_rot_goal
+---
+# Result
+float32 est_dig_act_goal
+float32 est_dig_rot_goal
+---
+# Feedback
+float32 percent_act_done
+float32 percent_rot_done
