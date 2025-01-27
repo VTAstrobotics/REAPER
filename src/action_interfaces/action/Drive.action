@@ -1,0 +1,5 @@
+geometry_msgs/Twist velocity_goal 
+---
+geometry_msgs/Twist curr_velocity
+---
+geometry_msgs/Twist inst_velocity
