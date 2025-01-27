@@ -294,8 +294,8 @@ namespace dig_server
         lLinkPosDutyCycle.Output = linkage_goal;
         lBcktPosDutyCycle.Output = bucket_goal ;
 
-        lLinkMotor.SetControl(lLinkDutyCycle);
-        lBcktMotor.SetControl(lBcktDutyCycle);
+        lLinkMotor.SetControl(lLinkPosDutyCycle);
+        lBcktMotor.SetControl(lBcktPosDutyCycle);
 
         linkPercentDone = (abs(linkage_goal) - abs(current_link_pos))/abs(linkage_goal) * 100;
         bcktPercentDone = (abs(bucket_goal ) - abs(current_bckt_pos))/abs(bucket_goal ) * 100;
