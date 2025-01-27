@@ -1,11 +1,25 @@
 # Request
-float32 dig_act_goal
-float32 dig_rot_goal
+################################################################################
+# if auton = true, run autonomous dig                                          #
+# if auton = false, fall back onto position goal.                              #
+# if position data is null, fall back onto power goal.                         #
+# if power data is also null, do nothing.                                      #
+################################################################################
+
+# Type 1: Full manual control (Power)
+float32 dig_link_pwr_goal
+float32 dig_bckt_pwr_goal
+# Type 2: Position control
+float32 dig_link_pos_goal
+float32 dig_bckt_pos_goal
+# Type 3: Autonomous control
+# apparently you can only use the std_srvs/Trigger for services not actions?
+bool auton
 ---
 # Result
-float32 est_dig_act_goal
-float32 est_dig_rot_goal
+float32 est_dig_link_goal
+float32 est_dig_bckt_goal
 ---
 # Feedback
-float32 percent_act_done
-float32 percent_rot_done
+float32 percent_link_done
+float32 percent_bckt_done
