@@ -85,10 +85,9 @@ namespace dump_server
         const std::shared_ptr<GoalHandleDump> goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-      (void)goal_handle;
         conveyorDutyCycle.Output = 0;
-        conveyorMotor.SetControl(conveyorDutyCycle);
-
+        Dump_Goal_Handle = nullptr;
+        has_goal = false;
       return rclcpp_action::CancelResponse::ACCEPT;
     }
 
@@ -106,17 +105,29 @@ namespace dump_server
       const auto goal = goal_handle->get_goal();
       auto feedback = std::make_shared<Dump::Feedback>();
       auto result = std::make_shared<Dump::Result>();
+      auto &amountDone = feedback->percent_done;
       while (volume_deposited <= goal->deposition_goal)
       {
-        auto &amountDone = feedback->percent_done;
+        if (goal_handle->is_canceling()) {
+                RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+                goal_handle->canceled(result);
+                RCLCPP_INFO(this->get_logger(), "Goal canceled");
+                Dump_Goal_Handle = nullptr;  // Reset the active goal
+                has_goal = false;
+                return;
+            }
+
         double speed = goal->deposition_goal;
         auto result = std::make_shared<Dump::Result>();
         ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(loop_rate_hz), -1));
         conveyorDutyCycle.Output = speed;
         conveyorMotor.SetControl(conveyorDutyCycle);
         RCLCPP_INFO(this->get_logger(), "The motor should be running");
+        amountDone = volume_deposited/goal->deposition_goal * 100;
 
+        goal_handle->publish_feedback(feedback);
         loop_rate.sleep();
+
       } 
         has_goal = false;
      if (rclcpp::ok())
@@ -125,6 +136,9 @@ namespace dump_server
           goal_handle->succeed(result);
           RCLCPP_INFO(this->get_logger(), "Goal succeeded");
           volume_deposited = 0;
+          Dump_Goal_Handle = nullptr;
+          has_goal = false;
+
         }
     }
   }; // class DumpActionServer
