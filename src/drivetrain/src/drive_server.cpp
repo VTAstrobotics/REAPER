@@ -106,7 +106,7 @@ namespace drive_server
       double v_right = linear  + 0.5 * angular * track_width_;
 
       auto &amountDone = feedback->inst_velocity;
-      while (goal->curr_velocity <= goal->velocity_goal)
+      while (goal->curr_velocity <= goal->velocity_goal) // not correct
       {
         if (goal_handle->is_canceling()) {
                 RCLCPP_INFO(this->get_logger(), "Goal is canceling");

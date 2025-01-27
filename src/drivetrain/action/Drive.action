@@ -1,5 +1,5 @@
-float32 deposition_goal 
+geometry_msgs/Twist velocity_goal 
 ---
-float32 est_deposit_goal 
+geometry_msgs/Twist curr_velocity
 ---
-float32 percent_done
+geometry_msgs/Twist inst_velocity
