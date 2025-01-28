@@ -1,5 +1,5 @@
 
-#include "action_interfaces/action/dump.hpp"
+#include "action_interfaces/action/drive.hpp"
 #include <functional>
 #include <memory>
 #include <thread>
@@ -105,45 +105,48 @@ namespace drive_server
       double v_left  = linear  - 0.5 * angular * track_width_;
       double v_right = linear  + 0.5 * angular * track_width_;
 
-      auto &amountDone = feedback->inst_velocity;
-      while (goal->curr_velocity <= goal->velocity_goal) // not correct
+
+      auto start_time = this->now();
+      auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
+
+      
+      while (rclcpp::ok() && this->now() < end_time)
       {
         if (goal_handle->is_canceling()) {
-                RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-                goal_handle->canceled(result);
-                RCLCPP_INFO(this->get_logger(), "Goal canceled");
-                Drive_Goal_Handle = nullptr;  // Reset the active goal
-                has_goal = false;
-                return;
-            }
-
-        double speed = goal->velocity_goal;
-        auto result = std::make_shared<Drive::Result>();
-        ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(loop_rate_hz), -1));
-        driveLeftDutyCycle.Output = leftPower;
-        driveRightDutyCycle.Output = rightPower;
-        //compare current velocity to goal velocity with a PID controller
-        driveLeft.SetControl(driveLeftDutyCycle);
-        driveRight.SetControl(driveRightDutyCycle); //duty cycle is between 0-1. 
-        RCLCPP_INFO(this->get_logger(), "The motors should be running");
-        goal_handle->publish_feedback(feedback);
-        loop_rate.sleep();
-
-      } 
-        has_goal = false;
-     if (rclcpp::ok())
-        {
-         result->curr_velocity = volume_deposited;
-          goal_handle->succeed(result);
-          RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-          volume_deposited = 0;
+          RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+          goal_handle->canceled(result);
+          RCLCPP_INFO(this->get_logger(), "Goal canceled");
           Drive_Goal_Handle = nullptr;
           has_goal = false;
-
+          return;
         }
-    }
-  }; // class DumpActionServer
+        drive_left_duty_.Output = v_left;
+        drive_right_duty_.Output = v_right;
+        drive_left_.SetControl(drive_left_duty_);
+        drive_right_.SetControl(drive_right_duty_);
 
-} // namespace action_tutorials_cpp
+        feedback->inst_velocity.linear.x = v_left;
+        feedback->inst_velocity.angular.z = v_right;
+        goal_handle->publish_feedback(feedback);
+
+        loop_rate.sleep();
+      }
+
+      drive_left_duty_.Output = 0.0;
+      drive_right_duty_.Output = 0.0;
+      drive_left_.SetControl(drive_left_duty_);
+      drive_right_.SetControl(drive_right_duty_);
+
+      if (rclcpp::ok())
+      {
+        result->curr_velocity = goal->velocity_goal;
+        goal_handle->succeed(result);
+        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+        Drive_Goal_Handle = nullptr;
+        has_goal = false;
+      }
+  }; // class DriveActionServer
+
+} // namespace drive_server
 
 RCLCPP_COMPONENTS_REGISTER_NODE(drive_server::DriveActionServer)
