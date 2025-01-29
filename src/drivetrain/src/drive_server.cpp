@@ -145,6 +145,7 @@ namespace drive_server
         Drive_Goal_Handle = nullptr;
         has_goal = false;
       }
+    }
   }; // class DriveActionServer
 
 } // namespace drive_server
