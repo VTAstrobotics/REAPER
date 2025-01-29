@@ -40,14 +40,15 @@ namespace drive_server
 
   private:
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
-    hardware::TalonFX drive_left_{20, "can0"};
-    hardware::TalonFX drive_right_{21, "can0"};
-    controls::DutyCycleOut drive_left_duty_{0.0};
-    controls::DutyCycleOut drive_right_duty_{0.0};
+    hardware::TalonFX drive_left{20, "can0"};
+    hardware::TalonFX drive_right{21, "can0"};
+    controls::DutyCycleOut drive_left_duty{0.0};
+    controls::DutyCycleOut drive_right_duty{0.0};
 
     bool has_goal{false};
     int loop_rate_hz{20};
-    double track_width_{1.0};
+    double track_width{1.0};
+    double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
     
     rclcpp_action::GoalResponse handle_goal(
@@ -72,10 +73,10 @@ namespace drive_server
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
          // Stop motors immediately
-        drive_left_duty_.Output = 0.0;
-        drive_right_duty_.Output = 0.0;
-        drive_left_.SetControl(drive_left_duty_);
-        drive_right_.SetControl(drive_right_duty_);
+        drive_left_duty.Output = 0.0;
+        drive_right_duty.Output = 0.0;
+        drive_left.SetControl(drive_left_duty);
+        drive_right.SetControl(drive_right_duty);
 
         has_goal = false;
         (void)goal_handle;
@@ -102,8 +103,8 @@ namespace drive_server
       double linear  = goal->velocity_goal.linear.x;
       double angular = goal->velocity_goal.angular.z;
       
-      double v_left  = linear  - 0.5 * angular * track_width_;
-      double v_right = linear  + 0.5 * angular * track_width_;
+      double v_left  = (linear  - 0.5 * angular * track_width)/normalization_constant;
+      double v_right = (linear  + 0.5 * angular * track_width)/normalization_constant;
 
 
       auto start_time = this->now();
@@ -120,22 +121,21 @@ namespace drive_server
           has_goal = false;
           return;
         }
-        drive_left_duty_.Output = v_left;
-        drive_right_duty_.Output = v_right;
-        drive_left_.SetControl(drive_left_duty_);
-        drive_right_.SetControl(drive_right_duty_);
-
+        drive_left_duty.Output = v_left;
+        drive_right_duty.Output = v_right;
+        drive_left.SetControl(drive_left_duty);
+        drive_right.SetControl(drive_right_duty);
         feedback->inst_velocity.linear.x = v_left;
-        feedback->inst_velocity.angular.z = v_right;
+        feedback->inst_velocity.angular.z = v_right; //placeholders
         goal_handle->publish_feedback(feedback);
 
         loop_rate.sleep();
       }
 
-      drive_left_duty_.Output = 0.0;
-      drive_right_duty_.Output = 0.0;
-      drive_left_.SetControl(drive_left_duty_);
-      drive_right_.SetControl(drive_right_duty_);
+      drive_left_duty.Output = 0.0;
+      drive_right_duty.Output = 0.0;
+      drive_left.SetControl(drive_left_duty);
+      drive_right.SetControl(drive_right_duty);
 
       if (rclcpp::ok())
       {
