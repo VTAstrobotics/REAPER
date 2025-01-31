@@ -7,6 +7,7 @@
 #include "ctre/phoenix6/TalonFX.hpp"
 #include "ctre/phoenix6/CANBus.hpp"
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 // TODO: add SparkMAX CAN stuff
 
@@ -26,13 +27,13 @@ namespace dig_server
     using GoalHandleDig = rclcpp_action::ServerGoalHandle<Dig>;
 
     explicit DigActionServer(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
-        : Node("dig_action_server", options)
+        : Node("dig_action_node", options)
     {
       using namespace std::placeholders;
 
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
-          "dig_action",
+          "dig_action_server",
           std::bind(&DigActionServer::handle_goal, this, _1, _2),
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
@@ -47,9 +48,8 @@ namespace dig_server
     // linkage actuators
     hardware::TalonFX lLinkMotor{10, "can0"}; // canid (each motor), can interface (same for all)
     controls::DutyCycleOut lLinkPwrDutyCycle{0}; // [-1, 1]
-    controls::PositionDutyCycle lLinkPosDutyCycle{0}; // absolute position to reach (in rotations)
+    controls::PositionDutyCycle lLinkPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX rLinkMotor{20, "can0"};
-    rLinkMotor.Follow(lLinkMotor);
     // m_follower.Follow(m_leader);
     // m_follower.SetInverted(TalonFXInvertType::FollowMaster);
     // m_strictFollower.Follow(m_leader);
@@ -58,9 +58,8 @@ namespace dig_server
     // bucket rotators
     hardware::TalonFX lBcktMotor{30, "can0"};
     controls::DutyCycleOut lBcktPwrDutyCycle{0};
-    controls::PositionDutyCycle lBcktPosDutyCycle{0}; // absolute position to reach (in rotations)
+    controls::PositionDutyCycle lBcktPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX rBcktMotor{40, "can0"};
-    rBcktMotor.Follow(rLinkMotor);
 
     // vibration motors
     // TODO: 2 NEO 550s via SparkMAX
@@ -71,10 +70,10 @@ namespace dig_server
 
     // subs to actuator position topics
     // should always be aligned so only 1 per pair of acts
-    rclcpp::Subscription<controls_msgs::msg::Dig>::SharedPtr pos_description = this->create_subscription<controls_msgs::msg::Dig>(
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr linear  = this->create_subscription<std_msgs::msg::Float32>(
       "/dig/link", 2, std::bind(&DigActionServer::dig_link_callback, this, std::placeholders::_1));
 
-    rclcpp::Subscription<controls_msgs::msg::Dig>::SharedPtr pos_description = this->create_subscription<controls_msgs::msg::Dig>(
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rotational = this->create_subscription<std_msgs::msg::Float32>(
       "/dig/bckt", 2, std::bind(&DigActionServer::dig_bckt_callback, this, std::placeholders::_1));
 
     float starting_act_pos{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
@@ -86,7 +85,7 @@ namespace dig_server
     /**
      * this gets us the sensor data for where our linkage actuators are at
      */
-    void dig_link_callback(const controls_msgs::msg::Dig msg){
+    void dig_link_callback(const std_msgs::msg::Float32 msg){
       RCLCPP_INFO(this->get_logger(), "DIG: /dig/link: %f", msg.data);
       if(abs(abs(starting_act_pos) - 987654) < 2){ // first pos
         starting_act_pos = msg.data;
@@ -103,7 +102,7 @@ namespace dig_server
     /**
      * this gets us the sensor data for where our rotation motors are at
      */
-    void dig_bckt_callback(const controls_msgs::msg::Dig msg){
+    void dig_bckt_callback(const std_msgs::msg::Float32 msg){
       RCLCPP_INFO(this->get_logger(), "DIG: /dig/bckt: %f", msg.data);
       if(abs(abs(starting_bckt_pos) - 987654) < 2){ // first pos
         starting_bckt_pos = msg.data;
@@ -131,7 +130,7 @@ namespace dig_server
         const rclcpp_action::GoalUUID &uuid,
         std::shared_ptr<const Dig::Goal> goal)
     {
-      RCLCPP_INFO(this->get_logger(), "DIG: Received goal request with order %f", goal->dig_goal);
+      // RCLCPP_INFO(this->get_logger(), "DIG: Received goal request with order %f", goal->dig_goal);
 
       if(!has_goal){
         RCLCPP_INFO(this->get_logger(),"DIG: Accepted goal");
@@ -178,7 +177,7 @@ namespace dig_server
     /**
      * Parses the parameters and calls the appropriate helper function
      */
-    void execute(const std::shared_ptr<GoalHandleDump> goal_handle)
+    void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
       const auto goal = goal_handle->get_goal();
 
@@ -290,9 +289,10 @@ namespace dig_server
         auto &linkPercentDone = feedback->percent_link_done;
         auto &bcktPercentDone = feedback->percent_bckt_done;
         ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(LOOP_RATE_HZ), -1));
-
-        lLinkPosDutyCycle.Output = linkage_goal;
-        lBcktPosDutyCycle.Output = bucket_goal ;
+        units::angle::turn_t linkage_rots {linkage_goal * 1_tr};
+        units::angle::turn_t bucket_rots{bucket_goal * 1_tr};
+        lLinkPosDutyCycle.Position = linkage_rots;
+        lBcktPosDutyCycle.Position = bucket_rots ;
 
         lLinkMotor.SetControl(lLinkPosDutyCycle);
         lBcktMotor.SetControl(lBcktPosDutyCycle);
