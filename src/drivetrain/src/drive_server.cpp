@@ -136,7 +136,6 @@ namespace drive_server
       drive_right_duty.Output = 0.0;
       drive_left.SetControl(drive_left_duty);
       drive_right.SetControl(drive_right_duty);
-
       if (rclcpp::ok())
       {
         result->curr_velocity = goal->velocity_goal;
