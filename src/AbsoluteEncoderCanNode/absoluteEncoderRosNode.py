@@ -33,6 +33,7 @@ class EncoderReader(Node):
                 # Assuming the encoder value is in the last 4 bytes of the response
                 encoder_value = (response.data[6] << 24) | (response.data[5] << 16) | (response.data[4] << 8) | response.data[3]
                 encoder_value = (encoder_value * 360) / 1024
+                encoder_value = (encoder_value * 2*3.14159)/ 360
 
                 self.get_logger().info(f"Encoder Value: {encoder_value}")
 
