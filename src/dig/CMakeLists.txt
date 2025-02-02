@@ -26,7 +26,6 @@ include_directories(
 )
 message(STATUS "Include directories: ${CMAKE_INCLUDE_PATH}")
 
-
 add_library(Dig_action SHARED src/dig_server.cpp)
 target_include_directories(Dig_action PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -43,7 +42,6 @@ ament_target_dependencies(Dig_action
   "phoenix6"
   )
 rclcpp_components_register_node(Dig_action PLUGIN "dig_server::DigActionServer" EXECUTABLE DigActionServer)
-
 
 add_definitions(-DUNIT_LIB_DISABLE_FMT -DUNIT_LIB_ENABLE_IOSTREAM)
 if(BUILD_TESTING)

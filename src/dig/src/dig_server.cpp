@@ -27,13 +27,13 @@ namespace dig_server
     using GoalHandleDig = rclcpp_action::ServerGoalHandle<Dig>;
 
     explicit DigActionServer(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
-        : Node("dig_action_node", options)
+        : Node("dig_action_server", options)
     {
       using namespace std::placeholders;
 
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
-          "dig_action_server",
+          "dig_action",
           std::bind(&DigActionServer::handle_goal, this, _1, _2),
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
@@ -70,11 +70,11 @@ namespace dig_server
 
     // subs to actuator position topics
     // should always be aligned so only 1 per pair of acts
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr linear  = this->create_subscription<std_msgs::msg::Float32>(
-      "/dig/link", 2, std::bind(&DigActionServer::dig_link_callback, this, std::placeholders::_1));
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr link_sub = this->create_subscription<std_msgs::msg::Float32>(
+      "/dig/link", 2, std::bind(&DigActionServer::dig_link_cb, this, std::placeholders::_1));
 
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr rotational = this->create_subscription<std_msgs::msg::Float32>(
-      "/dig/bckt", 2, std::bind(&DigActionServer::dig_bckt_callback, this, std::placeholders::_1));
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr bckt_sub = this->create_subscription<std_msgs::msg::Float32>(
+      "/dig/bckt", 2, std::bind(&DigActionServer::dig_bckt_cb, this, std::placeholders::_1));
 
     float starting_act_pos{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
     float current_link_pos{-987654};
@@ -85,7 +85,7 @@ namespace dig_server
     /**
      * this gets us the sensor data for where our linkage actuators are at
      */
-    void dig_link_callback(const std_msgs::msg::Float32 msg){
+    void dig_link_cb(const std_msgs::msg::Float32 msg){
       RCLCPP_INFO(this->get_logger(), "DIG: /dig/link: %f", msg.data);
       if(abs(abs(starting_act_pos) - 987654) < 2){ // first pos
         starting_act_pos = msg.data;
@@ -102,7 +102,7 @@ namespace dig_server
     /**
      * this gets us the sensor data for where our rotation motors are at
      */
-    void dig_bckt_callback(const std_msgs::msg::Float32 msg){
+    void dig_bckt_cb(const std_msgs::msg::Float32 msg){
       RCLCPP_INFO(this->get_logger(), "DIG: /dig/bckt: %f", msg.data);
       if(abs(abs(starting_bckt_pos) - 987654) < 2){ // first pos
         starting_bckt_pos = msg.data;
@@ -185,18 +185,14 @@ namespace dig_server
         RCLCPP_INFO(this->get_logger(), "DIG: execute: autonomous control");
         execute_auton(goal_handle);
 
-      } else if (!std::isnan(goal->dig_link_pos_goal) &&
-                 !std::isnan(goal->dig_bckt_pos_goal)) {
+      } else if (goal->pos) {
         RCLCPP_INFO(this->get_logger(), "DIG: execute: position control");
         execute_pos(goal_handle);
 
-      } else if (!std::isnan(goal->dig_link_pwr_goal) &&
-                 !std::isnan(goal->dig_bckt_pwr_goal)) {
+      } else {
         RCLCPP_INFO(this->get_logger(), "DIG: execute: power control");
         execute_pwr(goal_handle);
 
-      } else {
-        RCLCPP_ERROR(this->get_logger(), "DIG: execute: Malformed request. Were request values populated?");
       }
     }
 
@@ -227,6 +223,16 @@ namespace dig_server
       auto feedback = std::make_shared<Dig::Feedback>();
       auto result = std::make_shared<Dig::Result>();
 
+      if (goal_handle->is_canceling())
+      {
+        RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+        goal_handle->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "Goal canceled");
+        dig_goal_handle = nullptr;  // Reset the active goal
+        has_goal = false;
+        return;
+      }
+
       auto &linkPercentDone = feedback->percent_link_done;
       auto &bcktPercentDone = feedback->percent_bckt_done;
       ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(LOOP_RATE_HZ), -1));
@@ -252,6 +258,7 @@ namespace dig_server
         RCLCPP_ERROR(this->get_logger(), "DIG: execute_pwr: Goal failed");
       }
 
+      dig_goal_handle = nullptr;
       has_goal = false;
     }
 
@@ -283,16 +290,33 @@ namespace dig_server
       auto feedback = std::make_shared<Dig::Feedback>();
       auto result = std::make_shared<Dig::Result>();
 
+      if (goal_handle->is_canceling())
+      {
+        RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+        goal_handle->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "Goal canceled");
+        dig_goal_handle = nullptr;  // Reset the active goal
+        has_goal = false;
+        return;
+      }
+
       while (!APPROX(current_link_pos, linkage_goal) &&
              !APPROX(current_bckt_pos, bucket_goal))
       { // keep sending the request because CTRE's watchdog
         auto &linkPercentDone = feedback->percent_link_done;
         auto &bcktPercentDone = feedback->percent_bckt_done;
+
         ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(LOOP_RATE_HZ), -1));
-        units::angle::turn_t linkage_rots {linkage_goal * 1_tr};
+        units::angle::turn_t linkage_rots{linkage_goal * 1_tr};
         units::angle::turn_t bucket_rots{bucket_goal * 1_tr};
+
         lLinkPosDutyCycle.Position = linkage_rots;
         lBcktPosDutyCycle.Position = bucket_rots ;
+
+        units::angular_velocity::turns_per_second_t linkage_speed{10};
+        units::angular_velocity::turns_per_second_t bucket_speed{10};
+        lLinkPosDutyCycle.Velocity = linkage_speed; // rotations per sec
+        lBcktPosDutyCycle.Velocity = bucket_speed ; // rotations per sec
 
         lLinkMotor.SetControl(lLinkPosDutyCycle);
         lBcktMotor.SetControl(lBcktPosDutyCycle);
@@ -315,6 +339,7 @@ namespace dig_server
         RCLCPP_ERROR(this->get_logger(), "DIG: execute_pos: Goal failed");
       }
 
+      dig_goal_handle = nullptr;
       has_goal = false;
     }
 
@@ -329,7 +354,7 @@ namespace dig_server
      */
     void execute_auton(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-
+      has_goal = false;
     }
 
   }; // class DigActionServer
