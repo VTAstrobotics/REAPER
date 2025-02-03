@@ -46,18 +46,16 @@ namespace dig_server
     rclcpp_action::Server<Dig>::SharedPtr action_server_;
 
     // linkage actuators
-    hardware::TalonFX lLinkMotor{10, "can0"}; // canid (each motor), can interface (same for all)
+    hardware::TalonFX lLinkMotor{20, "can0"}; // canid (each motor), can interface (same for all)
     controls::DutyCycleOut lLinkPwrDutyCycle{0}; // [-1, 1]
     controls::PositionDutyCycle lLinkPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX rLinkMotor{20, "can0"};
-    rLinkMotor.SetControl(controls::Follower{lLinkMotor.GetDeviceID(), true}); // true because they are mounted inverted
+    hardware::TalonFX rLinkMotor{21, "can0"};
 
     // bucket rotators
     hardware::TalonFX lBcktMotor{30, "can0"};
     controls::DutyCycleOut lBcktPwrDutyCycle{0};
     controls::PositionDutyCycle lBcktPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX rBcktMotor{40, "can0"};
-    rBcktMotor.SetControl(controls::Follower{lBcktMotor.GetDeviceID(), false});
 
     // vibration motors
     // TODO: 2 NEO 550s via SparkMAX
@@ -178,6 +176,8 @@ namespace dig_server
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
       const auto goal = goal_handle->get_goal();
+      rLinkMotor.SetControl(controls::Follower{lLinkMotor.GetDeviceID(), true}); // true because they are mounted inverted
+      rBcktMotor.SetControl(controls::Follower{lBcktMotor.GetDeviceID(), false});
 
       if (goal->auton) {
         RCLCPP_INFO(this->get_logger(), "DIG: execute: autonomous control");
@@ -207,9 +207,10 @@ namespace dig_server
     {
       RCLCPP_INFO(this->get_logger(), "DIG: execute_pwr: executing...");
 
+      rclcpp::Rate loop_rate(LOOP_RATE_HZ);
       const auto goal = goal_handle->get_goal();
-      float linkage_goal = goal->dig_link_pwr_goal;
-      float bucket_goal  = goal->dig_bckt_pwr_goal;
+      double linkage_goal = goal->dig_link_pwr_goal;
+      double bucket_goal  = goal->dig_bckt_pwr_goal;
 
       // check that goal is allowable (duty cycle takes [-1, 1])
       if (linkage_goal < -1 || linkage_goal > 1 ||
@@ -231,19 +232,28 @@ namespace dig_server
         return;
       }
 
-      auto &linkPercentDone = feedback->percent_link_done;
-      auto &bcktPercentDone = feedback->percent_bckt_done;
-      ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(LOOP_RATE_HZ), -1));
+      auto end_time = this->now() + rclcpp::Duration::from_seconds(0.1);
 
-      lLinkPwrDutyCycle.Output = linkage_goal;
-      lBcktPwrDutyCycle.Output = bucket_goal ;
+      while (this->now() < end_time)
+      {
 
-      lLinkMotor.SetControl(lLinkPwrDutyCycle);
-      lBcktMotor.SetControl(lBcktPwrDutyCycle);
+        auto &linkPercentDone = feedback->percent_link_done;
+        auto &bcktPercentDone = feedback->percent_bckt_done;
+        ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(LOOP_RATE_HZ), -1));
 
-      linkPercentDone = 100;
-      bcktPercentDone = 100;
-      goal_handle->publish_feedback(feedback);
+        lLinkPwrDutyCycle.Output = linkage_goal;
+        lBcktPwrDutyCycle.Output = bucket_goal ;
+
+        lLinkMotor.SetControl(lLinkPwrDutyCycle);
+        lBcktMotor.SetControl(lBcktPwrDutyCycle);
+        RCLCPP_INFO(this->get_logger(), "told it to run... %f", linkage_goal);
+
+        linkPercentDone = 100;
+        bcktPercentDone = 100;
+        goal_handle->publish_feedback(feedback);
+
+        loop_rate.sleep();
+      }
 
       if (rclcpp::ok())
       {
@@ -311,8 +321,8 @@ namespace dig_server
         lLinkPosDutyCycle.Position = linkage_rots;
         lBcktPosDutyCycle.Position = bucket_rots ;
 
-        units::angular_velocity::turns_per_second_t linkage_speed{10};
-        units::angular_velocity::turns_per_second_t bucket_speed{10};
+        units::angular_velocity::turns_per_second_t linkage_speed{1};
+        units::angular_velocity::turns_per_second_t bucket_speed{1};
         lLinkPosDutyCycle.Velocity = linkage_speed; // rotations per sec
         lBcktPosDutyCycle.Velocity = bucket_speed ; // rotations per sec
 
