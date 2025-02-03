@@ -38,8 +38,10 @@ namespace dig_server
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
-      RCLCPP_INFO(this->get_logger(), "DIG: Action server is ready");
+      // rLinkMotor.SetControl(controls::Follower{lLinkMotor.GetDeviceID(), true}); // true because they are mounted inverted
+      // rBcktMotor.SetControl(controls::Follower{lBcktMotor.GetDeviceID(), false});
 
+      RCLCPP_INFO(this->get_logger(), "DIG: Action server is ready");
     }
 
   private:
@@ -49,19 +51,19 @@ namespace dig_server
     hardware::TalonFX lLinkMotor{20, "can0"}; // canid (each motor), can interface (same for all)
     controls::DutyCycleOut lLinkPwrDutyCycle{0}; // [-1, 1]
     controls::PositionDutyCycle lLinkPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX rLinkMotor{21, "can0"};
+    // hardware::TalonFX rLinkMotor{21, "can0"};
 
     // bucket rotators
-    hardware::TalonFX lBcktMotor{30, "can0"};
+    // hardware::TalonFX lBcktMotor{30, "can0"};
     controls::DutyCycleOut lBcktPwrDutyCycle{0};
     controls::PositionDutyCycle lBcktPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX rBcktMotor{40, "can0"};
+    // hardware::TalonFX rBcktMotor{40, "can0"};
 
     // vibration motors
     // TODO: 2 NEO 550s via SparkMAX
 
     bool has_goal{false};
-    const int LOOP_RATE_HZ{60};
+    const int LOOP_RATE_HZ{15};
     std::shared_ptr<GoalHandleDig> dig_goal_handle;
 
     // subs to actuator position topics
@@ -176,8 +178,6 @@ namespace dig_server
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
       const auto goal = goal_handle->get_goal();
-      rLinkMotor.SetControl(controls::Follower{lLinkMotor.GetDeviceID(), true}); // true because they are mounted inverted
-      rBcktMotor.SetControl(controls::Follower{lBcktMotor.GetDeviceID(), false});
 
       if (goal->auton) {
         RCLCPP_INFO(this->get_logger(), "DIG: execute: autonomous control");
@@ -232,27 +232,25 @@ namespace dig_server
         return;
       }
 
-      auto end_time = this->now() + rclcpp::Duration::from_seconds(0.1);
 
-      while (this->now() < end_time)
       {
 
         auto &linkPercentDone = feedback->percent_link_done;
         auto &bcktPercentDone = feedback->percent_bckt_done;
-        ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(LOOP_RATE_HZ), -1));
+        RCLCPP_INFO(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ)));//this is the correct math with correct units :)
+        ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ)));
 
-        lLinkPwrDutyCycle.Output = linkage_goal;
-        lBcktPwrDutyCycle.Output = bucket_goal ;
+        lLinkPwrDutyCycle.Output = .1;//linkage_goal;
+        lBcktPwrDutyCycle.Output = .1;//bucket_goal ;
 
         lLinkMotor.SetControl(lLinkPwrDutyCycle);
-        lBcktMotor.SetControl(lBcktPwrDutyCycle);
+        // lBcktMotor.SetControl(lBcktPwrDutyCycle);
         RCLCPP_INFO(this->get_logger(), "told it to run... %f", linkage_goal);
 
         linkPercentDone = 100;
         bcktPercentDone = 100;
         goal_handle->publish_feedback(feedback);
 
-        loop_rate.sleep();
       }
 
       if (rclcpp::ok())
@@ -268,6 +266,7 @@ namespace dig_server
 
       dig_goal_handle = nullptr;
       has_goal = false;
+      loop_rate.sleep();
     }
 
     /**************************************************************************
@@ -327,7 +326,7 @@ namespace dig_server
         lBcktPosDutyCycle.Velocity = bucket_speed ; // rotations per sec
 
         lLinkMotor.SetControl(lLinkPosDutyCycle);
-        lBcktMotor.SetControl(lBcktPosDutyCycle);
+        // lBcktMotor.SetControl(lBcktPosDutyCycle);
 
         linkPercentDone = (abs(linkage_goal) - abs(current_link_pos))/abs(linkage_goal) * 100;
         bcktPercentDone = (abs(bucket_goal ) - abs(current_bckt_pos))/abs(bucket_goal ) * 100;
