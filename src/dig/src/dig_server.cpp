@@ -50,16 +50,14 @@ namespace dig_server
     controls::DutyCycleOut lLinkPwrDutyCycle{0}; // [-1, 1]
     controls::PositionDutyCycle lLinkPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX rLinkMotor{20, "can0"};
-    // m_follower.Follow(m_leader);
-    // m_follower.SetInverted(TalonFXInvertType::FollowMaster);
-    // m_strictFollower.Follow(m_leader);
-    // m_strictFollower.SetInverted(TalonFXInvertType::CounterClockwise);
+    rLinkMotor.SetControl(controls::Follower{lLinkMotor.GetDeviceID(), true}); // true because they are mounted inverted
 
     // bucket rotators
     hardware::TalonFX lBcktMotor{30, "can0"};
     controls::DutyCycleOut lBcktPwrDutyCycle{0};
     controls::PositionDutyCycle lBcktPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX rBcktMotor{40, "can0"};
+    rBcktMotor.SetControl(controls::Follower{lBcktMotor.GetDeviceID(), false});
 
     // vibration motors
     // TODO: 2 NEO 550s via SparkMAX
