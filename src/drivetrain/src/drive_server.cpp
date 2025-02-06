@@ -8,6 +8,9 @@
 #include "ctre/phoenix6/CANBus.hpp"
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "SparkMax.hpp"
+#include "SparkFlex.hpp"
+#include "SparkBase.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -35,16 +38,30 @@ namespace drive_server
           std::bind(&DriveActionServer::handle_goal, this, _1, _2),
           std::bind(&DriveActionServer::handle_cancel, this, _1),
           std::bind(&DriveActionServer::handle_accepted, this, _1));
+        left_motor.SetIdleMode(IdleMode::kBrake);  // Brake
+        left_motor.SetMotorType(MotorType::kBrushless); // Brushed
+        left_motor.SetInverted(true);
+        left_motor.BurnFlash();
+
+        right_motor.SetIdleMode(IdleMode::kBrake);  // Brake
+        right_motor.SetMotorType(MotorType::kBrushless); // Brushed
+        right_motor.SetInverted(true);
+        right_motor.BurnFlash();
+
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
 
   private:
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
-    hardware::TalonFX drive_left{20, "can0"};
-    hardware::TalonFX drive_right{21, "can0"};
-    controls::DutyCycleOut drive_left_duty{0.0};
-    controls::DutyCycleOut drive_right_duty{0.0};
-
+    // hardware::TalonFX drive_left{20, "can0"};
+    // hardware::TalonFX drive_right{21, "can0"};
+    // controls::DutyCycleOut drive_left_duty{0.0};
+    // controls::DutyCycleOut drive_right_duty{0.0};
+        double drive_left_duty = 0;
+        double drive_right_duty = 0;
+        SparkMax left_motor{"can0", 47};
+        SparkMax right_motor{"can0", 47};
+        // Motor 1
     bool has_goal{false};
     int loop_rate_hz{20};
     double track_width{1.0};
@@ -73,10 +90,9 @@ namespace drive_server
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
          // Stop motors immediately
-        drive_left_duty.Output = 0.0;
-        drive_right_duty.Output = 0.0;
-        drive_left.SetControl(drive_left_duty);
-        drive_right.SetControl(drive_right_duty);
+        left_motor.SetDutyCycle(0.0);
+        right_motor.SetDutyCycle(0.0);
+        RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
         has_goal = false;
         (void)goal_handle;
@@ -121,10 +137,9 @@ namespace drive_server
           has_goal = false;
           return;
         }
-        drive_left_duty.Output = v_left;
-        drive_right_duty.Output = v_right;
-        drive_left.SetControl(drive_left_duty);
-        drive_right.SetControl(drive_right_duty);
+        
+        left_motor.SetDutyCycle(v_left);
+        right_motor.SetDutyCycle(v_right);
         feedback->inst_velocity.linear.x = v_left;
         feedback->inst_velocity.angular.z = v_right; //placeholders
         goal_handle->publish_feedback(feedback);
@@ -132,10 +147,11 @@ namespace drive_server
         loop_rate.sleep();
       }
 
-      drive_left_duty.Output = 0.0;
-      drive_right_duty.Output = 0.0;
-      drive_left.SetControl(drive_left_duty);
-      drive_right.SetControl(drive_right_duty);
+      // drive_left_duty.Output = 0.0;
+      // drive_right_duty.Output = 0.0;
+      // drive_left.SetControl(drive_left_duty);
+      // drive_right.SetControl(drive_right_duty);
+
       if (rclcpp::ok())
       {
         result->curr_velocity = goal->velocity_goal;
@@ -150,3 +166,4 @@ namespace drive_server
 } // namespace drive_server
 
 RCLCPP_COMPONENTS_REGISTER_NODE(drive_server::DriveActionServer)
+
