@@ -10,6 +10,6 @@
 /**
  * @brief Allowed amount of difference for two floats to be equal
  */
-#define APPROX_FUDGE 0.001f
+#define APPROX_FUDGE 0.01f
 
 #endif
