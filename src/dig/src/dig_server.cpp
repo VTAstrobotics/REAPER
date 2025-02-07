@@ -39,72 +39,74 @@ namespace dig_server
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
       configs::Slot0Configs linkConfigs{};
-      linkConfigs.kP = 0;
-      linkConfigs.kI = 0;
-      linkConfigs.kD = 0;
-      lLinkMotor.GetConfigurator().Apply(linkConfigs);
+      float K_u = 3.9, T_u = 0.04;
+      linkConfigs.kP = 0.8 * K_u;
+      linkConfigs.kI = 0; // 0; PD controller
+      linkConfigs.kD = 0.1 * K_u * T_u; 
+      l_link_mtr_.GetConfigurator().Apply(linkConfigs);
 
-      configs::Slot0Configs buckConfigs{};
-      buckConfigs.kP = 0;
-      buckConfigs.kI = 0;
-      buckConfigs.kD = 0;
-      lBcktMotor.GetConfigurator().Apply(buckConfigs);
+      configs::Slot0Configs bcktConfigs{};
+      K_u = 3.9, T_u = 0.04; // TODO: tune these values for the bucket.
+      bcktConfigs.kP = 0.8 * K_u;
+      bcktConfigs.kI = 0; // 0; PD controller
+      bcktConfigs.kD = 0.1 * K_u * T_u;
+      l_bckt_mtr_.GetConfigurator().Apply(bcktConfigs);
 
-      rLinkMotor.SetControl(controls::Follower{lLinkMotor.GetDeviceID(), true}); // true because they are mounted inverted
-      rBcktMotor.SetControl(controls::Follower{lBcktMotor.GetDeviceID(), false});
+      r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
+      r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
-      RCLCPP_INFO(this->get_logger(), "DIG: Action server is ready");
+      RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }
 
   private:
     rclcpp_action::Server<Dig>::SharedPtr action_server_;
 
     // linkage actuators
-    hardware::TalonFX lLinkMotor{20, "can0"}; // canid (each motor), can interface (same for all)
-    controls::DutyCycleOut lLinkPwrDutyCycle{0}; // [-1, 1]
-    controls::PositionDutyCycle lLinkPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX rLinkMotor{21, "can0"};
+    hardware::TalonFX l_link_mtr_{20, "can0"}; // canid (each motor), can interface (same for all)
+    controls::DutyCycleOut l_link_pwr_duty_cycle_{0}; // [-1, 1]
+    controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
+    hardware::TalonFX r_link_mtr_{21, "can0"};
 
     // bucket rotators
-    hardware::TalonFX lBcktMotor{30, "can0"};
-    controls::DutyCycleOut lBcktPwrDutyCycle{0};
-    controls::PositionDutyCycle lBcktPosDutyCycle{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX rBcktMotor{40, "can0"};
+    hardware::TalonFX l_bckt_mtr_{30, "can0"};
+    controls::DutyCycleOut l_bckt_pwr_duty_cycle_{0};
+    controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
+    hardware::TalonFX r_bckt_mtr_{40, "can0"};
 
     // vibration motors
     // TODO: 2 NEO 550s via SparkMAX
 
-    bool has_goal{false};
-    const int LOOP_RATE_HZ{15};
-    std::shared_ptr<GoalHandleDig> dig_goal_handle;
+    bool has_goal_{false};
+    const int LOOP_RATE_HZ_{15};
+    std::shared_ptr<GoalHandleDig> dig_goal_handle_;
 
     // subs to actuator position topics
     // should always be aligned so only 1 per pair of acts
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr link_sub = this->create_subscription<std_msgs::msg::Float32>(
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr link_sub_ = this->create_subscription<std_msgs::msg::Float32>(
       "/dig/link", 2, std::bind(&DigActionServer::dig_link_cb, this, std::placeholders::_1));
 
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr bckt_sub = this->create_subscription<std_msgs::msg::Float32>(
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr bckt_sub_ = this->create_subscription<std_msgs::msg::Float32>(
       "/dig/bckt", 2, std::bind(&DigActionServer::dig_bckt_cb, this, std::placeholders::_1));
 
-    float starting_act_pos{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
-    float current_link_pos{-987654};
+    float starting_link_pos_{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
+    float current_link_pos_{-987654};
 
-    float starting_bckt_pos{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
-    float current_bckt_pos{-987654};
+    float starting_bckt_pos_{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
+    float current_bckt_pos_{-987654};
 
     /**
      * this gets us the sensor data for where our linkage actuators are at
      */
     void dig_link_cb(const std_msgs::msg::Float32 msg){
-      RCLCPP_INFO(this->get_logger(), "DIG: /dig/link: %f", msg.data);
-      if(abs(abs(starting_act_pos) - 987654) < 2){ // first pos
-        starting_act_pos = msg.data;
-        RCLCPP_INFO(this->get_logger(), "DIG: starting linkage actuator positions are %f", starting_act_pos);
+      RCLCPP_INFO(this->get_logger(), "/dig/link: %f", msg.data);
+      if(abs(abs(starting_link_pos_) - 987654) < 2){ // first pos
+        starting_link_pos_ = msg.data;
+        RCLCPP_INFO(this->get_logger(), "starting linkage actuator positions are %f", starting_link_pos_);
 
       }
       else{
-        current_link_pos = msg.data;
-        RCLCPP_INFO(this->get_logger(), "DIG: current linkage actuator positions are %f", current_link_pos);
+        current_link_pos_ = msg.data;
+        RCLCPP_INFO(this->get_logger(), "current linkage actuator positions are %f", current_link_pos_);
 
       }
     }
@@ -113,15 +115,15 @@ namespace dig_server
      * this gets us the sensor data for where our rotation motors are at
      */
     void dig_bckt_cb(const std_msgs::msg::Float32 msg){
-      RCLCPP_INFO(this->get_logger(), "DIG: /dig/bckt: %f", msg.data);
-      if(abs(abs(starting_bckt_pos) - 987654) < 2){ // first pos
-        starting_bckt_pos = msg.data;
-        RCLCPP_INFO(this->get_logger(), "DIG: starting rotation motor positions are %f", starting_bckt_pos);
+      RCLCPP_INFO(this->get_logger(), "/dig/bckt: %f", msg.data);
+      if(abs(abs(starting_bckt_pos_) - 987654) < 2){ // first pos
+        starting_bckt_pos_ = msg.data;
+        RCLCPP_INFO(this->get_logger(), "starting rotation motor positions are %f", starting_bckt_pos_);
 
       }
       else{
-        current_bckt_pos = msg.data;
-        RCLCPP_INFO(this->get_logger(), "DIG: current rotation motor positions are %f", current_bckt_pos);
+        current_bckt_pos_ = msg.data;
+        RCLCPP_INFO(this->get_logger(), "current rotation motor positions are %f", current_bckt_pos_);
 
       }
     }
@@ -140,17 +142,17 @@ namespace dig_server
         const rclcpp_action::GoalUUID &uuid,
         std::shared_ptr<const Dig::Goal> goal)
     {
-      // RCLCPP_INFO(this->get_logger(), "DIG: Received goal request with order %f", goal->dig_goal);
+      // RCLCPP_INFO(this->get_logger(), "Received goal request with order %f", goal->dig_goal);
       (void)uuid, (void)goal; // for unused warning
 
-      if(!has_goal){
-        RCLCPP_INFO(this->get_logger(),"DIG: Accepted goal");
-        has_goal = true;
+      if(!has_goal_){
+        RCLCPP_INFO(this->get_logger(),"Accepted goal");
+        has_goal_ = true;
 
         return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
       }
       else{
-        RCLCPP_INFO(this->get_logger(),"DIG: Rejected goal because one is still executing");
+        RCLCPP_INFO(this->get_logger(),"Rejected goal because one is still executing");
 
         return rclcpp_action::GoalResponse::REJECT;
       }
@@ -162,16 +164,16 @@ namespace dig_server
     rclcpp_action::CancelResponse handle_cancel(
         const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-      RCLCPP_INFO(this->get_logger(), "DIG: Received request to cancel goal");
+      RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
       (void)goal_handle; // for unused warning
 
       // stop motion
-      lLinkPwrDutyCycle.Output = 0;
-      lBcktPwrDutyCycle.Output = 0;
+      l_link_pwr_duty_cycle_.Output = 0;
+      l_bckt_pwr_duty_cycle_.Output = 0;
 
       // set class vars
-      dig_goal_handle = nullptr;
-      has_goal = false;
+      dig_goal_handle_ = nullptr;
+      has_goal_ = false;
 
       return rclcpp_action::CancelResponse::ACCEPT;
     }
@@ -194,15 +196,15 @@ namespace dig_server
       const auto goal = goal_handle->get_goal();
 
       if (goal->auton) {
-        RCLCPP_INFO(this->get_logger(), "DIG: execute: autonomous control");
+        RCLCPP_DEBUG(this->get_logger(), "execute: autonomous control");
         execute_auton(goal_handle);
 
       } else if (goal->pos) {
-        RCLCPP_INFO(this->get_logger(), "DIG: execute: position control");
+        RCLCPP_DEBUG(this->get_logger(), "execute: position control");
         execute_pos(goal_handle);
 
       } else {
-        RCLCPP_INFO(this->get_logger(), "DIG: execute: power control");
+        RCLCPP_DEBUG(this->get_logger(), "execute: power control");
         execute_pwr(goal_handle);
 
       }
@@ -219,9 +221,9 @@ namespace dig_server
      */
     void execute_pwr(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-      RCLCPP_INFO(this->get_logger(), "DIG: execute_pwr: executing...");
+      RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
 
-      rclcpp::Rate loop_rate(LOOP_RATE_HZ);
+      rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
       const auto goal = goal_handle->get_goal();
       double linkage_goal = goal->dig_link_pwr_goal;
       double bucket_goal  = goal->dig_bckt_pwr_goal;
@@ -230,7 +232,7 @@ namespace dig_server
       if (linkage_goal < -1 || linkage_goal > 1 ||
           bucket_goal  < -1 || bucket_goal  > 1)
       {
-        RCLCPP_ERROR(this->get_logger(), "DIG: execute_pwr: Linkage and/or Bucket goal was out of bounds. Power goals should always be in [-1, 1]");
+        RCLCPP_ERROR(this->get_logger(), "execute_pwr: Linkage and/or Bucket goal was out of bounds. Power goals should always be in [-1, 1]");
       }
 
       auto feedback = std::make_shared<Dig::Feedback>();
@@ -241,22 +243,21 @@ namespace dig_server
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
         goal_handle->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        dig_goal_handle = nullptr;  // Reset the active goal
-        has_goal = false;
+        dig_goal_handle_ = nullptr;  // Reset the active goal
+        has_goal_ = false;
         return;
       }
 
       auto &linkPercentDone = feedback->percent_link_done;
       auto &bcktPercentDone = feedback->percent_bckt_done;
-      RCLCPP_INFO(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ))); //this is the correct math with correct units :)
-      ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ)));
+      RCLCPP_DEBUG(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
+      ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
 
-      lLinkPwrDutyCycle.Output = 0.1;//linkage_goal;
-      lBcktPwrDutyCycle.Output = 0.1;//bucket_goal ;
+      l_link_pwr_duty_cycle_.Output = linkage_goal;
+      l_bckt_pwr_duty_cycle_.Output = bucket_goal ;
 
-      lLinkMotor.SetControl(lLinkPwrDutyCycle);
-      lBcktMotor.SetControl(lBcktPwrDutyCycle);
-      RCLCPP_INFO(this->get_logger(), "told it to run... %f", linkage_goal);
+      l_link_mtr_.SetControl(l_link_pwr_duty_cycle_);
+      l_bckt_mtr_.SetControl(l_bckt_pwr_duty_cycle_);
 
       linkPercentDone = 100;
       bcktPercentDone = 100;
@@ -268,13 +269,13 @@ namespace dig_server
         result->est_dig_bckt_goal = bucket_goal ;
 
         goal_handle->succeed(result);
-        RCLCPP_INFO(this->get_logger(), "DIG: execute_pwr: Goal succeeded");
+        RCLCPP_INFO(this->get_logger(), "execute_pwr: Goal succeeded");
       } else {
-        RCLCPP_ERROR(this->get_logger(), "DIG: execute_pwr: Goal failed");
+        RCLCPP_ERROR(this->get_logger(), "execute_pwr: Goal failed");
       }
 
-      dig_goal_handle = nullptr;
-      has_goal = false;
+      dig_goal_handle_ = nullptr;
+      has_goal_ = false;
       loop_rate.sleep();
     }
 
@@ -289,57 +290,58 @@ namespace dig_server
      */
     void execute_pos(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-      RCLCPP_INFO(this->get_logger(), "DIG: execute_pos: executing...");
+      RCLCPP_DEBUG(this->get_logger(), "execute_pos: executing...");
 
-      rclcpp::Rate loop_rate(LOOP_RATE_HZ);
+      rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
       const auto goal = goal_handle->get_goal();
-      float linkage_goal = goal->dig_link_pos_goal;
-      float bucket_goal  = goal->dig_bckt_pos_goal;
-
-      // check that goal is allowable (duty cycle takes [-1, 1])
-      if (linkage_goal < -1 || linkage_goal > 1 ||
-          bucket_goal  < -1 || bucket_goal  > 1)
-      {
-        RCLCPP_ERROR(this->get_logger(), "DIG: execute_pos: Linkage and/or Bucket goal was out of bounds. Power goals should always be in [-1, 1]");
-      }
+      double linkage_goal = goal->dig_link_pos_goal;
+      double bucket_goal  = goal->dig_bckt_pos_goal;
 
       auto feedback = std::make_shared<Dig::Feedback>();
       auto result = std::make_shared<Dig::Result>();
 
-      if (goal_handle->is_canceling())
-      {
-        RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-        goal_handle->canceled(result);
-        RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        dig_goal_handle = nullptr;  // Reset the active goal
-        has_goal = false;
-        return;
-      }
+      // TODO: need to factor in the absolute encoders (and any other sensor data) from the callback above
+      current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue();
+      current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue();
 
-      while (!APPROX(current_link_pos, linkage_goal) &&
-             !APPROX(current_bckt_pos, bucket_goal))
+      while (!APPROX(current_link_pos_, linkage_goal) ||
+             !APPROX(current_bckt_pos_, bucket_goal))
       { // keep sending the request because CTRE's watchdog
+        // TODO: need to factor in the absolute encoders (and any other sensor data) from the callback above
+        current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue();
+        current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue();
+
+        if (goal_handle->is_canceling())
+        {
+          RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+          goal_handle->canceled(result);
+          RCLCPP_INFO(this->get_logger(), "Goal canceled");
+          dig_goal_handle_ = nullptr;  // Reset the active goal
+          has_goal_ = false;
+          return;
+        }
+
         auto &linkPercentDone = feedback->percent_link_done;
         auto &bcktPercentDone = feedback->percent_bckt_done;
 
-        RCLCPP_INFO(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ))); //this is the correct math with correct units :)
-        ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ)));
-        units::angle::turn_t linkage_rots{linkage_goal * 1_tr};
-        units::angle::turn_t bucket_rots{bucket_goal * 1_tr};
+        RCLCPP_DEBUG(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
+        ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
+        units::angle::turn_t linkage_angl{linkage_goal * 1_tr};
+        units::angle::turn_t bucket_angl{bucket_goal * 1_tr};
 
-        lLinkPosDutyCycle.Position = linkage_rots;
-        lBcktPosDutyCycle.Position = bucket_rots ;
+        l_link_pos_duty_cycle_.Position = linkage_angl;
+        l_bckt_pos_duty_cycle_.Position = bucket_angl ;
 
         units::angular_velocity::turns_per_second_t linkage_speed{1};
         units::angular_velocity::turns_per_second_t bucket_speed{1};
-        lLinkPosDutyCycle.Velocity = linkage_speed; // rotations per sec
-        lBcktPosDutyCycle.Velocity = bucket_speed ; // rotations per sec
+        l_link_pos_duty_cycle_.Velocity = linkage_speed; // rotations per sec
+        l_bckt_pos_duty_cycle_.Velocity = bucket_speed ; // rotations per sec
 
-        lLinkMotor.SetControl(lLinkPosDutyCycle);
-        lBcktMotor.SetControl(lBcktPosDutyCycle);
+        l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
+        l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
 
-        linkPercentDone = (abs(linkage_goal) - abs(current_link_pos))/abs(linkage_goal) * 100;
-        bcktPercentDone = (abs(bucket_goal ) - abs(current_bckt_pos))/abs(bucket_goal ) * 100;
+        linkPercentDone = (abs(linkage_goal) - abs(current_link_pos_))/abs(linkage_goal) * 100;
+        bcktPercentDone = (abs(bucket_goal ) - abs(current_bckt_pos_))/abs(bucket_goal ) * 100;
         goal_handle->publish_feedback(feedback);
 
         loop_rate.sleep();
@@ -347,17 +349,17 @@ namespace dig_server
 
       if (rclcpp::ok())
       {
-        result->est_dig_link_goal = current_link_pos;
-        result->est_dig_bckt_goal = current_bckt_pos;
+        result->est_dig_link_goal = current_link_pos_;
+        result->est_dig_bckt_goal = current_bckt_pos_;
 
         goal_handle->succeed(result);
-        RCLCPP_INFO(this->get_logger(), "DIG: execute_pos: Goal succeeded");
+        RCLCPP_INFO(this->get_logger(), "execute_pos: Goal succeeded");
       } else {
-        RCLCPP_ERROR(this->get_logger(), "DIG: execute_pos: Goal failed");
+        RCLCPP_ERROR(this->get_logger(), "execute_pos: Goal failed");
       }
 
-      dig_goal_handle = nullptr;
-      has_goal = false;
+      dig_goal_handle_ = nullptr;
+      has_goal_ = false;
     }
 
     /**************************************************************************
@@ -372,8 +374,8 @@ namespace dig_server
     void execute_auton(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
       (void)goal_handle; // for unused warning
-      dig_goal_handle = nullptr;
-      has_goal = false;
+      dig_goal_handle_ = nullptr;
+      has_goal_ = false;
     }
 
   }; // class DigActionServer
