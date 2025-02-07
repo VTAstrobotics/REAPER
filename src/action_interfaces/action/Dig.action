@@ -1,0 +1,26 @@
+# Request
+################################################################################
+# if auton = true, run autonomous dig                                          #
+# if auton = false, and pos = true, position goal.                             #
+# if auton = false and pos = false, power goal.                                #
+################################################################################
+
+# Type 1: Full manual control (Power)
+float32 dig_link_pwr_goal 0
+float32 dig_bckt_pwr_goal 0
+# Type 2: Position control
+float32 dig_link_pos_goal 0
+float32 dig_bckt_pos_goal 0
+# Type 3: Autonomous control
+# apparently you can only use the std_srvs/Trigger for services not actions?
+# unfortunately, it doesnt seem you can detect whether data was sent or not.
+bool auton false
+bool pos false
+---
+# Result
+float32 est_dig_link_goal
+float32 est_dig_bckt_goal
+---
+# Feedback
+float32 percent_link_done
+float32 percent_bckt_done
