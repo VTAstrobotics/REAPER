@@ -22,8 +22,6 @@ RUN groupadd --gid $USER_GID $USERNAME \
 # Switch from root to user
 USER $USERNAME
 
-
-
 # Add user to video group to allow access to webcam
 RUN sudo usermod --append --groups video $USERNAME
 
@@ -68,6 +66,11 @@ RUN sudo apt-get install -y lsb-release \
     && sudo ./llvm.sh 16 \
     && sudo apt-get install -y clang-format-16 \
     && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
+
+# install sparkcan
+RUN sudo add-apt-repository ppa:graysonarendt/sparkcan
+RUN sudo apt update
+RUN sudo apt install sparkcan
 
 #### Begin Navigation Stack #####
 RUN sudo apt-get install -y \
