@@ -15,6 +15,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/Dump.action"
+  "action/Dig.action"
   DEPENDENCIES builtin_interfaces action_msgs
 )
 
