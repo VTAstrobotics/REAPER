@@ -67,6 +67,11 @@ RUN sudo apt-get install -y lsb-release \
     && sudo apt-get install -y clang-format-16 \
     && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
 
+# install sparkcan
+RUN sudo add-apt-repository ppa:graysonarendt/sparkcan
+RUN sudo apt update
+RUN sudo apt install sparkcan
+
 #### Begin Navigation Stack #####
 RUN sudo apt-get install -y \
     ros-humble-navigation2 \

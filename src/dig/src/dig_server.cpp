@@ -9,7 +9,7 @@
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "std_msgs/msg/float32.hpp"
 
-// TODO: add SparkMAX CAN stuff
+#include "SparkMax.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -42,7 +42,7 @@ namespace dig_server
       float K_u = 3.9, T_u = 0.04;
       linkConfigs.kP = 0.8 * K_u;
       linkConfigs.kI = 0; // 0; PD controller
-      linkConfigs.kD = 0.1 * K_u * T_u; 
+      linkConfigs.kD = 0.1 * K_u * T_u;
       l_link_mtr_.GetConfigurator().Apply(linkConfigs);
 
       configs::Slot0Configs bcktConfigs{};
@@ -54,6 +54,14 @@ namespace dig_server
 
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
+
+      l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      l_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      l_vib_mtr_.BurnFlash();
+
+      r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      r_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      r_vib_mtr_.BurnFlash();
 
       RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }
@@ -74,7 +82,8 @@ namespace dig_server
     hardware::TalonFX r_bckt_mtr_{40, "can0"};
 
     // vibration motors
-    // TODO: 2 NEO 550s via SparkMAX
+    SparkMax l_vib_mtr_{"can0", 50};
+    SparkMax r_vib_mtr_{"can0", 51};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{15};
@@ -376,6 +385,12 @@ namespace dig_server
       (void)goal_handle; // for unused warning
       dig_goal_handle_ = nullptr;
       has_goal_ = false;
+
+      // l_vib_mtr.Heartbeat();
+      // r_vib_mtr.Heartbeat();
+
+      // l_vib_mtr.SetDutyCycle(0.1);
+      // r_vib_mtr.SetDutyCycle(0.1);
     }
 
   }; // class DigActionServer
