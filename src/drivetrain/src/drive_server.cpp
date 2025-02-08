@@ -38,14 +38,18 @@ namespace drive_server
           std::bind(&DriveActionServer::handle_goal, this, _1, _2),
           std::bind(&DriveActionServer::handle_cancel, this, _1),
           std::bind(&DriveActionServer::handle_accepted, this, _1));
-        left_motor.SetIdleMode(IdleMode::kBrake);  // Brake
-        left_motor.SetMotorType(MotorType::kBrushless); // Brushed
-        left_motor.SetInverted(true);
+
+        left_motor.SetIdleMode(IdleMode::kBrake);
+        left_motor.SetMotorType(MotorType::kBrushless);
+        // left_motor.SetSmartCurrentFreeLimit(50.0);
+        left_motor.SetSmartCurrentStallLimit(40.0); // 0.8 Nm
         left_motor.BurnFlash();
 
-        right_motor.SetIdleMode(IdleMode::kBrake);  // Brake
-        right_motor.SetMotorType(MotorType::kBrushless); // Brushed
+        right_motor.SetIdleMode(IdleMode::kBrake);
+        right_motor.SetMotorType(MotorType::kBrushless);
         right_motor.SetInverted(true);
+        // left_motor.SetSmartCurrentFreeLimit(50.0);
+        left_motor.SetSmartCurrentStallLimit(40.0); // 0.8 Nm
         right_motor.BurnFlash();
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
@@ -67,7 +71,7 @@ namespace drive_server
     double track_width{1.0};
     double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
-    
+
     rclcpp_action::GoalResponse handle_goal(
         const rclcpp_action::GoalUUID &uuid,
         std::shared_ptr<const Drive::Goal> goal)
@@ -118,7 +122,7 @@ namespace drive_server
       auto result = std::make_shared<Drive::Result>();
       double linear  = goal->velocity_goal.linear.x;
       double angular = goal->velocity_goal.angular.z;
-      
+
       double v_left  = (linear  - 0.5 * angular * track_width)/normalization_constant;
       double v_right = (linear  + 0.5 * angular * track_width)/normalization_constant;
 
@@ -126,7 +130,7 @@ namespace drive_server
       auto start_time = this->now();
       auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
 
-      
+
       while (rclcpp::ok() && this->now() < end_time)
       {
         if (goal_handle->is_canceling()) {
@@ -137,7 +141,7 @@ namespace drive_server
           has_goal = false;
           return;
         }
-        
+
         left_motor.SetDutyCycle(v_left);
         right_motor.SetDutyCycle(v_right);
         feedback->inst_velocity.linear.x = v_left;
