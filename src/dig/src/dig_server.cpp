@@ -38,29 +38,45 @@ namespace dig_server
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
-      configs::Slot0Configs linkConfigs{};
+      configs::Slot0Configs linkPIDConfig{};
       float K_u = 3.9, T_u = 0.04;
-      linkConfigs.kP = 0.8 * K_u;
-      linkConfigs.kI = 0; // 0; PD controller
-      linkConfigs.kD = 0.1 * K_u * T_u;
-      l_link_mtr_.GetConfigurator().Apply(linkConfigs);
+      linkPIDConfig.kP = 0.8 * K_u;
+      linkPIDConfig.kI = 0; // 0; PD controller
+      linkPIDConfig.kD = 0.1 * K_u * T_u;
+      l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
 
-      configs::Slot0Configs bcktConfigs{};
+      configs::CurrentLimitsConfigs linkLimConfig{};
+      linkLimConfig.SupplyCurrentLimit = 60;
+      linkLimConfig.SupplyCurrentLimitEnable = true;
+      l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+      r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+
+      configs::Slot0Configs bcktPIDConfig{};
       K_u = 3.9, T_u = 0.04; // TODO: tune these values for the bucket.
-      bcktConfigs.kP = 0.8 * K_u;
-      bcktConfigs.kI = 0; // 0; PD controller
-      bcktConfigs.kD = 0.1 * K_u * T_u;
-      l_bckt_mtr_.GetConfigurator().Apply(bcktConfigs);
+      bcktPIDConfig.kP = 0.8 * K_u;
+      bcktPIDConfig.kI = 0; // 0; PD controller
+      bcktPIDConfig.kD = 0.1 * K_u * T_u;
+      l_bckt_mtr_.GetConfigurator().Apply(bcktPIDConfig);
+
+      configs::CurrentLimitsConfigs bcktLimConfig{};
+      bcktLimConfig.SupplyCurrentLimit = 40;
+      bcktLimConfig.SupplyCurrentLimitEnable = true;
+      l_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
+      r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
 
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
       l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
       l_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       l_vib_mtr_.BurnFlash();
 
       r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
       r_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       r_vib_mtr_.BurnFlash();
 
       RCLCPP_DEBUG(this->get_logger(), "Ready for action");
