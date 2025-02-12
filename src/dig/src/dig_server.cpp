@@ -64,6 +64,8 @@ namespace dig_server
       l_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
       r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
 
+      controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
+
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
@@ -118,6 +120,17 @@ namespace dig_server
 
     float starting_bckt_pos_{-987654}; // if this is negative 987654 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
     float current_bckt_pos_{-987654};
+
+    // lookup table for auto dig
+    // time (s),actuator angle (rots),bucket angle (rots), vibration (duty cycle [-1,1]),linact hardstop (encoder [0-4095]),drive_l (m/s),drive_r (m/s)
+    float LOOKUP_TB_[6][7] = {
+      0,0,0,0,0,0,0,
+      1,1,1,0.2,20,0.1,0.1,
+      2,2,2,0.4,40,0.1,0.1,
+      3,3,3,0.6,60,0.1,0.1,
+      4,4,4,0.8,80,0.1,0.1,
+      5,5,5,1,100,0.1,0.1,
+    };
 
     /**
      * this gets us the sensor data for where our linkage actuators are at
