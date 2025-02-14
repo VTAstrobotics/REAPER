@@ -48,7 +48,6 @@ namespace dump_server
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description = this->create_subscription<std_msgs::msg::Float32>(
       "/dump/volume", 2, std::bind(&DumpActionServer::dump_volume_callback, this, std::placeholders::_1));
     float starting_volume{-802000};// if this is negative 8020 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
-    
 
     void dump_volume_callback(const std_msgs::msg::Float32 msg){
       RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
@@ -128,7 +127,7 @@ namespace dump_server
         goal_handle->publish_feedback(feedback);
         loop_rate.sleep();
 
-      } 
+      }
         has_goal = false;
      if (rclcpp::ok())
         {

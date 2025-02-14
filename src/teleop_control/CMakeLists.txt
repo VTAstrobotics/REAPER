@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(teliop_control)
+project(teleop_control)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -24,15 +24,15 @@ include_directories(
 )
 message(STATUS "Include directories: ${CMAKE_INCLUDE_PATH}")
 
-
-add_library(operator_control SHARED src/client.cpp)
-target_include_directories(operator_control PRIVATE
+add_library(distributor SHARED src/distributor.cpp)
+target_include_directories(distributor PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_compile_definitions(operator_control PRIVATE
-"operator_control_CPP_BUILDING_DLL")
-ament_target_dependencies(operator_control
+
+target_compile_definitions(distributor PRIVATE
+"distributor_CPP_BUILDING_DLL")
+ament_target_dependencies(distributor
   "action_interfaces"
   "rclcpp"
   "rclcpp_action"
@@ -40,8 +40,7 @@ ament_target_dependencies(operator_control
   "std_msgs"
   "sensor_msgs"
   )
-rclcpp_components_register_node(operator_control PLUGIN "Distributor" EXECUTABLE DumpActionServer)
-
+rclcpp_components_register_node(distributor PLUGIN "teleop_control::Distributor" EXECUTABLE Distributor)
 
 add_definitions(-DUNIT_LIB_DISABLE_FMT -DUNIT_LIB_ENABLE_IOSTREAM)
 if(BUILD_TESTING)
@@ -57,7 +56,7 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS
-  operator_control
+  distributor
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
