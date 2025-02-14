@@ -9,7 +9,7 @@
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "std_msgs/msg/float32.hpp"
 
-#include "SparkMax.hpp"
+// #include "SparkMax.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -81,17 +81,17 @@ namespace dig_server
 
       // TODO: hardstop
 
-      l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      l_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      l_vib_mtr_.BurnFlash();
+      // l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      // l_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      // l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      // l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      // l_vib_mtr_.BurnFlash();
 
-      r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      r_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      r_vib_mtr_.BurnFlash();
+      // r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      // r_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      // r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      // r_vib_mtr_.BurnFlash();
 
       RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }
@@ -115,8 +115,8 @@ namespace dig_server
     // TODO
 
     // vibration motors
-    SparkMax l_vib_mtr_{"can0", 50};
-    SparkMax r_vib_mtr_{"can0", 51};
+    // SparkMax l_vib_mtr_{"can0", 50};
+    // SparkMax r_vib_mtr_{"can0", 51};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{15};
@@ -302,18 +302,18 @@ namespace dig_server
      * sets the vibration motors to run with a specific duty cycle
      * @param pwr the duty cycle for the motors to run at. accepts [-1, 1]
      */
-    void vib_pwr(double pwr){
-      if (pwr < -1 || pwr > 1)
-      {
-        RCLCPP_ERROR(this->get_logger(), "vib_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
-      }
+    // void vib_pwr(double pwr){
+    //   if (pwr < -1 || pwr > 1)
+    //   {
+    //     RCLCPP_ERROR(this->get_logger(), "vib_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
+    //   }
 
-      l_vib_mtr_.Heartbeat();
-      r_vib_mtr_.Heartbeat();
+    //   l_vib_mtr_.Heartbeat();
+    //   r_vib_mtr_.Heartbeat();
 
-      l_vib_mtr_.SetDutyCycle(pwr);
-      r_vib_mtr_.SetDutyCycle(pwr);
-    }
+    //   l_vib_mtr_.SetDutyCycle(pwr);
+    //   r_vib_mtr_.SetDutyCycle(pwr);
+    // }
 
     /**
      * runs the dig motors to a duty cycle goal
@@ -328,7 +328,7 @@ namespace dig_server
       double bucket_goal = goal->dig_bckt_pwr_goal;
       double hrdstp_goal = goal->dig_hstp_pwr_goal;
       double vibrtn_goal = goal->dig_vibr_pwr_goal;
-      RCLCPP_DEBUG(this->get_logger(), "execute_pwr: hrdstp_goal = %d", hrdstp_goal);
+      RCLCPP_DEBUG(this->get_logger(), "execute_pwr: hrdstp_goal = %f", hrdstp_goal);
 
       // check that goal is allowable (duty cycle takes [-1, 1])
       if (lnkage_goal < -1 || lnkage_goal > 1 ||
@@ -369,7 +369,7 @@ namespace dig_server
       // TODO: hardstop
 
       // vibration motors duty cycle
-      vib_pwr(vibrtn_goal);
+      // vib_pwr(vibrtn_goal);
 
       linkPercentDone = 100;
       bcktPercentDone = 100;
@@ -480,7 +480,7 @@ namespace dig_server
         goto_pos(lnkage_goal, bucket_goal, hrdstp_goal);
 
         // vibration motors duty cycle
-        vib_pwr(vibrtn_goal);
+        // vib_pwr(vibrtn_goal);
 
         linkPercentDone = (abs(lnkage_goal) - abs(current_link_pos_))/abs(lnkage_goal) * 100;
         bcktPercentDone = (abs(bucket_goal) - abs(current_bckt_pos_))/abs(bucket_goal) * 100;
@@ -569,7 +569,7 @@ namespace dig_server
           goto_pos(LOOKUP_TB_[i][1], LOOKUP_TB_[i][2], LOOKUP_TB_[i][3]);
 
           // vibration motors duty cycle
-          vib_pwr(LOOKUP_TB_[i][4]);
+          // vib_pwr(LOOKUP_TB_[i][4]);
 
           linkPercentDone = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
           bcktPercentDone = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
