@@ -328,6 +328,7 @@ namespace dig_server
       double bucket_goal = goal->dig_bckt_pwr_goal;
       double hrdstp_goal = goal->dig_hstp_pwr_goal;
       double vibrtn_goal = goal->dig_vibr_pwr_goal;
+      RCLCPP_DEBUG(this->get_logger(), "execute_pwr: hrdstp_goal = %d", hrdstp_goal);
 
       // check that goal is allowable (duty cycle takes [-1, 1])
       if (lnkage_goal < -1 || lnkage_goal > 1 ||
@@ -372,7 +373,7 @@ namespace dig_server
 
       linkPercentDone = 100;
       bcktPercentDone = 100;
-      hstpPercentDone = 0; // TODO
+      hstpPercentDone = 100; // TODO
       vibrPercentDone = 100;
       goal_handle->publish_feedback(feedback);
 
