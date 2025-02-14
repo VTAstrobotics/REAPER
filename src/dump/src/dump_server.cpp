@@ -35,6 +35,12 @@ namespace dump_server
           std::bind(&DumpActionServer::handle_cancel, this, _1),
           std::bind(&DumpActionServer::handle_accepted, this, _1));
       RCLCPP_INFO(this->get_logger(), "Action server is ready");
+
+      configs::CurrentLimitsConfigs limConfig{};
+      limConfig.SupplyCurrentLimit = 30;
+      limConfig.SupplyCurrentLimitEnable = true;
+      conveyorMotor.GetConfigurator().Apply(limConfig);
+
     }
 
   private:
