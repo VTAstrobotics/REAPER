@@ -542,18 +542,19 @@ namespace dig_server
         RCLCPP_DEBUG(this->get_logger(), "execute_auton: i=%ld", i);
 
         // get the starting time for this iteration of the loop
-        rclcpp::Time start_time = this->now();
+        double next_goal_time = this->now().seconds();
 
-        float time_til_next_goal;
         if (i == sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0]) - 1)
         {
           // if it's the last iteration, we can't look-ahead, so assume some constant length of time
-          time_til_next_goal = LOOKUP_TB_[i][0] + 1;
+          next_goal_time += 1; // TODO change this??
         } else {
-          time_til_next_goal = LOOKUP_TB_[i+1][0];
+          next_goal_time += (LOOKUP_TB_[i+1][0] - LOOKUP_TB_[i][0]);
         }
 
-        while ((this->now() - start_time).seconds() > time_til_next_goal)
+        RCLCPP_DEBUG(this->get_logger(), "now = %f, nex goal = %f", this->now().seconds(), next_goal_time);
+
+        while (this->now().seconds() < next_goal_time)
         {
           if (goal_handle->is_canceling())
           {
