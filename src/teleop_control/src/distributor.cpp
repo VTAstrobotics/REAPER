@@ -156,11 +156,11 @@ private:
         }
 
         if (valid_press(BUTTON_B, raw)) {
-            RCLCPP_INFO(this->get_logger(), "B: Digging autonomously");
+            RCLCPP_INFO(this->get_logger(), "B: Digging autonomously disabled until encoder values are known (so we dont break the robot)");
 
-            dig_goal.auton = true;
+            // dig_goal.auton = true;
 
-            this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         }
 
         if (valid_press(BUTTON_X, raw)) {
