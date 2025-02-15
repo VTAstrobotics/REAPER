@@ -142,8 +142,8 @@ namespace drive_server
           return;
         }
 
-        left_motor.SetDutyCycle(v_left);
-        right_motor.SetDutyCycle(v_right);
+        left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
+        right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
         feedback->inst_velocity.linear.x = v_left;
         feedback->inst_velocity.angular.z = v_right; //placeholders
         goal_handle->publish_feedback(feedback);
