@@ -40,11 +40,15 @@ public:
         : Node("distributor", options)
     {
         this->dump_ptr_ = rclcpp_action::create_client<Dump>(this, "dump");
-        this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "Dig");
-        this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "Drive");
+        this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig_action");
+        this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
 
         this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
 
+        for (size_t i = 0; i < sizeof(last_btn_press_)/sizeof(*last_btn_press_); i++)
+        {
+            last_btn_press_[i] = this->now().seconds();
+        }
     }
 
     // void send_goal()
@@ -62,61 +66,257 @@ private:
     rclcpp_action::Client<Dig>::SharedPtr dig_ptr_;
     rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
 
+    bool slow_turn_ = false; // toggle to slow drive turning
+    const float SLOW_DRIVE_TURN_VAL_ = 0.5; // what rate to slow turning
+    const float SLOW_BCKT_ROT_VAL_ = 0.125;
     /*
-     * Joystick 1
+     * store the last time each button was pressed.
+     * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
+     * array structure is same as the joy message buttons array!
     */
-    void joy1_cb(const sensor_msgs::msg::Joy &raw)
+    float last_btn_press_[11];
+    const float BUTTON_COOLDOWN_MS_ = 50;
+
+    /**
+     * Given the button index, returns true if there was a valid press
+     * @param button INDEX in the arrays
+     * @param raw pointer to the raw joy msg
+     * @return true if button was pressed AND if it wasn't a duplicate press (i.e. 1 press shouldnt count as 2)
+     */
+    bool valid_press (int button, const sensor_msgs::msg::Joy& raw)
     {
-        // Drive controls
+        return (raw.buttons[button] && ((this->now().seconds() - last_btn_press_[button]) > BUTTON_COOLDOWN_MS_));
+    }
+
+    /**
+     * Given an array of button indices, returns true if all were pressed
+     * @param buttons is an array of button indices, corresponding to the joy msg
+     * @param size is the number of elements in the array
+     * @param raw pointer to the raw joy msg
+     * @return true if all buttons were pressed AND none were duplicate presses
+     */
+    bool valid_presses (const int buttons[], const int size, const sensor_msgs::msg::Joy& raw)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            if (!valid_press(buttons[i], raw)) { return false; }
+        }
+
+        return true;
+    }
+
+    /**
+     * Joystick 1
+     * @param raw the raw message data from the Joy topic
+    */
+    void joy1_cb(const sensor_msgs::msg::Joy& raw)
+    {
+
+        /**********************************************************************
+         *                                                                    *
+         * ACTION SERVER GOALS                                                *
+         * You can only send one goal per action server at a time, so each    *
+         * control can modify the goal for that iteration to send a goal      *
+         *                                                                    *
+         **********************************************************************/
+        // Drive action server
         auto drive_goal = Drive::Goal();
         geometry_msgs::msg::Twist drive_vel;
-        drive_vel.linear.x = 1;
-        drive_vel.linear.y = 2;
-        drive_vel.linear.z = 3;
-        drive_vel.angular.x = 4;
-        drive_vel.angular.y = 5;
-        drive_vel.angular.z = 6;
+        auto send_drive_goal_options = rclcpp_action::Client<Drive>::SendGoalOptions();
+        send_drive_goal_options.goal_response_callback = std::bind(&Distributor::drive_response_cb, this, _1);
+        send_drive_goal_options.feedback_callback = std::bind(&Distributor::drive_fb_cb, this, _1, _2);
+        send_drive_goal_options.result_callback = std::bind(&Distributor::drive_result_cb, this, _1);
 
-        // Dig controls
+        // Dig action server
         auto dig_goal = Dig::Goal();
-        dig_goal.auton = true;
+        auto send_dig_goal_options = rclcpp_action::Client<Dig>::SendGoalOptions();
+        send_dig_goal_options.goal_response_callback = std::bind(&Distributor::dig_response_cb, this, _1);
+        send_dig_goal_options.feedback_callback = std::bind(&Distributor::dig_fb_cb, this, _1, _2);
+        send_dig_goal_options.result_callback = std::bind(&Distributor::dig_result_cb, this, _1);
 
-        // Dump controls
+        // Dump action server
         auto dump_goal = Dump::Goal();
-        dump_goal.deposition_goal = 0.01;
+        auto send_dump_goal_options = rclcpp_action::Client<Dump>::SendGoalOptions();
+        send_dump_goal_options.goal_response_callback = std::bind(&Distributor::dump_response_cb, this, _1);
+        send_dump_goal_options.feedback_callback = std::bind(&Distributor::dump_fb_cb, this, _1, _2);
+        send_dump_goal_options.result_callback = std::bind(&Distributor::dump_result_cb, this, _1);
 
-        if (raw.buttons[BUTTON_A]){ //
-            auto send_dump_goal_options = rclcpp_action::Client<Dump>::SendGoalOptions();
-            send_dump_goal_options.goal_response_callback = std::bind(&Distributor::dump_response_cb, this, _1);
-            send_dump_goal_options.feedback_callback = std::bind(&Distributor::dump_fb_cb, this, _1, _2);
-            send_dump_goal_options.result_callback = std::bind(&Distributor::dump_result_cb, this, _1);
+        /**********************************************************************
+         *                                                                    *
+         * BUTTON CONTROLS                                                    *
+         *                                                                    *
+         **********************************************************************/
+
+        if (valid_press(BUTTON_A, raw)) {
+            RCLCPP_INFO(this->get_logger(), "A: Dumping 0.01 m^3");
+
+            dump_goal.deposition_goal = 0.01;
+
             this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
-        if (raw.buttons[BUTTON_B]){ //
-            auto send_dig_goal_options = rclcpp_action::Client<Dig>::SendGoalOptions();
-            send_dig_goal_options.goal_response_callback = std::bind(&Distributor::dig_response_cb, this, _1);
-            send_dig_goal_options.feedback_callback = std::bind(&Distributor::dig_fb_cb, this, _1, _2);
-            send_dig_goal_options.result_callback = std::bind(&Distributor::dig_result_cb, this, _1);
+        if (valid_press(BUTTON_B, raw)) {
+            RCLCPP_INFO(this->get_logger(), "B: Digging autonomously");
+
+            dig_goal.auton = true;
+
             this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         }
 
-        if (raw.buttons[BUTTON_X]){ //
-            auto send_drive_goal_options = rclcpp_action::Client<Drive>::SendGoalOptions();
-            send_drive_goal_options.goal_response_callback = std::bind(&Distributor::drive_response_cb, this, _1);
-            send_drive_goal_options.feedback_callback = std::bind(&Distributor::drive_fb_cb, this, _1, _2);
-            send_drive_goal_options.result_callback = std::bind(&Distributor::drive_result_cb, this, _1);
-            this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
+        if (valid_press(BUTTON_X, raw)) {
+            RCLCPP_INFO(this->get_logger(), "X: Dumping 0.1 m^3");
+
+            dump_goal.deposition_goal = 0.01;
+
+            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
-        // if (raw.buttons[BUTTON_Y]){ //
-        //     auto send_dump_goal_options = rclcpp_action::Client<Dump>::SendGoalOptions();
-        //     send_dump_goal_options.goal_response_callback = std::bind(&Distributor::dump_response_cb, this, _1);
-        //     send_dump_goal_options.feedback_callback = std::bind(&Distributor::dump_fb_cb, this, _1, _2);
-        //     send_dump_goal_options.result_callback = std::bind(&Distributor::dump_result_cb, this, _1);
-        //     this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
-        // }
+        if (valid_press(BUTTON_Y, raw)) {
+            slow_turn_ = !slow_turn_;
+            if (slow_turn_) {
+                RCLCPP_INFO(this->get_logger(), "Y: Decreasing the max turning rate");
+            } else {
+                RCLCPP_INFO(this->get_logger(), "Y: Turning back to full speed");
+            }
+        }
 
+        if (valid_press(BUTTON_LBUMPER, raw)) {
+            RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
+            dig_goal.dig_link_pwr_goal += 0.1;
+        }
+
+        if (valid_press(BUTTON_RBUMPER, raw)) {
+            RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
+            dig_goal.dig_link_pwr_goal -= 0.1;
+        }
+
+        if (valid_press(BUTTON_BACK, raw)) {
+            RCLCPP_INFO(this->get_logger(), "Back: Not yet implemented. Doing nothing...");
+        }
+
+        if (valid_press(BUTTON_START, raw)) {
+            RCLCPP_INFO(this->get_logger(), "Start: Not yet implemented. Doing nothing...");
+        }
+
+        if (valid_press(BUTTON_MANUFACTURER, raw)) {
+            RCLCPP_INFO(this->get_logger(), "Xbox: Not yet implemented. Doing nothing...");
+        }
+
+        const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
+        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw)) {
+            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
+            rclcpp::shutdown();
+        }
+
+        if (valid_press(BUTTON_LSTICK, raw)) {
+            RCLCPP_INFO(this->get_logger(), "LS (down): Not yet implemented. Doing nothing...");
+        }
+
+        if (valid_press(BUTTON_RSTICK, raw)) {
+            RCLCPP_INFO(this->get_logger(), "RS (down): Not yet implemented. Doing nothing...");
+        }
+
+        /**********************************************************************
+         *                                                                    *
+         * PRIMARY DRIVER AXIS CONTROLS                                       *
+         *                                                                    *
+         *  raw.axes[AXIS_LEFTX] // Drive turn                                *
+         *  raw.axes[AXIS_LEFTY] //                                           *
+         *                                                                    *
+         *  raw.axes[AXIS_RIGHTX] //                                          *
+         *  raw.axes[AXIS_RIGHTY] // Dig bucket rotation (up lifts front)     *
+         *  raw.axes[AXIS_LTRIGGER] // Drive reverse throttle                 *
+         *  raw.axes[AXIS_RTRIGGER] // Drive forward throttle                 *
+         *  raw.axes[AXIS_DPAD_X] //                                          *
+         *  raw.axes[AXIS_DPAD_Y] //                                          *
+         *                                                                    *
+         *  drive_vel.linear.x; // straight                                   *
+         *  drive_vel.linear.y; //                                            *
+         *  drive_vel.linear.z; //                                            *
+         *  drive_vel.angular.x; //                                           *
+         *  drive_vel.angular.y; //                                           *
+         *  drive_vel.angular.z; // turn (positive left, negative right)      *
+         *                                                                    *
+         **********************************************************************/
+
+        /**********************************************************************
+         *                                                                    *
+         * DRIVETRAIN CONTROLS                                                *
+         *                                                                    *
+         **********************************************************************/
+
+        // Drive throttle
+        float LT = raw.axes[AXIS_LTRIGGER];
+        float RT = raw.axes[AXIS_RTRIGGER];
+
+        /*
+         * Shift triggers from [-1, 1], where
+         *    1 = not pressed
+         *   -1 = fully pressed
+         *    0 = halfway
+         * to [0, 1] where
+         *    0 = not pressed
+         *    1 = fully pressed
+         */
+        LT = ((-1 * LT) + 1) * 0.5;
+        RT = ((-1 * RT) + 1) * 0.5;
+
+        // Apply cubic function for better control
+        LT = std::pow(LT, 3);
+        RT = std::pow(RT, 3);
+
+        drive_vel.linear.x  = RT - LT; // [-1, 1]
+
+        // Drive turning
+        float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+
+        // Apply cubic function for better control
+        LSX = std::pow(LSX, 3);
+
+        drive_vel.angular.z = LSX; // [-1, 1]
+
+        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+
+        /**********************************************************************
+         *                                                                    *
+         * DIG SYSTEM CONTROLS                                                *
+         *                                                                    *
+         **********************************************************************/
+        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+        float RSY = raw.axes[AXIS_RIGHTY];
+
+        // Apply cubic function for better control
+        RSY = std::pow(RSY, 3);
+        dig_goal.dig_bckt_pwr_goal = RSY;
+        dig_goal.dig_bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+
+        /**********************************************************************
+         *                                                                    *
+         * DUMP SYSTEM CONTROLS                                               *
+         *                                                                    *
+         **********************************************************************/
+        if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
+            // i think eventually this would be good for manual dumping, but
+            // dump action server does not support this yet
+            RCLCPP_INFO(this->get_logger(), "Dpad X: Not yet implemented. Doing nothing...");
+        }
+
+        if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
+            RCLCPP_INFO(this->get_logger(), "Dpad Y: Not yet implemented. Doing nothing...");
+        }
+
+        /**********************************************************************
+         *                                                                    *
+         * SEND ACTION SERVER GOALS                                           *
+         * always send a goal for now because autonomy goals would have       *
+         * already been sent, so this will be disregarded by the server       *
+         * anyway, but in the future we can do something to check if we       *
+         * should send.                                                       *
+         *                                                                    *
+         **********************************************************************/
+        this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
+        this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+        this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
     }
 
     /**
@@ -129,6 +329,9 @@ private:
 
     }
 
+    /**
+     * @param goal_handle
+     */
     void drive_response_cb(const DriveGoalHandle::SharedPtr& goal_handle)
     {
         if (goal_handle) {
@@ -172,6 +375,9 @@ private:
         result.result->curr_velocity.angular.x, result.result->curr_velocity.angular.y, result.result->curr_velocity.angular.z);
     }
 
+    /**
+     * @param goal_handle
+     */
     void dig_response_cb(const DigGoalHandle::SharedPtr& goal_handle)
     {
         if (goal_handle) {
