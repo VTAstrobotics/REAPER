@@ -113,23 +113,23 @@ namespace dig_server
     hardware::TalonFX l_link_mtr_{20, "can0"}; // canid (each motor), can interface (same for all)
     controls::DutyCycleOut l_link_pwr_duty_cycle_{0}; // [-1, 1]
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX r_link_mtr_{21, "can0"};
+    hardware::TalonFX r_link_mtr_{23, "can0"};
 
     // bucket rotators
-    hardware::TalonFX l_bckt_mtr_{30, "can0"};
+    hardware::TalonFX l_bckt_mtr_{21, "can0"};
     controls::DutyCycleOut l_bckt_pwr_duty_cycle_{0};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX r_bckt_mtr_{40, "can0"};
+    hardware::TalonFX r_bckt_mtr_{24, "can0"};
 
     // hardstop
-    // TODO
+    // TODO CAN ID 26
 
     // vibration motors
-    // SparkMax l_vib_mtr_{"can0", 50};
-    // SparkMax r_vib_mtr_{"can0", 51};
+    // SparkMax l_vib_mtr_{"can0", 22};
+    // SparkMax r_vib_mtr_{"can0", 25};
 
     bool has_goal_{false};
-    const int LOOP_RATE_HZ_{15};
+    const int LOOP_RATE_HZ_{50};
     std::shared_ptr<GoalHandleDig> dig_goal_handle_;
 
     // subs to actuator position topics

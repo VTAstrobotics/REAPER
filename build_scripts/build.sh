@@ -1,13 +1,12 @@
 #!/bin/bash
 
 printf "\nbuild.sh:\n"
-echo "Changing directory"
-cd /workspaces/REAPER/src/
+cd /workspaces/REAPER
 
-echo "Building project"
+echo "Building and sourcing project"
+colcon build --packes-select action_interfaces
+source install/setup.bash
 colcon build --symlink-install
-
-echo "Sourcing"
 source install/setup.bash
 
 printf "build.sh done.\n\n"

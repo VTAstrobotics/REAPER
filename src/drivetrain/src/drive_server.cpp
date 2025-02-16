@@ -4,9 +4,6 @@
 #include <memory>
 #include <thread>
 #include <cmath>
-#include "ctre/phoenix6/TalonFX.hpp"
-#include "ctre/phoenix6/CANBus.hpp"
-#include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "SparkMax.hpp"
 #include "SparkFlex.hpp"
@@ -17,8 +14,6 @@
 #include "rclcpp_components/register_node_macro.hpp"
 #include "std_msgs/msg/float32.hpp"
 
-using namespace action_interfaces::action;
-using namespace ctre::phoenix6;
 namespace drive_server
 {
   class DriveActionServer : public rclcpp::Node
@@ -63,11 +58,11 @@ namespace drive_server
     // controls::DutyCycleOut drive_right_duty{0.0};
         double drive_left_duty = 0;
         double drive_right_duty = 0;
-        SparkMax left_motor{"can0", 47};
-        SparkMax right_motor{"can0", 47};
+        SparkMax left_motor{"can0", 10};
+        SparkMax right_motor{"can0", 11};
         // Motor 1
     bool has_goal{false};
-    int loop_rate_hz{20};
+    int loop_rate_hz{120};
     double track_width{1.0};
     double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
@@ -141,7 +136,8 @@ namespace drive_server
           has_goal = false;
           return;
         }
-
+	left_motor.Heartbeat();
+	right_motor.Heartbeat();
         left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
         feedback->inst_velocity.linear.x = v_left;

@@ -75,7 +75,9 @@ private:
      * array structure is same as the joy message buttons array!
     */
     float last_btn_press_[11];
-    const float BUTTON_COOLDOWN_MS_ = 50;
+    const float BUTTON_COOLDOWN_MS_ = 0.050;
+    bool teleop_disabled_ = false;
+    bool stop_mode_ = false;
 
     /**
      * Given the button index, returns true if there was a valid press
@@ -111,7 +113,16 @@ private:
     */
     void joy1_cb(const sensor_msgs::msg::Joy& raw)
     {
+        const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
+        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw) && !stop_mode_) {
+            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
+            teleop_disabled_ = !teleop_disabled_;
+            stop_mode_ = true;
+        } else {
+            stop_mode_ = false;
+        }
 
+        if (teleop_disabled_) { return; }
         /**********************************************************************
          *                                                                    *
          * ACTION SERVER GOALS                                                *
@@ -200,12 +211,6 @@ private:
 
         if (valid_press(BUTTON_MANUFACTURER, raw)) {
             RCLCPP_INFO(this->get_logger(), "Xbox: Not yet implemented. Doing nothing...");
-        }
-
-        const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
-        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw)) {
-            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
-            rclcpp::shutdown();
         }
 
         if (valid_press(BUTTON_LSTICK, raw)) {
@@ -314,6 +319,7 @@ private:
          * should send.                                                       *
          *                                                                    *
          **********************************************************************/
+	drive_goal.velocity_goal = drive_vel;
         this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
         this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);

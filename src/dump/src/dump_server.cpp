@@ -45,7 +45,7 @@ namespace dump_server
 
   private:
     rclcpp_action::Server<Dump>::SharedPtr action_server_;
-    hardware::TalonFX conveyorMotor{20, "can0"};
+    hardware::TalonFX conveyorMotor{30, "can0"};
     controls::DutyCycleOut conveyorDutyCycle{0};
     float volume_deposited{0};
     bool has_goal{false};
