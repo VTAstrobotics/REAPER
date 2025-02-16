@@ -60,6 +60,10 @@ namespace dig_server
       l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
       r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
 
+      // enable brake mode
+      l_link_pwr_duty_cycle_.OverrideBrakeDurNeutral = true;
+      l_link_pos_duty_cycle_.OverrideBrakeDurNeutral = true;
+
       configs::Slot0Configs bcktPIDConfig{};
       K_u = 3.9, T_u = 0.04; // TODO: tune these values for the bucket.
       bcktPIDConfig.kP = 0.8 * K_u;
@@ -76,6 +80,12 @@ namespace dig_server
       // TODO finish this?
       // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
+      // enable brake mode
+      controls::StaticBrake static_brake;
+      l_link_mtr_.SetControl(static_brake);
+      l_bckt_mtr_.SetControl(static_brake);
+
+      // set right motors to follow left motors
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
