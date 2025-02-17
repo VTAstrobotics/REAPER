@@ -1,12 +1,18 @@
 #!/bin/bash
 
 printf "\nbuild.sh:\n"
-cd /workspaces/REAPER
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "build.sh: [ERROR]: This script must be sourced, not executed."
+    echo "build.sh: [INFO]: Usage: source build.sh"
+    exit 1
+fi
+echo "Changing directory"
+cd /workspaces/REAPER/src/
 
-echo "Building and sourcing project"
-colcon build --packes-select action_interfaces
-source install/setup.bash
+echo "Building project"
 colcon build --symlink-install
+
+echo "Sourcing"
 source install/setup.bash
 
-printf "build.sh done.\n\n"
+echo build.sh: done
