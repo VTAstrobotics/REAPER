@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(dig)
+project(teleop_control)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,7 +7,6 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(phoenix6 REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
@@ -16,10 +15,8 @@ find_package(rclcpp_components REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(action_interfaces REQUIRED)
-find_package(sparkcan REQUIRED)
 find_package(std_msgs REQUIRED)
-
-find_package(unique_identifier_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/include
@@ -27,23 +24,23 @@ include_directories(
 )
 message(STATUS "Include directories: ${CMAKE_INCLUDE_PATH}")
 
-add_library(Dig_action SHARED src/dig_server.cpp)
-target_include_directories(Dig_action PRIVATE
+add_library(distributor SHARED src/distributor.cpp)
+target_include_directories(distributor PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-target_compile_definitions(Dig_action PRIVATE
-"DIG_ACTION_CPP_BUILDING_DLL")
-ament_target_dependencies(Dig_action
+
+target_compile_definitions(distributor PRIVATE
+"distributor_CPP_BUILDING_DLL")
+ament_target_dependencies(distributor
   "action_interfaces"
-  "sparkcan"
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components"
   "std_msgs"
-  "phoenix6"
+  "sensor_msgs"
   )
-rclcpp_components_register_node(Dig_action PLUGIN "dig_server::DigActionServer" EXECUTABLE DigActionServer)
+rclcpp_components_register_node(distributor PLUGIN "teleop_control::Distributor" EXECUTABLE Distributor)
 
 add_definitions(-DUNIT_LIB_DISABLE_FMT -DUNIT_LIB_ENABLE_IOSTREAM)
 if(BUILD_TESTING)
@@ -59,7 +56,7 @@ if(BUILD_TESTING)
 endif()
 
 install(TARGETS
-  Dig_action
+  distributor
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)

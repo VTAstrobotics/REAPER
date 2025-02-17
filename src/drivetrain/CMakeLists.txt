@@ -14,7 +14,7 @@ find_package(std_msgs REQUIRED)
 find_package(action_interfaces REQUIRED)
 find_package(unique_identifier_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(phoenix6 REQUIRED)
+find_package(sparkcan REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/Drive.action"
@@ -42,7 +42,7 @@ ament_target_dependencies(Drive_action_server
   "std_msgs"
   "geometry_msgs"
   "action_interfaces"
-  "phoenix6"
+  "sparkcan"
 )
 
 rclcpp_components_register_node(Drive_action_server PLUGIN "drive_server::DriveActionServer" EXECUTABLE DriveActionServer)
