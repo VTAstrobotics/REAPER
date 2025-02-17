@@ -103,8 +103,22 @@ namespace dump_server
       // this needs to return quickly to avoid blocking the executor, so spin up a new thread
       std::thread{std::bind(&DumpActionServer::execute, this, _1), goal_handle}.detach();
     }
-
+    
     void execute(const std::shared_ptr<GoalHandleDump> goal_handle)
+    {
+      const auto goal = goal_handle->get_goal();
+
+      if (goal->auton) {
+        RCLCPP_DEBUG(this->get_logger(), "execute: control using force sensor");
+        execute_withForce(goal_handle);
+
+      else{
+        RCLCPP_DEBUG(this->get_logger(), "execute: manual power control");
+        execute_pwr_dump(goal_handle);
+
+      }
+    }
+    void execute_withForce(const std::shared_ptr<GoalHandleDump> goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Executing goal");
       rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
@@ -146,6 +160,59 @@ namespace dump_server
           has_goal = false;
 
         }
+    }
+
+    void execute_pwr_dump(const std::shared_ptr<GoalHandleDig> goal_handle)
+    {
+      RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
+
+      rclcpp::Rate loop_rate(loop_rate_hz);
+      const auto goal = goal_handle->get_goal();
+      double power_goal  = goal->pwr_goal;
+      auto &amountDone = feedback->percent_done;
+      
+      // check that goal is allowable (duty cycle takes [-1, 1])
+      if (power_goal  < -1 || power_goal  > 1)
+      {
+        RCLCPP_ERROR(this->get_logger(), "execute_pwr_dump: Power was out of bounds. Power goals should always be in [-1, 1]");
+      }
+
+      auto feedback = std::make_shared<Dump::Feedback>();
+      auto result = std::make_shared<Dump::Result>();
+
+      if (goal_handle->is_canceling())
+      {
+        RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+        goal_handle->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "Goal canceled");
+        Dump_Goal_Handle = nullptr;  // Reset the active goal
+        has_goal_ = false;
+        return;
+      }
+      
+      double speed = goal->power_goal;
+      conveyorDutyCycle.Output = speed;
+      conveyorMotor.SetControl(conveyorDutyCycle);
+
+      ctre::phoenix::unmanaged::FeedEnable(pow(static_cast<float>(loop_rate_hz), -1));
+      amountDone = volume_deposited/goal->deposition_goal * 100;
+
+      goal_handle->publish_feedback(feedback);
+
+      if (rclcpp::ok())
+      {
+        result->est_dig_link_goal = linkage_goal;
+        result->est_dig_bckt_goal = bucket_goal ;
+
+        goal_handle->succeed(result);
+        RCLCPP_INFO(this->get_logger(), "execute_pwr: Goal succeeded");
+      } else {
+        RCLCPP_ERROR(this->get_logger(), "execute_pwr: Goal failed");
+      }
+
+      Dump_Goal_Handle = nullptr;
+      has_goal_ = false;
+      loop_rate.sleep();
     }
   }; // class DumpActionServer
 
