@@ -50,8 +50,7 @@ RUN rosdep update
 
 # Source the ROS setup file
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
-RUN echo "source /workspaces/REAPER/src/main_ws/install/setup.bash" >> ~/.bashrc
-RUN echo "source /workspaces/REAPER/src/micro_ws/install/setup.bash" >> ~/.bashrc
+RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 
 ###############################################################################
 #                                                                             #
