@@ -1,4 +1,5 @@
-FROM ubuntu:18.04
+FROM ros:humble-ros-base-jammy
+# FROM ubuntu:18.04
 
 RUN apt-get update && apt-get install -y \
         git \
