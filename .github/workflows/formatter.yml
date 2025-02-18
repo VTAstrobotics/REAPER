@@ -17,7 +17,10 @@ jobs:
         run: cp ./.devcontainer/Dockerfile ./.github/actions/cppformat
 
       - name: Modify Dockerfile for clang testing
-        run: echo "COPY ./.github/actions/cppformat/entrypoint.sh /entrypoint.sh\\nRUN chmod +x /entrypoint.sh\\nENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
+        run: |
+          echo "COPY ./.github/actions/cppformat/entrypoint.sh /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
+          echo "RUN chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
+          echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
 
       - name: Clang Code Formatter
         uses: ./.github/actions/cppformat
