@@ -13,18 +13,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
-      - name: Copy formatting
-        run: cp ./.clang-format ./.github/actions/cppformat
-
-      - name: Copy formatting
-        run: cp ./.clang-tidy ./.github/actions/cppformat
-
-      - name: Copy src for formatting
-        run: cp -r ./src ./.github/actions/cppformat
-
       - name: Copy Dockerfile
         run: cp ./.devcontainer/Dockerfile ./.github/actions/cppformat
 
+      - name: Modify Dockerfile for clang testing
+        run: echo "COPY ./.github/actions/cppformat/entrypoint.sh /entrypoint.sh\nRUN chmod +x /entrypoint.sh\nENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
+"
       - name: Clang Code Formatter
         uses: ./.github/actions/cppformat
         env:
