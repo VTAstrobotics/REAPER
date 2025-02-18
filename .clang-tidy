@@ -1,0 +1,8 @@
+Checks: 'readability-identifier-naming'
+CheckOptions:
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case # snake case
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case # snake case
+  - key: readability-identifier-naming.MemberSuffix
+    value: '_'
