@@ -16,6 +16,9 @@ jobs:
       - name: Copy formatting
         run: cp ./.clang-format ./.github/actions/cppformat
 
+      - name: Copy formatting
+        run: cp ./.clang-tidy ./.github/actions/cppformat
+
       - name: Clang Code Formatter
         uses: ./.github/actions/cppformat
         env:
