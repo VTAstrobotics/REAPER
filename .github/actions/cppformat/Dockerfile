@@ -1,5 +1,5 @@
 FROM ros:humble-ros-base-jammy
-# FROM ubuntu:18.04
+FROM ubuntu:18.04
 
 RUN apt-get update && apt-get install -y \
         git \
@@ -20,6 +20,7 @@ RUN apt-get install -y lsb-release \
 
 COPY .clang-format /.clang-format
 COPY .clang-tidy /.clang-tidy
+COPY src/ /src/
 
 # Basic ROS2 setup
 RUN apt-get update && apt-get install -y --no-install-recommends \
