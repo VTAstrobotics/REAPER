@@ -18,6 +18,10 @@ RUN apt-get install -y lsb-release \
     && ln -s $(which clang-format-16) /usr/local/bin/clang-format
 
 COPY .clang-format /.clang-format
+COPY .clang-tidy /.clang-tidy
+
+# for clang-tidy
+RUN colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
