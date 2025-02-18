@@ -155,6 +155,17 @@ private:
         /**********************************************************************
          *                                                                    *
          * BUTTON CONTROLS                                                    *
+         * raw.buttons[BUTTON_A] // Dump 0.01m^3 but pending force sensors    *
+         * raw.buttons[BUTTON_B] // Dig auto scoop                            *
+         * raw.buttons[BUTTON_X] // Dump 0.1m^3 but pending force sensors     *
+         * raw.buttons[BUTTON_Y] // toggle slow turn mode                     *
+         * raw.buttons[BUTTON_LBUMPER] // Lower dig linkage                   *
+         * raw.buttons[BUTTON_RBUMPER] // Raise dig linkage                   *
+         * raw.buttons[BUTTON_BACK] //                                        *
+         * raw.buttons[BUTTON_START] //                                       *
+         * raw.buttons[BUTTON_MANUFACTURER] //                                *
+         * raw.buttons[BUTTON_LSTICK] //                                      *
+         * raw.buttons[BUTTON_RSTICK] //                                      *
          *                                                                    *
          **********************************************************************/
 
@@ -225,28 +236,28 @@ private:
          *                                                                    *
          * PRIMARY DRIVER AXIS CONTROLS                                       *
          *                                                                    *
-         *  raw.axes[AXIS_LEFTX] // Drive turn                                *
-         *  raw.axes[AXIS_LEFTY] //                                           *
+         * raw.axes[AXIS_LEFTX] // Drive turn                                 *
+         * raw.axes[AXIS_LEFTY] // Dump (up = dump)                           *
          *                                                                    *
-         *  raw.axes[AXIS_RIGHTX] //                                          *
-         *  raw.axes[AXIS_RIGHTY] // Dig bucket rotation (up lifts front)     *
-         *  raw.axes[AXIS_LTRIGGER] // Drive reverse throttle                 *
-         *  raw.axes[AXIS_RTRIGGER] // Drive forward throttle                 *
-         *  raw.axes[AXIS_DPAD_X] //                                          *
-         *  raw.axes[AXIS_DPAD_Y] //                                          *
-         *                                                                    *
-         *  drive_vel.linear.x; // straight                                   *
-         *  drive_vel.linear.y; //                                            *
-         *  drive_vel.linear.z; //                                            *
-         *  drive_vel.angular.x; //                                           *
-         *  drive_vel.angular.y; //                                           *
-         *  drive_vel.angular.z; // turn (positive left, negative right)      *
+         * raw.axes[AXIS_RIGHTX] //                                           *
+         * raw.axes[AXIS_RIGHTY] // Dig bucket rotation (up lifts front)      *
+         * raw.axes[AXIS_LTRIGGER] // Drive reverse throttle                  *
+         * raw.axes[AXIS_RTRIGGER] // Drive forward throttle                  *
+         * raw.axes[AXIS_DPAD_X] // Dump constant speed (left = dump)         *
+         * raw.axes[AXIS_DPAD_Y] //                                           *
          *                                                                    *
          **********************************************************************/
 
         /**********************************************************************
          *                                                                    *
          * DRIVETRAIN CONTROLS                                                *
+         *                                                                    *
+         * drive_vel.linear.x; // straight                                    *
+         * drive_vel.linear.y; //                                             *
+         * drive_vel.linear.z; //                                             *
+         * drive_vel.angular.x; //                                            *
+         * drive_vel.angular.y; //                                            *
+         * drive_vel.angular.z; // turn (positive left, negative right)       *
          *                                                                    *
          **********************************************************************/
 
