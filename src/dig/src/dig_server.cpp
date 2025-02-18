@@ -9,7 +9,8 @@
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "std_msgs/msg/float32.hpp"
 
-// #include "SparkMax.hpp"
+#include "SparkMax.hpp"
+#include "PIDController.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -47,6 +48,7 @@ namespace dig_server
         rcutils_reset_error();
       }
 
+      // Linkage motor configuration
       configs::Slot0Configs linkPIDConfig{};
       float K_u = 3.9, T_u = 0.04;
       linkPIDConfig.kP = 0.8 * K_u;
@@ -64,6 +66,14 @@ namespace dig_server
       l_link_pwr_duty_cycle_.OverrideBrakeDurNeutral = true;
       l_link_pos_duty_cycle_.OverrideBrakeDurNeutral = true;
 
+      // enable brake mode
+      controls::StaticBrake static_brake;
+      l_link_mtr_.SetControl(static_brake);
+
+      // set right motors to follow left motors
+      r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
+
+      // Bucket motor configuration
       configs::Slot0Configs bcktPIDConfig{};
       K_u = 3.9, T_u = 0.04; // TODO: tune these values for the bucket.
       bcktPIDConfig.kP = 0.8 * K_u;
@@ -77,31 +87,46 @@ namespace dig_server
       l_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
       r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
 
-      // TODO finish this?
-      // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
-
       // enable brake mode
-      controls::StaticBrake static_brake;
-      l_link_mtr_.SetControl(static_brake);
       l_bckt_mtr_.SetControl(static_brake);
 
       // set right motors to follow left motors
-      r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
-      // TODO: hardstop
+      // TODO finish this?
+      // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
-      // l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      // l_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      // l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      // l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      // l_vib_mtr_.BurnFlash();
+      // Left vibration motor (neo550) configuration
+      l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      l_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      l_vib_mtr_.BurnFlash();
 
-      // r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      // r_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      // r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      // r_vib_mtr_.BurnFlash();
+      // Right vibration motor (neo550) configuration
+      r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      r_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      r_vib_mtr_.BurnFlash();
+
+      // Hardstop linear actuator configuration
+      hstp_mtr_.SetIdleMode(IdleMode::kBrake);
+      hstp_mtr_.SetMotorType(MotorType::kBrushed);
+      hstp_mtr_.SetSmartCurrentFreeLimit(10.0);
+      hstp_mtr_.SetSmartCurrentStallLimit(10.0);
+
+      PIDController hstp_pid(hstp_mtr_);
+      K_u = 3.9, T_u = 0.04; // TODO: tune these values for the hardstop.
+      hstp_pid.SetP(0, 0.8 * K_u);
+      hstp_pid.SetI(0, 0.);
+      hstp_pid.SetD(0, 0.1 * K_u * T_u); // 0; PD controller
+
+      // Configure smart motion settings for velocity control
+      hstp_pid.SetSmartMotionMaxVelocity(0, 100.);  // Max velocity in RPM
+      hstp_pid.SetSmartMotionMaxAccel(0, 10.);     // Max acceleration in RPM/s
+
+      hstp_mtr_.BurnFlash();
 
       RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }
@@ -121,16 +146,17 @@ namespace dig_server
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX r_bckt_mtr_{40, "can0"};
 
-    // hardstop
-    // TODO
+    // hardstop linear actuator
+    SparkMax hstp_mtr_{"can0", 26};
 
     // vibration motors
-    // SparkMax l_vib_mtr_{"can0", 50};
-    // SparkMax r_vib_mtr_{"can0", 51};
+    SparkMax l_vib_mtr_{"can0", 50};
+    SparkMax r_vib_mtr_{"can0", 51};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{15};
     std::shared_ptr<GoalHandleDig> dig_goal_handle_;
+    const float HSTP_VEL_{2.9}; // in/s. estimate. TODO: remove when sensor
 
     // subs to actuator position topics
     // should always be aligned so only 1 per pair of acts
@@ -156,7 +182,15 @@ namespace dig_server
     // if this is negative 987654 then it means that we have not reseeded the starting pos for the run.
     // Note that even the absolute value is an entirely unrealistic position and a recognizable number.
     float starting_hstp_pos_{-987654};
-    float current_hstp_pos_{-987654};
+    float current_hstp_pos_{0}; // TODO this is temporary ok
+
+    // position limits
+    const float LINK_MIN_POS_{-1000000}; // TODO replace temp value
+    const float LINK_MAX_POS_{1000000}; // TODO replace temp value
+    const float BCKT_MIN_POS_{-1000000}; // TODO replace temp value
+    const float BCKT_MAX_POS_{1000000}; // TODO replace temp value
+    const float HSTP_MIN_POS_{0};
+    const float HSTP_MAX_POS_{4096};
 
     // lookup table for auto dig
 // time (s),actuator angle (rots),bucket angle (rots), linact hardstop (encoder [0,4096]),vibration (duty cycle [-1,1])
@@ -205,7 +239,7 @@ namespace dig_server
     }
 
     /**
-     * this gets us the sensor data for where our rotation motors are at
+     * this gets us the sensor data for where our hardstop is at
      */
     void dig_hstp_cb(const std_msgs::msg::Float32 msg){
       RCLCPP_INFO(this->get_logger(), "/dig/hstp: %f", msg.data);
@@ -260,8 +294,10 @@ namespace dig_server
       (void)goal_handle; // for unused warning
 
       // stop motion
-      l_link_pwr_duty_cycle_.Output = 0;
-      l_bckt_pwr_duty_cycle_.Output = 0;
+      link_pwr(0);
+      bckt_pwr(0);
+      vib_pwr(0);
+      hstp_pwr(0);
 
       // set class vars
       dig_goal_handle_ = nullptr;
@@ -309,21 +345,71 @@ namespace dig_server
      *************************************************************************/
 
     /**
+     * sets the linkage motors to run with a specific duty cycle
+     * @param pwr the duty cycle for the motors to run at. accepts [-1, 1]
+     */
+    void link_pwr(double pwr) {
+      if (pwr < -1 || pwr > 1)
+      {
+        RCLCPP_ERROR(this->get_logger(), "link_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
+        // TODO: should this just be set to 0?
+        std::clamp(pwr, -1., 1.);
+      }
+
+      l_link_pwr_duty_cycle_.Output = pwr;
+      l_link_mtr_.SetControl(l_link_pwr_duty_cycle_);
+    }
+
+    /**
+     * sets the bucket motors to run with a specific duty cycle
+     * @param pwr the duty cycle for the motors to run at. accepts [-1, 1]
+     */
+    void bckt_pwr(double pwr) {
+      if (pwr < -1 || pwr > 1)
+      {
+        RCLCPP_ERROR(this->get_logger(), "link_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
+        // TODO: should this just be set to 0?
+        std::clamp(pwr, -1., 1.);
+      }
+
+      l_bckt_pwr_duty_cycle_.Output = pwr;
+      l_bckt_mtr_.SetControl(l_bckt_pwr_duty_cycle_);
+    }
+
+    /**
      * sets the vibration motors to run with a specific duty cycle
      * @param pwr the duty cycle for the motors to run at. accepts [-1, 1]
      */
-    // void vib_pwr(double pwr){
-    //   if (pwr < -1 || pwr > 1)
-    //   {
-    //     RCLCPP_ERROR(this->get_logger(), "vib_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
-    //   }
+    void vib_pwr(double pwr){
+      if (pwr < -1 || pwr > 1)
+      {
+        RCLCPP_ERROR(this->get_logger(), "vib_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
+        // TODO: should this just be set to 0?
+        std::clamp(pwr, -1., 1.);
+      }
 
-    //   l_vib_mtr_.Heartbeat();
-    //   r_vib_mtr_.Heartbeat();
+      l_vib_mtr_.Heartbeat();
+      r_vib_mtr_.Heartbeat();
 
-    //   l_vib_mtr_.SetDutyCycle(pwr);
-    //   r_vib_mtr_.SetDutyCycle(pwr);
-    // }
+      l_vib_mtr_.SetDutyCycle(pwr);
+      r_vib_mtr_.SetDutyCycle(pwr);
+    }
+
+    /**
+     * sets the hardstop motor to run with a specific duty cycle
+     * @param pwr the duty cycle for the motor to run at. accepts [-1, 1]
+     */
+    void hstp_pwr(double pwr){
+      if (pwr < -1 || pwr > 1)
+      {
+        RCLCPP_ERROR(this->get_logger(), "hstp_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
+        // TODO: should this just be set to 0?
+        std::clamp(pwr, -1., 1.);
+      }
+
+      hstp_mtr_.Heartbeat();
+      hstp_mtr_.SetDutyCycle(pwr);
+    }
 
     /**
      * runs the dig motors to a duty cycle goal
@@ -347,6 +433,12 @@ namespace dig_server
           vibrtn_goal < -1 || vibrtn_goal > 1)
       {
         RCLCPP_ERROR(this->get_logger(), "execute_pwr: Goal was out of bounds. Power goals should always be in [-1, 1]");
+
+        // TODO: should this just be set to 0?
+        std::clamp(lnkage_goal, -1., 1.);
+        std::clamp(bucket_goal, -1., 1.);
+        std::clamp(hrdstp_goal, -1., 1.);
+        std::clamp(vibrtn_goal, -1., 1.);
       }
 
       auto feedback = std::make_shared<Dig::Feedback>();
@@ -370,16 +462,10 @@ namespace dig_server
       RCLCPP_DEBUG(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
       ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
 
-      l_link_pwr_duty_cycle_.Output = lnkage_goal;
-      l_bckt_pwr_duty_cycle_.Output = bucket_goal;
-
-      l_link_mtr_.SetControl(l_link_pwr_duty_cycle_);
-      l_bckt_mtr_.SetControl(l_bckt_pwr_duty_cycle_);
-
-      // TODO: hardstop
-
-      // vibration motors duty cycle
-      // vib_pwr(vibrtn_goal);
+      link_pwr(lnkage_goal);
+      bckt_pwr(bucket_goal);
+      vib_pwr(vibrtn_goal);
+      hstp_pwr(hrdstp_goal);
 
       linkPercentDone = 100;
       bcktPercentDone = 100;
@@ -411,19 +497,89 @@ namespace dig_server
      *************************************************************************/
 
     /**
+     * Checks if the requested position is in the bounds
+     * @param pos is the requested position
+     * @param min is the minimum boundary
+     * @param max is the maximum boundary
+     * @return true if in bounds, fales if out of bounds
+     */
+    bool pos_in_bounds(double pos, double min, double max) {
+      return !(pos < min || pos > max);
+    }
+
+    /**
+     * Checks if the requested position is in the linkage bounds
+     * @param pos is the requested position to drive the linkage
+     * @return true if in bounds, fales if out of bounds
+     */
+    bool linkage_in_bounds(double pos) {
+      if (pos_in_bounds(pos, LINK_MIN_POS_, LINK_MAX_POS_)) {
+        return true;
+      } else {
+        RCLCPP_ERROR(this->get_logger(), "linkage_in_bounds: Linkage goal was out of bounds. Linkage goal was %f but should be in [%f, %f]", pos, LINK_MIN_POS_, LINK_MAX_POS_);
+        return false;
+      }
+    }
+
+    /**
+     * Checks if the requested position is in the bucket bounds
+     * @param pos is the requested position to drive the bucket
+     * @return true if in bounds, fales if out of bounds
+     */
+    bool bucket_in_bounds(double pos) {
+      if (pos_in_bounds(pos, BCKT_MIN_POS_, BCKT_MAX_POS_)) {
+        return true;
+      } else {
+        RCLCPP_ERROR(this->get_logger(), "bucket_in_bounds: Bucket goal was out of bounds. Bucket goal was %f but should be in [%f, %f]", pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
+        return false;
+      }
+    }
+
+    /**
+     * Checks if the requested position is in the hardstop bounds
+     * @param pos is the requested position to drive the hardstop
+     * @return true if in bounds, fales if out of bounds
+     */
+    bool hrdstp_in_bounds(double pos) {
+      if (pos_in_bounds(pos, HSTP_MIN_POS_, HSTP_MAX_POS_)) {
+        return true;
+      } else {
+        RCLCPP_ERROR(this->get_logger(), "hrdstp_in_bounds: Hardstop goal was out of bounds. Hardstop goal was %f but should be in [%f, %f]", pos, HSTP_MIN_POS_, HSTP_MAX_POS_);
+        return false;
+      }
+    }
+
+    /**
+     * Checks if the requested positions are in bounds
+     * @param lnkage_pos is the requested position to drive the linkage
+     * @param bucket_pos is the requested position to drive the bucket
+     * @param hrdstp_pos is the requested position to drive the hardstop
+     * @return true if ALL in bounds, fales if ANY out of bounds
+     */
+    bool positions_in_bounds(double lnkage_pos, double bucket_pos, double hrdstp_pos) {
+      return (linkage_in_bounds(lnkage_pos) && bucket_in_bounds(bucket_pos) && hrdstp_in_bounds(hrdstp_pos));
+    }
+
+    /**
      * given a goal, set motors to go to that goal
      * no vibration motors bc position control makes no sense for them
      * @param lnkage_goal position in rotations for the linkage motors
      * @param bucket_goal position in rotations for the bucket  motors
-     * @param hrdstp_goal position in encoder ticks for the hardstop motor
+     * @param hrdstp_goal position in encoder ticks for the hardstop motor [0, 4096]
+     * @param start_time TODO remove this parameter but it's just to estimate wehre the hardstop is until we get sensor
      */
-    void goto_pos(double lnkage_goal, double bucket_goal, double hrdstp_goal)
+    void goto_pos(double lnkage_goal, double bucket_goal, double hrdstp_goal, double start_time)
     {
+      if (!positions_in_bounds(lnkage_goal, bucket_goal, hrdstp_goal))
+      {
+        RCLCPP_ERROR(this->get_logger(), "goto_pos: Goal was out of bounds");
+        return;
+      }
+
       // TODO: need to factor in the absolute encoders (and any other sensor data) from the callback above
       current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue();
       current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue();
       // TODO: hardstop
-      (void)hrdstp_goal; // for unused warning
 
       RCLCPP_DEBUG(this->get_logger(), "Running for %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
       ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
@@ -441,7 +597,19 @@ namespace dig_server
       l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
       l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
 
-      // TODO: hardstop
+      // TODO: hardstop (need sensor lol)
+      // hstp_pid.SetReference(100, CtrlType::kPosition);
+
+      // temporarily use power/time
+      // 3 in/s unloaded, 2.5 full load. maybe we can assume like 2.9 and tune?
+      float hstp_duty_cycle = 1 ? (hrdstp_goal - current_hstp_pos_) : -1;
+      hstp_pwr(hstp_duty_cycle);
+      // TODO remove this when we get hstop sensor !
+      // update estimate pos temporary power time estimate
+      // duty cycle drives the direction
+      // (duration extending) x (current_power) x (max_speed)
+      current_hstp_pos_ += (this->now().seconds() - start_time) * hstp_duty_cycle * HSTP_VEL_;
+      RCLCPP_DEBUG(this->get_logger(), "current_hstp_pos_ = %f", current_hstp_pos_);
     }
 
     /**
@@ -487,10 +655,11 @@ namespace dig_server
         }
 
         // linkage, bucket, and hardstop to a set position
-        goto_pos(lnkage_goal, bucket_goal, hrdstp_goal);
+        double start_time = this->now().seconds(); // TODO: remove this once hstp sensor
+        goto_pos(lnkage_goal, bucket_goal, hrdstp_goal, start_time);
 
         // vibration motors duty cycle
-        // vib_pwr(vibrtn_goal);
+        vib_pwr(vibrtn_goal);
 
         linkPercentDone = (abs(lnkage_goal) - abs(current_link_pos_))/abs(lnkage_goal) * 100;
         bcktPercentDone = (abs(bucket_goal) - abs(current_bckt_pos_))/abs(bucket_goal) * 100;
@@ -577,10 +746,11 @@ namespace dig_server
           }
 
           // linkage, bucket, and hardstop to a set position
-          goto_pos(LOOKUP_TB_[i][1], LOOKUP_TB_[i][2], LOOKUP_TB_[i][3]);
+          double start_time = this->now().seconds(); // TODO: remove this once hstp sensor
+          goto_pos(LOOKUP_TB_[i][1], LOOKUP_TB_[i][2], LOOKUP_TB_[i][3], start_time);
 
           // vibration motors duty cycle
-          // vib_pwr(LOOKUP_TB_[i][4]);
+          vib_pwr(LOOKUP_TB_[i][4]);
 
           linkPercentDone = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
           bcktPercentDone = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
