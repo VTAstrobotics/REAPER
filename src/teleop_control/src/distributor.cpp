@@ -75,7 +75,9 @@ private:
      * array structure is same as the joy message buttons array!
     */
     float last_btn_press_[11];
-    const float BUTTON_COOLDOWN_MS_ = 50;
+    const float BUTTON_COOLDOWN_MS_ = 0.050;
+    bool teleop_disabled_ = false;
+    bool stop_mode_ = false;
 
     /**
      * Given the button index, returns true if there was a valid press
@@ -111,7 +113,16 @@ private:
     */
     void joy1_cb(const sensor_msgs::msg::Joy& raw)
     {
+        const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
+        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw) && !stop_mode_) {
+            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
+            teleop_disabled_ = !teleop_disabled_;
+            stop_mode_ = true;
+        } else {
+            stop_mode_ = false;
+        }
 
+        if (teleop_disabled_) { return; }
         /**********************************************************************
          *                                                                    *
          * ACTION SERVER GOALS                                                *
@@ -202,12 +213,6 @@ private:
             RCLCPP_INFO(this->get_logger(), "Xbox: Not yet implemented. Doing nothing...");
         }
 
-        const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
-        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw)) {
-            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
-            rclcpp::shutdown();
-        }
-
         if (valid_press(BUTTON_LSTICK, raw)) {
             RCLCPP_INFO(this->get_logger(), "LS (down): Not yet implemented. Doing nothing...");
         }
@@ -296,14 +301,22 @@ private:
          *                                                                    *
          **********************************************************************/
         if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
-            // i think eventually this would be good for manual dumping, but
-            // dump action server does not support this yet
-            RCLCPP_INFO(this->get_logger(), "Dpad X: Not yet implemented. Doing nothing...");
+            dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
+            RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
+            dump_goal.auton = false;
+            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
         if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
             RCLCPP_INFO(this->get_logger(), "Dpad Y: Not yet implemented. Doing nothing...");
         }
+
+        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+        float LSY = raw.axes[AXIS_LEFTY];
+
+        // Apply cubic function for better control
+        LSY = std::pow(LSY, 3);
+        dump_goal.pwr_goal = LSY;
 
         /**********************************************************************
          *                                                                    *
@@ -314,6 +327,7 @@ private:
          * should send.                                                       *
          *                                                                    *
          **********************************************************************/
+	drive_goal.velocity_goal = drive_vel;
         this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
         this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);

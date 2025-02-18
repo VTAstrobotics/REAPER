@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo build.sh:
-
 # Check if the script is being sourced or run directly
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "build.sh: [ERROR]: This script must be sourced, not executed."
@@ -9,7 +7,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-cd /workspaces/REAPER
+# cd /workspaces/REAPER
 
 echo build.sh: building
 
