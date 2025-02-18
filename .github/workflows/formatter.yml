@@ -18,7 +18,7 @@ jobs:
 
       - name: Modify Dockerfile for clang testing
         run: echo "COPY ./.github/actions/cppformat/entrypoint.sh /entrypoint.sh\nRUN chmod +x /entrypoint.sh\nENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
-"
+
       - name: Clang Code Formatter
         uses: ./.github/actions/cppformat
         env:
