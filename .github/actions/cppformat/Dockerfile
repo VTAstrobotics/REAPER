@@ -20,5 +20,6 @@ RUN apt-get install -y lsb-release \
 COPY .clang-format /.clang-format
 
 COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
