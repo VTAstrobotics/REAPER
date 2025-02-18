@@ -20,7 +20,7 @@ RUN apt-get install -y lsb-release \
 
 COPY .clang-format /.clang-format
 COPY .clang-tidy /.clang-tidy
-COPY src/ /src/
+COPY src/ /
 
 # Basic ROS2 setup
 RUN apt-get update && apt-get install -y --no-install-recommends \
