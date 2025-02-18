@@ -73,7 +73,7 @@ namespace dump_server
         const rclcpp_action::GoalUUID &uuid,
         std::shared_ptr<const Dump::Goal> goal)
     {
-      RCLCPP_INFO(this->get_logger(), "Received goal request with order %f", goal->deposition_goal);
+      RCLCPP_INFO(this->get_logger(), "Received goal request with order %f m^3 or %f power", goal->deposition_goal, goal->pwr_goal);
       (void)uuid;
       if(!has_goal){
         RCLCPP_INFO(this->get_logger(),"Accepted Goal and Will soon Execute it");
@@ -165,9 +165,9 @@ namespace dump_server
     {
       RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
 
-      rclcpp::Rate loop_rate(loop_rate_hz);
       const auto goal = goal_handle->get_goal();
-      double power_goal  = goal->pwr_goal;
+      double power_goal = goal->pwr_goal;
+
       auto feedback = std::make_shared<Dump::Feedback>();
       auto result = std::make_shared<Dump::Result>();
       auto &amountDone = feedback->percent_done;
@@ -188,18 +188,17 @@ namespace dump_server
         return;
       }
 
-      double speed = goal->pwr_goal;
-      conveyorDutyCycle.Output = speed;
-      conveyorMotor.SetControl(conveyorDutyCycle);
+      ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(loop_rate_hz)));
 
-      RCLCPP_INFO(this->get_logger(), "The motor should be running");
-      amountDone = volume_deposited/goal->deposition_goal * 100;
+      conveyorDutyCycle.Output = power_goal;
+      conveyorMotor.SetControl(conveyorDutyCycle);
+      amountDone = 100;
 
       goal_handle->publish_feedback(feedback);
 
       if (rclcpp::ok())
       {
-        result->est_deposit_goal = volume_deposited;
+        result->est_deposit_goal = power_goal;
 
         goal_handle->succeed(result);
         RCLCPP_INFO(this->get_logger(), "execute_pwr: Goal succeeded");
@@ -209,7 +208,6 @@ namespace dump_server
 
       Dump_Goal_Handle = nullptr;
       has_goal = false;
-      loop_rate.sleep();
     }
   }; // class DumpActionServer
 

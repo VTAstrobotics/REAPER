@@ -301,14 +301,22 @@ private:
          *                                                                    *
          **********************************************************************/
         if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
-            // i think eventually this would be good for manual dumping, but
-            // dump action server does not support this yet
-            RCLCPP_INFO(this->get_logger(), "Dpad X: Not yet implemented. Doing nothing...");
+            dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
+            RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
+            dump_goal.auton = false;
+            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
         if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
             RCLCPP_INFO(this->get_logger(), "Dpad Y: Not yet implemented. Doing nothing...");
         }
+
+        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+        float LSY = raw.axes[AXIS_LEFTY];
+
+        // Apply cubic function for better control
+        LSY = std::pow(LSY, 3);
+        dump_goal.pwr_goal = LSY;
 
         /**********************************************************************
          *                                                                    *
