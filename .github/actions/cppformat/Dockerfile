@@ -1,5 +1,5 @@
 FROM ros:humble-ros-base-jammy
-# FROM ubuntu:18.04
+FROM ubuntu:18.04
 
 RUN apt-get update && apt-get install -y \
         git \
@@ -29,9 +29,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     && pip3 install setuptools==58.2.0 \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# for clang-tidy
-RUN colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
