@@ -20,6 +20,14 @@ RUN apt-get install -y lsb-release \
 COPY .clang-format /.clang-format
 COPY .clang-tidy /.clang-tidy
 
+# Basic ROS2 setup
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-desktop=0.10.0-1* \
+    python3 \
+    python3-pip \
+    && pip3 install setuptools==58.2.0 \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 # for clang-tidy
 RUN colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
