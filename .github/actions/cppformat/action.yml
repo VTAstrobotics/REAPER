@@ -2,4 +2,4 @@ name: 'clang-format Code Formatter'
 description: 'Runs clang-format on source code'
 runs:
   using: 'docker'
-  image: 'oldDockerfile'
+  image: 'Dockerfile'
