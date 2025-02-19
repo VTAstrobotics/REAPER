@@ -1,10 +1,12 @@
 #!/bin/bash
 
+echo "1"
 sh -c "git config --global --add safe.directory $PWD"
+echo "2"
 
 set -eu
 
-sh sudo chmod -R 777 /github/
+echo "3"
 REPO_FULLNAME=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
 
 echo "## Initializing git repo..."
