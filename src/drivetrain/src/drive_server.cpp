@@ -37,14 +37,14 @@ namespace drive_server
         left_motor.SetIdleMode(IdleMode::kBrake);
         left_motor.SetMotorType(MotorType::kBrushless);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(40.0); // 0.8 Nm
+        left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         left_motor.BurnFlash();
 
         right_motor.SetIdleMode(IdleMode::kBrake);
         right_motor.SetMotorType(MotorType::kBrushless);
         right_motor.SetInverted(true);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(40.0); // 0.8 Nm
+        left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         right_motor.BurnFlash();
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
@@ -118,8 +118,8 @@ namespace drive_server
       double linear  = goal->velocity_goal.linear.x;
       double angular = goal->velocity_goal.angular.z;
 
-      double v_left  = (linear  - 0.5 * angular * track_width)/normalization_constant;
-      double v_right = (linear  + 0.5 * angular * track_width)/normalization_constant;
+      double v_left  = linear  - angular;
+      double v_right = linear  + angular;
 
 
       auto start_time = this->now();
