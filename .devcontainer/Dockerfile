@@ -83,8 +83,6 @@ RUN sudo apt-get install -y \
 #         sudo apt install -y ros-humble-turtlebot3-gazebo; \
 #     fi
 
-RUN echo "test"
-
 # set environment variables for navigation
 ENV TURTLEBOT3_MODEL=waffle \
     GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/opt/ros/humble/share/turtlebot3_gazebo/models

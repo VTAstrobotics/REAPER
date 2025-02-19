@@ -38,14 +38,10 @@
         "vscode": {
             "settings": {},
             "extensions": [
-                // "donjayamanne.githistory",
 				"eamodio.gitlens",
                 "mhutchie.git-graph",
 				"ms-azuretools.vscode-docker",
 				"ms-iot.vscode-ros",
-                // "ms-python.vscode-pylance",
-                // "ms-python.python"
-				// "ms-vscode.cpptools",
 				"ms-vscode.cpptools-extension-pack",
 				"xaver.clang-format",
               ]
