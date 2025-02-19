@@ -306,6 +306,11 @@ private:
         dig_goal.dig_bckt_pwr_goal = RSY;
         dig_goal.dig_bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
 
+        if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
+            RCLCPP_INFO(this->get_logger(), "Dpad Y: Dig hardstop manual control");
+            dig_goal.dig_hstp_pwr_goal = raw.axes[AXIS_DPAD_Y];
+        }
+
         /**********************************************************************
          *                                                                    *
          * DUMP SYSTEM CONTROLS                                               *
@@ -316,10 +321,6 @@ private:
             RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
             dump_goal.auton = false;
             this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
-        }
-
-        if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
-            RCLCPP_INFO(this->get_logger(), "Dpad Y: Not yet implemented. Doing nothing...");
         }
 
         // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
