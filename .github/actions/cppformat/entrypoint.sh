@@ -1,12 +1,9 @@
 #!/bin/bash
 
-echo "1"
 sh -c "git config --global --add safe.directory $PWD"
-echo "2"
 
 set -eu
 
-echo "3"
 REPO_FULLNAME=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
 
 echo "## Initializing git repo..."
@@ -33,10 +30,10 @@ echo "## Running clang-format on C/C++ source"
 SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -f 2)
 
 # for clang-tidy
-colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+# colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 clang-format -style=file -i $SRC
-clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p /workspaces/REAPER/build/ --fix-errors
+# clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p /workspaces/REAPER/build/ --fix-errors
 
 echo "## Commiting files..."
 git commit -am "apply clang-format" || true
