@@ -28,7 +28,7 @@ jobs:
         docker save astro-dev:$(date +%s) -o astro-dev:$(date +%s).tar
 
     - name: Upload the devcontainer image
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: astro-dev:$(date +%s)
         path: astro-dev:$(date +%s).tar
@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Get developer container image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: astro-dev:$(date +%s)
 
