@@ -18,7 +18,7 @@ jobs:
 
       - name: Modify Dockerfile for clang testing
         run: |
-          echo "COPY ./.github/actions/cppformat/entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
+          echo "COPY entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
           echo "RUN chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
           echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
 
