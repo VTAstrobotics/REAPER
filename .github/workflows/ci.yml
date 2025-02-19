@@ -5,9 +5,52 @@ on:
     branches: "main"
 
 jobs:
-  build:
+  build-dev-container:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout
     - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build .devcontainer/ --file .devcontainer/Dockerfile --tag astro-dev:$(date +%s)
+
+    - name: Copy Dockerfile
+      run: cp ./.devcontainer/Dockerfile ./.github/actions/cppformat
+
+    - name: Modify Dockerfile for clang testing
+      run: |
+        echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> ./.github/actions/cppformat/Dockerfile
+        echo "COPY entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
+        echo "RUN sudo chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
+        echo "USER root" >> ./.github/actions/cppformat/Dockerfile
+        echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
+
+    - name: Build the developer container image
+      run: |
+        docker build .devcontainer/ --file .devcontainer/Dockerfile --tag astro-dev:$(date +%s)
+        docker save astro-dev:$(date +%s) -o astro-dev:$(date +%s).tar
+
+    - name: Upload the devcontainer image
+      uses: actions/upload-artifact@v2
+      with:
+        name: astro-dev:$(date +%s)
+        path: astro-dev:$(date +%s).tar
+
+
+  apply-formatting:
+    name: clang-format Code Formatter
+    runs-on: ubuntu-latest
+    needs: build-dev-container
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Get developer container image
+        uses: actions/download-artifact@v2
+        with:
+          name: astro-dev:$(date +%s)
+
+      - name: Load developer container
+        run: docker load -i astro-dev:$(date +%s)
+
+      - name: Clang Code Formatter
+        uses: ./.github/actions/cppformat
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
