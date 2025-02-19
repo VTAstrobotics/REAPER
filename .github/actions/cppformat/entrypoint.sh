@@ -30,6 +30,7 @@ echo "## Running clang-format on C/C++ source"
 SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -f 2)
 
 # for clang-tidy
+source /opt/ros/humble/setup.bash
 colcon build --packages-select action_interfaces
 source install/setup.bash
 colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
