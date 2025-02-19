@@ -24,14 +24,14 @@ jobs:
 
     - name: Build the developer container image
       run: |
-        docker build .devcontainer/ --file .devcontainer/Dockerfile --tag astro-dev:$(date +%s)
-        docker save astro-dev:$(date +%s) -o astro-dev:$(date +%s).tar
+        docker build .devcontainer/ --file .devcontainer/Dockerfile --tag astro-dev:ci
+        docker save astro-dev:ci -o astro-dev:ci.tar
 
     - name: Upload the devcontainer image
       uses: actions/upload-artifact@v4
       with:
-        name: astro-dev:$(date +%s)
-        path: astro-dev:$(date +%s).tar
+        name: astro-dev:ci
+        path: astro-dev:ci.tar
 
 
   apply-formatting:
@@ -45,10 +45,10 @@ jobs:
       - name: Get developer container image
         uses: actions/download-artifact@v4
         with:
-          name: astro-dev:$(date +%s)
+          name: astro-dev:ci
 
       - name: Load developer container
-        run: docker load -i astro-dev:$(date +%s)
+        run: docker load -i astro-dev:ci
 
       - name: Clang Code Formatter
         uses: ./.github/actions/cppformat
