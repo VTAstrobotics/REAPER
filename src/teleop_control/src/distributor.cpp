@@ -51,11 +51,6 @@ public:
         }
     }
 
-    // void send_goal()
-    // {
-
-    // }
-
 private:
 
     /*
@@ -75,6 +70,8 @@ private:
      * array structure is same as the joy message buttons array!
     */
     float last_btn_press_[11];
+    // TODO: toggle and hold button
+
     const float BUTTON_COOLDOWN_MS_ = 0.050;
     bool teleop_disabled_ = false;
     bool stop_mode_ = false;
@@ -204,12 +201,12 @@ private:
 
         if (valid_press(BUTTON_LBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
-            dig_goal.dig_link_pwr_goal += 0.1;
+            dig_goal.link_pwr_goal += 0.1;
         }
 
         if (valid_press(BUTTON_RBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.dig_link_pwr_goal -= 0.1;
+            dig_goal.link_pwr_goal -= 0.1;
         }
 
         if (valid_press(BUTTON_BACK, raw)) {
@@ -303,12 +300,12 @@ private:
 
         // Apply cubic function for better control
         RSY = std::pow(RSY, 3);
-        dig_goal.dig_bckt_pwr_goal = RSY;
-        dig_goal.dig_bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+        dig_goal.bckt_pwr_goal = RSY;
+        dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
 
         if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
             RCLCPP_INFO(this->get_logger(), "Dpad Y: Dig hardstop manual control");
-            dig_goal.dig_hstp_pwr_goal = raw.axes[AXIS_DPAD_Y];
+            dig_goal.hstp_pwr_goal = raw.axes[AXIS_DPAD_Y];
         }
 
         /**********************************************************************
@@ -319,7 +316,6 @@ private:
         if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
             dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
             RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
-            dump_goal.auton = false;
             this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
@@ -339,7 +335,7 @@ private:
          * should send.                                                       *
          *                                                                    *
          **********************************************************************/
-	drive_goal.velocity_goal = drive_vel;
+        drive_goal.velocity_goal = drive_vel;
         this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
         this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
@@ -440,7 +436,7 @@ private:
             return;
         }
 
-        RCLCPP_INFO(this->get_logger(), "Dig linkage at %f and bucket at %f (estimated)", result.result->est_dig_link_goal, result.result->est_dig_bckt_goal);
+        RCLCPP_INFO(this->get_logger(), "Dig linkage at %f and bucket at %f (estimated)", result.result->est_link_goal, result.result->est_bckt_goal);
     }
 
     /**
