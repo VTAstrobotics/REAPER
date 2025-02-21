@@ -14,7 +14,7 @@ echo build.sh: building
 colcon build --packages-select action_interfaces
 source install/setup.bash
 
-colcon build
+colcon build --cmake-args=-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON
 source install/setup.bash
 
 echo build.sh: done
