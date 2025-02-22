@@ -8,7 +8,7 @@
 #include "ctre/phoenix6/CANBus.hpp"
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "std_msgs/msg/float32.hpp"
-
+#include "ctre/phoenix6/mechanisms/SimpleDifferentialMechanism.hpp"
 #include "SparkMax.hpp"
 #include "PIDController.hpp"
 
@@ -34,7 +34,7 @@ namespace dig_server
 
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
-          "dig_action",
+          "dig",
           std::bind(&DigActionServer::handle_goal, this, _1, _2),
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
@@ -52,12 +52,13 @@ namespace dig_server
       // configs::TalonFXConfiguration link_configs{};
       configs::Slot0Configs linkPIDConfig{};
       // configs::Slot0Configs& linkPIDConfig = link_configs.Slot0;
-      float K_u = 5.9, T_u = 0.04;
+      float K_u = 1.0, T_u = 0.04;
       linkPIDConfig.kP = 0.8 * K_u;
       linkPIDConfig.kI = 0; // 0; PD controller
       linkPIDConfig.kD = 0.1 * K_u * T_u;
       l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
       r_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+
 
       configs::CurrentLimitsConfigs linkLimConfig{};
       // linkLimConfig.SupplyCurrentLimit = 60;
@@ -80,16 +81,18 @@ namespace dig_server
       l_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
       r_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
 
+
       // set right motors to follow left motors
-      r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
+      // r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
 
       // Bucket motor configuration
       configs::Slot0Configs bcktPIDConfig{};
-      K_u = 3.9, T_u = 0.04; // TODO: tune these values for the bucket.
+      K_u = 3.5, T_u = 0.04; // TODO: tune these values for the bucket.
       bcktPIDConfig.kP = 0.8 * K_u;
       bcktPIDConfig.kI = 0; // 0; PD controller
       bcktPIDConfig.kD = 0.1 * K_u * T_u;
       l_bckt_mtr_.GetConfigurator().Apply(bcktPIDConfig);
+      r_bckt_mtr_.GetConfigurator().Apply(bcktPIDConfig);
 
       configs::CurrentLimitsConfigs bcktLimConfig{};
       // bcktLimConfig.SupplyCurrentLimit = 40;
@@ -101,12 +104,16 @@ namespace dig_server
       // enable brake mode TODO: test this
       configs::MotorOutputConfigs bckt_mtr_configs{};
       bckt_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
+      bckt_mtr_configs.PeakForwardDutyCycle = 0.1;
+      bckt_mtr_configs.PeakReverseDutyCycle = -0.1;
       l_bckt_mtr_.GetConfigurator().Apply(bckt_mtr_configs);
       r_bckt_mtr_.GetConfigurator().Apply(bckt_mtr_configs);
 
       // set right motors to follow left motors
-      r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
+      // r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
+      linkage_mechanism.ApplyConfigs();
+      bckt_mechanism.ApplyConfigs();
       // TODO finish this?
       // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
@@ -151,12 +158,14 @@ namespace dig_server
     controls::DutyCycleOut l_link_pwr_duty_cycle_{0}; // [-1, 1]
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX r_link_mtr_{23, "can0"};
+    mechanisms::SimpleDifferentialMechanism linkage_mechanism{l_link_mtr_, r_link_mtr_, false};
 
     // bucket rotators
     hardware::TalonFX l_bckt_mtr_{21, "can0"};
     controls::DutyCycleOut l_bckt_pwr_duty_cycle_{0};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX r_bckt_mtr_{24, "can0"};
+    mechanisms::SimpleDifferentialMechanism bckt_mechanism{l_bckt_mtr_, r_bckt_mtr_, true};
 
     // hardstop linear actuator
     // SparkMax hstp_mtr_{"can0", 26};
@@ -173,7 +182,7 @@ namespace dig_server
      * DO NOT CHANGE WITHOUT CHANGING THE ACTION DEFINITION! */
     const float DEFAULT_VAL_{-987654.321};
     const float LINK_GEAR_RATIO_{100}; // 100:1
-    const float BCKT_GEAR_RATIO_{80}; // 80:1
+    const float BCKT_GEAR_RATIO_{75}; // 75:1
     double goal_received_time_{-1}; // in seconds
 
     // subs to actuator position topics
@@ -418,9 +427,9 @@ namespace dig_server
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
         pwr = 0;
       }
+      controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
+      linkage_mechanism.SetControl(position_command);
 
-      l_link_pwr_duty_cycle_.Output = pwr;
-      l_link_mtr_.SetControl(l_link_pwr_duty_cycle_);
     }
 
     /**
@@ -621,7 +630,7 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       if (pos_in_bounds(pos, BCKT_MIN_POS_, BCKT_MAX_POS_)) {
         return true;
       } else {
-        RCLCPP_ERROR(this->get_logger(), "bucket_in_bounds: Bucket goal was out of bounds. Bucket goal was %f but should be in [%f, %f]", pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
+        RCLCPP_ERROR(this->get_logger(), "bucket_in_bounds: B120ggucket goal was out of bounds. Bucket goal was %f but should be in [%f, %f]", pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
         return false;
       }
     }
@@ -645,19 +654,21 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
      * @param pos the position for the linkage to go to
      */
     void link_pos(double pos, double vel = 1) {
+      pos *= LINK_GEAR_RATIO_;
       if (!linkage_in_bounds(pos)) { return; }
       (void)vel; // for unused warning
 
       units::angle::turn_t angle{pos * 1_tr};
       units::angular_velocity::turns_per_second_t speed{vel};
 
-      l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
-      l_link_pos_duty_cycle_.Position = angle;
       // controls::MotionMagicVoltage link_req{0_tr};
       // l_link_mtr_.SetControl(link_req);
-      l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
+      // l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
 
-      current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue();
+      controls::DifferentialPositionDutyCycle position_command{angle, 0 * 0_tr};
+      linkage_mechanism.SetControl(position_command);
+
+      current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue() / LINK_GEAR_RATIO_;
     }
 
     /**
@@ -665,17 +676,21 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
      * @param pos the position for the linkage to go to
      */
     void bckt_pos(double pos, double vel = 1) {
+      pos *= BCKT_GEAR_RATIO_;
       if (!bucket_in_bounds(pos)) { return; }
       (void)vel; // for unused warning
 
       units::angle::turn_t angle{pos * 1_tr};
       units::angular_velocity::turns_per_second_t speed{vel};
 
-      l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
-      l_bckt_pos_duty_cycle_.Position = angle;
-      l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
+      // l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
+      // l_bckt_pos_duty_cycle_.Position = angle;
+      // l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
 
-      current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue();
+      controls::DifferentialPositionDutyCycle position_command{angle, 0 * 0_tr};
+      bckt_mechanism.SetControl(position_command);
+
+      current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue() / BCKT_GEAR_RATIO_;
     }
 
     /**

@@ -40,7 +40,7 @@ public:
         : Node("distributor", options)
     {
         this->dump_ptr_ = rclcpp_action::create_client<Dump>(this, "dump");
-        this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig_action");
+        this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig");
         this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
 
         this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
