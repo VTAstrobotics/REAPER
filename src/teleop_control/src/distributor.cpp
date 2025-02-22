@@ -45,10 +45,11 @@ public:
 
         this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
 
-        for (size_t i = 0; i < sizeof(last_btn_press_)/sizeof(*last_btn_press_); i++)
+        for (int i = 0; i < NUM_BTNS_; i++)
         {
-            last_btn_press_[i] = this->now().seconds();
+            last_btns_.emplace_back(0);
         }
+        RCLCPP_INFO(this->get_logger(), "size = %ld", last_btns_.size());
     }
 
 private:
@@ -69,22 +70,22 @@ private:
      * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
      * array structure is same as the joy message buttons array!
     */
-    float last_btn_press_[11];
+    const int NUM_BTNS_ = 11;
+    std::vector<int> last_btns_; // 1 if the button was pressed in the last joy message; else 0
     // TODO: toggle and hold button
 
-    const float BUTTON_COOLDOWN_MS_ = 0.050;
     bool teleop_disabled_ = false;
-    bool stop_mode_ = false;
 
     /**
-     * Given the button index, returns true if there was a valid press
+     * Given the button index, returns true if there was a valid press.
+     * this means it checks that it wasn't accidentally held for 2 joy messages in a row.
      * @param button INDEX in the arrays
      * @param raw pointer to the raw joy msg
      * @return true if button was pressed AND if it wasn't a duplicate press (i.e. 1 press shouldnt count as 2)
      */
-    bool valid_press (int button, const sensor_msgs::msg::Joy& raw)
+    bool valid_toggle_press (const int button, const sensor_msgs::msg::Joy& raw)
     {
-        return (raw.buttons[button] && ((this->now().seconds() - last_btn_press_[button]) > BUTTON_COOLDOWN_MS_));
+        return (raw.buttons[button] && (!last_btns_[button]));
     }
 
     /**
@@ -94,11 +95,11 @@ private:
      * @param raw pointer to the raw joy msg
      * @return true if all buttons were pressed AND none were duplicate presses
      */
-    bool valid_presses (const int buttons[], const int size, const sensor_msgs::msg::Joy& raw)
+    bool valid_toggle_presses (const int buttons[], const int size, const sensor_msgs::msg::Joy& raw)
     {
         for (int i = 0; i < size; i++)
         {
-            if (!valid_press(buttons[i], raw)) { return false; }
+            if (!valid_toggle_press(buttons[i], raw)) { return false; }
         }
 
         return true;
@@ -111,15 +112,16 @@ private:
     void joy1_cb(const sensor_msgs::msg::Joy& raw)
     {
         const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
-        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw) && !stop_mode_) {
-            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
+        if (valid_toggle_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw)) {
             teleop_disabled_ = !teleop_disabled_;
-            stop_mode_ = true;
-        } else {
-            stop_mode_ = false;
+            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. TOGGLING TO %s", teleop_disabled_ ? "DISABLED" : "ENABLED");
         }
 
-        if (teleop_disabled_) { return; }
+        if (teleop_disabled_) {
+            last_btns_ = raw.buttons;
+            return;
+        }
+
         /**********************************************************************
          *                                                                    *
          * ACTION SERVER GOALS                                                *
@@ -166,31 +168,23 @@ private:
          *                                                                    *
          **********************************************************************/
 
-        if (valid_press(BUTTON_A, raw)) {
-            RCLCPP_INFO(this->get_logger(), "A: Dumping 0.01 m^3");
-
-            dump_goal.deposition_goal = 0.01;
+        if (valid_toggle_press(BUTTON_A, raw)) {
+            RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
 
             this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
-        if (valid_press(BUTTON_B, raw)) {
-            RCLCPP_INFO(this->get_logger(), "B: Digging autonomously disabled until encoder values are known (so we dont break the robot)");
+        if (valid_toggle_press(BUTTON_B, raw)) {
+            RCLCPP_INFO(this->get_logger(), "B: Canceling all goals. Robot should stop. To re-enable robot, press stop sequence (BACK, START, AND XBOX).");
 
-            // dig_goal.auton = true;
-
-            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+            this->drive_ptr_->async_cancel_all_goals();
+            this->dump_ptr_->async_cancel_all_goals();
+            this->dig_ptr_->async_cancel_all_goals();
+            teleop_disabled_ = true;
+            return;
         }
 
-        if (valid_press(BUTTON_X, raw)) {
-            RCLCPP_INFO(this->get_logger(), "X: Dumping 0.1 m^3");
-
-            dump_goal.deposition_goal = 0.01;
-
-            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
-        }
-
-        if (valid_press(BUTTON_Y, raw)) {
+        if (valid_toggle_press(BUTTON_X, raw)) {
             slow_turn_ = !slow_turn_;
             if (slow_turn_) {
                 RCLCPP_INFO(this->get_logger(), "Y: Decreasing the max turning rate");
@@ -198,36 +192,48 @@ private:
                 RCLCPP_INFO(this->get_logger(), "Y: Turning back to full speed");
             }
 
-            // dig_goal.link_pos_goal = 0;
         }
 
-        if (valid_press(BUTTON_LBUMPER, raw)) {
+        if (valid_toggle_press(BUTTON_Y, raw)) {
+            RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
+
+            // dig_goal.link_pos_goal = 0;
+            // dig_goal.bckt_pos_goal = 0;
+            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+        }
+
+        if (valid_toggle_press(BUTTON_LBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
             dig_goal.link_pwr_goal = 0.1;
         }
 
-        if (valid_press(BUTTON_RBUMPER, raw)) {
+        if (valid_toggle_press(BUTTON_RBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
             dig_goal.link_pwr_goal = -0.1;
         }
 
-        if (valid_press(BUTTON_BACK, raw)) {
+        if (valid_toggle_press(BUTTON_BACK, raw)) {
             RCLCPP_INFO(this->get_logger(), "Back: Not yet implemented. Doing nothing...");
+            // dump_goal.deposition_goal = 0.1;
+            // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
-        if (valid_press(BUTTON_START, raw)) {
+        if (valid_toggle_press(BUTTON_START, raw)) {
             RCLCPP_INFO(this->get_logger(), "Start: Not yet implemented. Doing nothing...");
         }
 
-        if (valid_press(BUTTON_MANUFACTURER, raw)) {
+        if (valid_toggle_press(BUTTON_MANUFACTURER, raw)) {
             RCLCPP_INFO(this->get_logger(), "Xbox: Not yet implemented. Doing nothing...");
+
+            // dig_goal.auton = true;
+            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         }
 
-        if (valid_press(BUTTON_LSTICK, raw)) {
+        if (valid_toggle_press(BUTTON_LSTICK, raw)) {
             RCLCPP_INFO(this->get_logger(), "LS (down): Not yet implemented. Doing nothing...");
         }
 
-        if (valid_press(BUTTON_RSTICK, raw)) {
+        if (valid_toggle_press(BUTTON_RSTICK, raw)) {
             RCLCPP_INFO(this->get_logger(), "RS (down): Not yet implemented. Doing nothing...");
         }
 
@@ -341,6 +347,9 @@ private:
         this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
         this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+
+        // set up next iteration
+        last_btns_ = raw.buttons;
     }
 
     /**
