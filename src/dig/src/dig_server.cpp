@@ -49,12 +49,15 @@ namespace dig_server
       }
 
       // Linkage motor configuration
+      // configs::TalonFXConfiguration link_configs{};
       configs::Slot0Configs linkPIDConfig{};
-      float K_u = 3.9, T_u = 0.04;
+      // configs::Slot0Configs& linkPIDConfig = link_configs.Slot0;
+      float K_u = 5.9, T_u = 0.04;
       linkPIDConfig.kP = 0.8 * K_u;
       linkPIDConfig.kI = 0; // 0; PD controller
       linkPIDConfig.kD = 0.1 * K_u * T_u;
       l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+      r_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
 
       configs::CurrentLimitsConfigs linkLimConfig{};
       // linkLimConfig.SupplyCurrentLimit = 60;
@@ -63,18 +66,19 @@ namespace dig_server
       l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
       r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
 
-      // enable brake mode
-      l_link_pwr_duty_cycle_.OverrideBrakeDurNeutral = true;
-      l_link_pos_duty_cycle_.OverrideBrakeDurNeutral = true;
+      // auto& link_mm_configs = link_configs.MotionMagic;
+      // link_mm_configs.MotionMagicCruiseVelocity = 3;
+      // link_mm_configs.MotionMagicAcceleration = 20;
+      // l_link_mtr_.GetConfigurator().Apply(link_configs);
+      // r_link_mtr_.GetConfigurator().Apply(link_configs);
 
       // enable brake mode TODO: test this
-      // controls::StaticBrake static_brake;
-      // l_link_mtr_.SetControl(static_brake);
-      // l_link_mtr_.SetNeutralMode(NeutralMode::Brake); // Set to Brake mode
-      // signals::NeutralModeValue configs::MotorOutputConfigs::NeutralMode {signals::NeutralModeValue::Brake};
-      configs::MotorOutputConfigs l_link_mtr_configs{};
-      l_link_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
-      l_link_mtr_.GetConfigurator().Apply(l_link_mtr_configs);
+      configs::MotorOutputConfigs link_mtr_configs{};
+      link_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
+      link_mtr_configs.PeakForwardDutyCycle = 0.1;
+      link_mtr_configs.PeakReverseDutyCycle = -0.1;
+      l_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
+      r_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
 
       // set right motors to follow left motors
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
@@ -95,11 +99,10 @@ namespace dig_server
       r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
 
       // enable brake mode TODO: test this
-      // l_bckt_mtr_.SetControl(static_brake);
-      // l_bckt_mtr_.SetNeutralMode(NeutralMode::Brake); // Set to Brake mode
-      configs::MotorOutputConfigs l_bckt_mtr_configs{};
-      l_bckt_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
-      l_bckt_mtr_.GetConfigurator().Apply(l_bckt_mtr_configs);
+      configs::MotorOutputConfigs bckt_mtr_configs{};
+      bckt_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
+      l_bckt_mtr_.GetConfigurator().Apply(bckt_mtr_configs);
+      r_bckt_mtr_.GetConfigurator().Apply(bckt_mtr_configs);
 
       // set right motors to follow left motors
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
@@ -480,6 +483,7 @@ namespace dig_server
       RCLCPP_DEBUG_ONCE(this->get_logger(), "execute_pwr: Loop rate %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
       ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
 
+RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().GetValue());
       pwr_func(goal_val);
 
       percent_done = 100;
@@ -519,6 +523,7 @@ namespace dig_server
       std::shared_ptr<Dig::Result> result) {
       double bucket_goal = goal_handle->get_goal()->bckt_pwr_goal;
       float& bckt_percent_done = feedback->percent_bckt_done;
+      RCLCPP_INFO(this->get_logger(), "buck goal = %f", bucket_goal);
 
       execute_pwr(
         goal_handle,
@@ -648,7 +653,11 @@ namespace dig_server
 
       l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
       l_link_pos_duty_cycle_.Position = angle;
+      // controls::MotionMagicVoltage link_req{0_tr};
+      // l_link_mtr_.SetControl(link_req);
       l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
+
+      current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue();
     }
 
     /**
@@ -665,6 +674,8 @@ namespace dig_server
       l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
       l_bckt_pos_duty_cycle_.Position = angle;
       l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
+
+      current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue();
     }
 
     /**
@@ -715,6 +726,7 @@ namespace dig_server
 
       while (!reached_pos(current_pos, goal_val, MIN_POS, MAX_POS))
       {
+        RCLCPP_INFO(this->get_logger(), "cur %f, goal %f, min %f, max %f", current_pos, goal_val, MIN_POS, MAX_POS);
         if (goal_handle->is_canceling()) { return; }
 
         RCLCPP_DEBUG_ONCE(this->get_logger(), "execute_pos: Loop rate %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
@@ -722,7 +734,7 @@ namespace dig_server
 
         pos_func(goal_val, vel);
 
-        percent_done = (abs(goal_val) - abs(current_link_pos_))/abs(goal_val) * 100;
+        percent_done = (abs(goal_val) - abs(current_pos))/abs(goal_val) * 100;
         goal_handle->publish_feedback(feedback);
 
         loop_rate.sleep();

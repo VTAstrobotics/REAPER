@@ -197,16 +197,18 @@ private:
             } else {
                 RCLCPP_INFO(this->get_logger(), "Y: Turning back to full speed");
             }
+
+            // dig_goal.link_pos_goal = 0;
         }
 
         if (valid_press(BUTTON_LBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
-            dig_goal.link_pwr_goal += 0.1;
+            dig_goal.link_pwr_goal = 0.1;
         }
 
         if (valid_press(BUTTON_RBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal -= 0.1;
+            dig_goal.link_pwr_goal = -0.1;
         }
 
         if (valid_press(BUTTON_BACK, raw)) {
