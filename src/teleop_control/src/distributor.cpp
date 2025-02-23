@@ -154,9 +154,9 @@ private:
         /**********************************************************************
          *                                                                    *
          * BUTTON CONTROLS                                                    *
-         * raw.buttons[BUTTON_A] // Dig to ground pos 
+         * raw.buttons[BUTTON_A] // Dig to ground pos
          * raw.buttons[BUTTON_B] // Dig auto scoop                            *
-         * raw.buttons[BUTTON_X] // 
+         * raw.buttons[BUTTON_X] //
          * raw.buttons[BUTTON_Y] // dig to stow/deposit pos
          * raw.buttons[BUTTON_LBUMPER] // Lower dig linkage                   *
          * raw.buttons[BUTTON_RBUMPER] // Raise dig linkage                   *
@@ -170,7 +170,7 @@ private:
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		dump_goal.dig_link_pos_goal = 0; //TODO: set
+		dig_goal.link_pos_goal = 0; //TODO: set
             this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
@@ -195,7 +195,7 @@ private:
         }
 
         if (valid_toggle_press(BUTTON_Y, raw)) {
-		dump_goal.dig_link_pos_goal = 0; //TODO: set
+		dig_goal.link_pos_goal = 0; //TODO: set
             RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
             // dig_goal.link_pos_goal = 0;
@@ -302,7 +302,7 @@ private:
 
 
 	// Cameron
-	
+
 	float LSY = raw.axes[AXIS_LEFTY];
 	LSY = std::pow(LSY, 3);
 	drive_vel.linear.x = LSY;
@@ -339,7 +339,7 @@ private:
 
 
 	//Cameron
-	
+
         float LT = raw.axes[AXIS_LTRIGGER];
         float RT = raw.axes[AXIS_RTRIGGER];
 
@@ -372,7 +372,7 @@ private:
   //          RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
  //           this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
 //        }
-	
+
         if (raw.buttons[BUTTON_B]) {
             dump_goal.pwr_goal = 0.25;
             RCLCPP_INFO(this->get_logger(), "B: Dump with power %f", dump_goal.pwr_goal);
