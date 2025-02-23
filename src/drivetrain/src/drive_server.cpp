@@ -37,14 +37,14 @@ namespace drive_server
         left_motor.SetIdleMode(IdleMode::kBrake);
         left_motor.SetMotorType(MotorType::kBrushless);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(40.0); // 0.8 Nm
+        left_motor.SetSmartCurrentStallLimit(20.0); // 0.8 Nm
         left_motor.BurnFlash();
 
         right_motor.SetIdleMode(IdleMode::kBrake);
         right_motor.SetMotorType(MotorType::kBrushless);
         right_motor.SetInverted(true);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(40.0); // 0.8 Nm
+        left_motor.SetSmartCurrentStallLimit(20.0); // 0.8 Nm
         right_motor.BurnFlash();
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
@@ -105,6 +105,25 @@ namespace drive_server
       std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
     }
 
+    std::vector<double> curvatureDrive(double linear_speed, double z_rotation){
+    	linear_speed = std::clamp(linear_speed, -1.0, 1.0);
+	z_rotation = std::clamp(z_rotation, -1.0 , 1.0);
+
+	double left_speed = linear_speed - z_rotation;
+	double right_speed = linear_speed + z_rotation;
+
+	//this desaturates
+	//
+	double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
+	if(max_magnitude > 1){
+	left_speed /= max_magnitude;
+	right_speed /= max_magnitude; 
+	}
+	std::vector<double> speeds = {left_speed, right_speed};
+	return speeds;
+    
+    
+    }
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
 
@@ -118,8 +137,8 @@ namespace drive_server
       double linear  = goal->velocity_goal.linear.x;
       double angular = goal->velocity_goal.angular.z;
 
-      double v_left  = (linear  - 0.5 * angular * track_width)/normalization_constant;
-      double v_right = (linear  + 0.5 * angular * track_width)/normalization_constant;
+      double v_left  = linear  - angular;
+      double v_right = linear  + angular;
 
 
       auto start_time = this->now();

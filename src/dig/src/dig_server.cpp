@@ -62,7 +62,7 @@ namespace dig_server
 
       configs::CurrentLimitsConfigs linkLimConfig{};
       // linkLimConfig.SupplyCurrentLimit = 60;
-      linkLimConfig.SupplyCurrentLimit = 10; // for testing
+      linkLimConfig.SupplyCurrentLimit = 30; // for testing
       linkLimConfig.SupplyCurrentLimitEnable = true;
       l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
       r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
@@ -96,7 +96,7 @@ namespace dig_server
 
       configs::CurrentLimitsConfigs bcktLimConfig{};
       // bcktLimConfig.SupplyCurrentLimit = 40;
-      bcktLimConfig.SupplyCurrentLimit = 10;
+      bcktLimConfig.SupplyCurrentLimit = 20;
       bcktLimConfig.SupplyCurrentLimitEnable = true;
       l_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
       r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
@@ -427,9 +427,9 @@ namespace dig_server
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
         pwr = 0;
       }
+
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
       linkage_mechanism.SetControl(position_command);
-
     }
 
     /**
@@ -443,8 +443,8 @@ namespace dig_server
         pwr = 0;
       }
 
-      l_bckt_pwr_duty_cycle_.Output = pwr;
-      l_bckt_mtr_.SetControl(l_bckt_pwr_duty_cycle_);
+      controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
+      bckt_mechanism.SetControl(position_command);
     }
 
     /**
