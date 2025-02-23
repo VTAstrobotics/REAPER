@@ -44,8 +44,9 @@ namespace drive_server
         right_motor.SetMotorType(MotorType::kBrushless);
         right_motor.SetInverted(true);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
+        right_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         right_motor.BurnFlash();
+        publisher_ = this->create_publisher<geometry_msgs::msg::twist>("drive velocity", 10);
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
@@ -66,6 +67,8 @@ namespace drive_server
     double track_width{1.0};
     double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
+    double wheelCircumference = 30; //placeholder
+
 
     rclcpp_action::GoalResponse handle_goal(
         const rclcpp_action::GoalUUID &uuid,
@@ -107,6 +110,7 @@ namespace drive_server
 
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
+      geometry_msgs::msg::twist velocity_message;
 
       RCLCPP_INFO(this->get_logger(), "Executing goal");
       rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
@@ -115,8 +119,6 @@ namespace drive_server
 
       auto feedback = std::make_shared<Drive::Feedback>();
       auto result = std::make_shared<Drive::Result>();
-      double linear  = goal->velocity_goal.linear.x;
-      double angular = goal->velocity_goal.angular.z;
 
       double v_left  = linear  - angular;
       double v_right = linear  + angular;
@@ -142,6 +144,16 @@ namespace drive_server
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
         feedback->inst_velocity.linear.x = v_left;
         feedback->inst_velocity.angular.z = v_right; //placeholders
+
+        double left_wheel_rpm  = left_motor.GetVelocity();
+        double right_wheel_rpm = right_motor.GetVelocity();
+        double left_linear  = (wheelCircumference * left_wheel_rpm) / 60.0;
+        double right_linear = (wheelCircumference * right_wheel_rpm) / 60.0;
+        double angular = (right_linear - left_linear) / track_width;
+        velocity_message.linear.x = (right_linear+left_linear)/2;
+        velocity_message.angular.z=angular;
+        publisher_->publish(velocity_message);
+
         goal_handle->publish_feedback(feedback);
 
         loop_rate.sleep();
