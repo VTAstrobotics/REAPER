@@ -43,20 +43,20 @@ class EncoderReader(Node):
 
             else:
                 self.get_logger().warn(f"No response from encoder.")
-        try:
+            
             # Send the message to the bus
             bus.send(message2)
-            self.get_logger().info(f"Message sent: {message}")
+            self.get_logger().info(f"Message 2 sent: {message2}")
 
             # Wait for the response from the encoder
-            response = bus.recv(1.0)  # 1 second timeout
+            response2 = bus.recv(1.0)  # 1 second timeout
 
-            if response:
-                self.get_logger().info(f"Response 2 received: {response}")
+            if response2:
+                self.get_logger().info(f"Response 2 received: {response2}")
                 # Assuming the encoder value is in the last 4 bytes of the response
-                encoder_value = (response.data[6] << 24) | (response.data[5] << 16) | (response.data[4] << 8) | response.data[3]
+                encoder_value = (response2.data[6] << 24) | (response2.data[5] << 16) | (response2.data[4] << 8) | response2.data[3]
                 encoder_value = (encoder_value * 360) / 1024
-                encoder_value = (encoder_value * 2*3.14159)/ 360
+                encoder_value = ((encoder_value * 2*3.14159)/ 360)/(2*3.14159)
 
                 self.get_logger().info(f"Encoder 2 Value: {encoder_value}")
 
@@ -64,7 +64,7 @@ class EncoderReader(Node):
                 self.encoder_publisher.publish(Float64(data=encoder_value))
 
             else:
-                self.get_logger().warn(f"No response from encoder 2.")
+                self.get_logger().warn(f"No response from encoder.")
         except Exception as e:
             self.get_logger().error(f"Error in reading encoder 2 value: {e}")
 
