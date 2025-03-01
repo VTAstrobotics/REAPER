@@ -1,8 +1,4 @@
 {
-<<<<<<< HEAD
-    "cmake.sourceDirectory": "/workspaces/REAPER/src/dig_bucket",
-=======
->>>>>>> main
     "python.autoComplete.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
@@ -10,9 +6,6 @@
     "python.analysis.extraPaths": [
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
-<<<<<<< HEAD
-    ]
-=======
     ],
     "cmake.sourceDirectory": "C:/Users/alexa/OneDrive/Desktop/REAPER/src/action_interfaces",
     "C_Cpp.errorSquiggles": "disabled",
@@ -87,5 +80,4 @@
         "typeindex": "cpp",
         "typeinfo": "cpp"
     }
->>>>>>> main
 }
