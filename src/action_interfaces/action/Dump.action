@@ -1,0 +1,7 @@
+float32 deposition_goal 
+float32 pwr_goal 0
+bool auton false
+---
+float32 est_deposit_goal
+---
+float32 percent_done

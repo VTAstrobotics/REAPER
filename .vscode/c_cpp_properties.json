@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "configurations": [
     {
       "browse": {
@@ -17,4 +18,28 @@
     }
   ],
   "version": 4
+=======
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                "/opt/ros/humble/include/**",
+                "/usr/include/**",
+                "${workspaceFolder}/build/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "gnu11",
+            "cppStandard": "c++17",
+            "compileCommands": [
+                "${workspaceFolder}/build/compile_commands.json"
+            ]
+        }
+    ],
+    "version": 4
+>>>>>>> main
 }

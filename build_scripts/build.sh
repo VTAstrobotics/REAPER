@@ -1,13 +1,20 @@
 #!/bin/bash
 
-printf "\nbuild.sh:\n"
-echo "Changing directory"
-cd /workspaces/REAPER/src/
+# Check if the script is being sourced or run directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "build.sh: [ERROR]: This script must be sourced, not executed."
+    echo "build.sh: [INFO]: Usage: source build.sh"
+    exit 1
+fi
 
-echo "Building project"
-colcon build --symlink-install
+# cd /workspaces/REAPER
 
-echo "Sourcing"
+echo build.sh: building
+
+colcon build --packages-select action_interfaces
 source install/setup.bash
 
-printf "build.sh done.\n\n"
+colcon build --cmake-args=-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON
+source install/setup.bash
+
+echo build.sh: done
