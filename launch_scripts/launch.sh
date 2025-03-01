@@ -7,16 +7,16 @@ source install/setup.bash
 
 # Running
 echo "Launching nodes..."
-ros2 launch controls launch.yaml &
-ros2 launch teleop launch.yaml &
+ros2 run teleop_control Distributor&
+ros2 run dig DigActionServer&
+ros2 run dump DumpActionServer&
+ros2 run drivetrain DriveActionServer&
 ros2 run joy joy_node
-
 # Teardown
 echo "Shutting down..."
 pkill ros2
-pkill dig
-pkill dump
-pkill distrib
-pkill drivetrain
-pkill uart
+pkill Distributor
+pkill DigActionServer
+pkill DumpActionServer
+pkill DriveActionServer
 echo "Killed background processes"
