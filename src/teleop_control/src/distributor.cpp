@@ -97,12 +97,15 @@ private:
      */
     bool valid_toggle_presses (const int buttons[], const int size, const sensor_msgs::msg::Joy& raw)
     {
+        bool all_pressed = true;
+
         for (int i = 0; i < size; i++)
         {
-            if (!valid_toggle_press(buttons[i], raw)) { return false; }
+            if (!raw.buttons[buttons[i]]) { return false; }
+            if (!last_btns_[buttons[i]]) { all_pressed = false; }
         }
 
-        return true;
+        return !all_pressed;
     }
 
     /**
@@ -115,6 +118,8 @@ private:
         if (valid_toggle_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw)) {
             teleop_disabled_ = !teleop_disabled_;
             RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. TOGGLING TO %s", teleop_disabled_ ? "DISABLED" : "ENABLED");
+            last_btns_ = raw.buttons;
+            return;
         }
 
         if (teleop_disabled_) {
