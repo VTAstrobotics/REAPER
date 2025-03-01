@@ -8,8 +8,8 @@ class EncoderReader(Node):
         super().__init__('encoder_reader')
         
         # Publishers for the two different encoder values
-        self.encoder_publisher_1 = self.create_publisher(Float64, 'encoder_value_1', 10)
-        self.encoder_publisher_2 = self.create_publisher(Float64, 'encoder_value_2', 10)
+        self.encoder_publisher_1 = self.create_publisher(Float64, '/dig/link', 10)
+        self.encoder_publisher_2 = self.create_publisher(Float64, '/dig/bckt', 10)
         self.get_logger().info("Encoder Reader Node has been started.")
         
         # Timers for reading the two encoder values at 1 Hz
@@ -36,7 +36,7 @@ class EncoderReader(Node):
                 # Decode the encoder value
                 encoder_value = (response.data[6] << 24) | (response.data[5] << 16) | (response.data[4] << 8) | response.data[3]
                 encoder_value = (encoder_value * 360) / 1024
-                encoder_value = (encoder_value * 2 * 3.14159) / 360
+                encoder_value = ((encoder_value * 2 * 3.14159) / 360) /(2*3.14159)
 
                 self.get_logger().info(f"Encoder 1 Value: {encoder_value}")
 
