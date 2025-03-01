@@ -4,7 +4,7 @@
   <name>camera_streamer</name>
   <version>0.0.0</version>
   <description>TODO:to display webcam footage on a ros2 node</description>
-  <maintainer email="person@email.com">person</maintainer>
+  <maintainer email="cameronw23@vt.edu">cameron</maintainer>
   <license>Apache-2.0</license>
 
   <test_depend>ament_copyright</test_depend>

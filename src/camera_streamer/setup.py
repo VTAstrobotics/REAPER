@@ -13,16 +13,14 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='pratik',
-    maintainer_email='pratikphadte19@gmail.com',
+    maintainer='cameron',
+    maintainer_email='cameronw23@vt.edu',
     description='TODO: Package description',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'webcam_node = camera_streamer.webcam_node:main',
-            'usbcam_node = camera_streamer.usbcam_node:main',
-            'ip_stream_node = camera_streamer.ip_stream_node:main',
+            'usbCamStreamer = camera_streamer.usb_camera_streamer:main',
         ],
     },
 )
