@@ -49,38 +49,59 @@ namespace dig_server
       }
 
       // Linkage motor configuration
-      // configs::TalonFXConfiguration link_configs{};
-      configs::Slot0Configs linkPIDConfig{};
-      // configs::Slot0Configs& linkPIDConfig = link_configs.Slot0;
+      // LAME BOOOOOOOOOOOOOO
+      // configs::Slot0Configs linkPIDConfig{};
       float K_u = 1.0, T_u = 0.04;
-      linkPIDConfig.kP = 0.8 * K_u;
-      linkPIDConfig.kI = 0; // 0; PD controller
-      linkPIDConfig.kD = 0.1 * K_u * T_u;
-      l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
-      r_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+      // linkPIDConfig.kP = 0.8 * K_u;
+      // linkPIDConfig.kI = 0; // 0; PD controller
+      // linkPIDConfig.kD = 0.1 * K_u * T_u;
+      // l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+      // r_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
 
+      // configs::CurrentLimitsConfigs linkLimConfig{};
+      // // linkLimConfig.SupplyCurrentLimit = 60;
+      // linkLimConfig.SupplyCurrentLimit = 30; // for testing
+      // linkLimConfig.SupplyCurrentLimitEnable = true;
+      // l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+      // r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+      // // LAME BOOOOOOOOOOOOOO
 
-      configs::CurrentLimitsConfigs linkLimConfig{};
-      // linkLimConfig.SupplyCurrentLimit = 60;
-      linkLimConfig.SupplyCurrentLimit = 30; // for testing
-      linkLimConfig.SupplyCurrentLimitEnable = true;
-      l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
-      r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+      // EXCITING WOW TODO
 
-      // auto& link_mm_configs = link_configs.MotionMagic;
-      // link_mm_configs.MotionMagicCruiseVelocity = 3;
-      // link_mm_configs.MotionMagicAcceleration = 20;
-      // l_link_mtr_.GetConfigurator().Apply(link_configs);
-      // r_link_mtr_.GetConfigurator().Apply(link_configs);
+      configs::TalonFXConfiguration link_configs{};
+      // slot0
+      configs::Slot0Configs& linkSlot0 = link_configs.Slot0;
+      linkSlot0.kS = 0;
+      linkSlot0.kV = 0;
+      linkSlot0.kA = 0;
+      linkSlot0.kP = 0;
+      linkSlot0.kI = 0;
+      linkSlot0.kD = 0;
 
-      // enable brake mode TODO: test this
-      configs::MotorOutputConfigs link_mtr_configs{};
+      // slot1
+      configs::Slot1Configs& linkSlot1 = link_configs.Slot1;
+      linkSlot1.kS = 0;
+      linkSlot1.kV = 0;
+      linkSlot1.kA = 0;
+      linkSlot1.kP = 0;
+      linkSlot1.kI = 0;
+      linkSlot1.kD = 0;
+
+      auto& link_mm_configs = link_configs.MotionMagic;
+      link_mm_configs.MotionMagicCruiseVelocity = 3;
+      link_mm_configs.MotionMagicAcceleration = 20;
+      // link_mm_configs.MotionMagicJerk = 0; // optional value, skipping now
+
+      // EXCITING WOW TODO
+
+      // enable brake mode
+      // configs::MotorOutputConfigs link_mtr_configs{};
+      configs::MotorOutputConfigs link_mtr_configs = link_configs.MotorOutput;
       link_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
       link_mtr_configs.PeakForwardDutyCycle = 0.1;
       link_mtr_configs.PeakReverseDutyCycle = -0.1;
-      l_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
-      r_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
-
+      l_link_mtr_.GetConfigurator().Apply(link_configs);
+      r_link_mtr_.GetConfigurator().Apply(link_configs);
 
       // set right motors to follow left motors
       // r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
@@ -101,7 +122,7 @@ namespace dig_server
       l_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
       r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
 
-      // enable brake mode TODO: test this
+      // enable brake mode
       configs::MotorOutputConfigs bckt_mtr_configs{};
       bckt_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
       bckt_mtr_configs.PeakForwardDutyCycle = 0.1;
@@ -112,8 +133,8 @@ namespace dig_server
       // set right motors to follow left motors
       // r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
-      linkage_mechanism.ApplyConfigs();
-      bckt_mechanism.ApplyConfigs();
+      link_mech.ApplyConfigs();
+      bckt_mech.ApplyConfigs();
       // TODO finish this?
       // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
@@ -158,14 +179,14 @@ namespace dig_server
     controls::DutyCycleOut l_link_pwr_duty_cycle_{0}; // [-1, 1]
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX r_link_mtr_{23, "can0"};
-    mechanisms::SimpleDifferentialMechanism linkage_mechanism{l_link_mtr_, r_link_mtr_, false};
+    mechanisms::SimpleDifferentialMechanism link_mech{l_link_mtr_, r_link_mtr_, false};
 
     // bucket rotators
     hardware::TalonFX l_bckt_mtr_{21, "can0"};
     controls::DutyCycleOut l_bckt_pwr_duty_cycle_{0};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     hardware::TalonFX r_bckt_mtr_{24, "can0"};
-    mechanisms::SimpleDifferentialMechanism bckt_mechanism{l_bckt_mtr_, r_bckt_mtr_, true};
+    mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, true};
 
     // hardstop linear actuator
     // SparkMax hstp_mtr_{"can0", 26};
@@ -179,11 +200,19 @@ namespace dig_server
     const float HSTP_VEL_{2.9}; // in/s. estimate. TODO: remove when sensor
     /* ridiculous number and recognizable.
      * CORRESPONDS TO THE ACTION DEFINITION (.action)
-     * DO NOT CHANGE WITHOUT CHANGING THE ACTION DEFINITION! */
+     * DO NOT CHANGE WITHOUT CHANGING THE ACTION DEFINITION!
+     * TODO: def this in header file used in both places? */
     const float DEFAULT_VAL_{-987654.321};
+
+    // whatever value aligns 0.25 as straight up and -0.25 as straight down
+    const float LINK_ABS_ENCODER_MAGIC_NUMBER_{0.}; // TODO
     const float LINK_GEAR_RATIO_{100}; // 100:1
+
+    // whatever value aligns 0.25 as straight up and -0.25 as straight down
+    const float BCKT_ABS_ENCODER_MAGIC_NUMBER_{0.}; // TODO
     const float BCKT_GEAR_RATIO_{75}; // 75:1
-    double goal_received_time_{-1}; // in seconds
+
+    double goal_received_time_{-1}; // in seconds TODO: remove it's hardstop related
 
     // subs to actuator position topics
     // should always be aligned so only 1 per pair of acts
@@ -235,6 +264,8 @@ namespace dig_server
       RCLCPP_INFO(this->get_logger(), "/dig/link: %f", msg.data);
       if(abs(abs(starting_link_pos_) - 987654) < 2){ // first pos
         starting_link_pos_ = msg.data;
+        l_link_mtr_.SetPosition((starting_link_pos_ - LINK_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
+        r_link_mtr_.SetPosition(-1 * (starting_link_pos_ - LINK_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
         RCLCPP_INFO(this->get_logger(), "starting linkage actuator positions are %f", starting_link_pos_);
 
       }
@@ -252,6 +283,8 @@ namespace dig_server
       RCLCPP_INFO(this->get_logger(), "/dig/bckt: %f", msg.data);
       if(abs(abs(starting_bckt_pos_) - 987654) < 2){ // first pos
         starting_bckt_pos_ = msg.data;
+        l_bckt_mtr_.SetPosition((starting_bckt_pos_ - BCKT_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
+        r_bckt_mtr_.SetPosition(-1 * (starting_bckt_pos_ - BCKT_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
         RCLCPP_INFO(this->get_logger(), "starting rotation motor positions are %f", starting_bckt_pos_);
 
       }
@@ -429,7 +462,7 @@ namespace dig_server
       }
 
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
-      linkage_mechanism.SetControl(position_command);
+      link_mech.SetControl(position_command);
     }
 
     /**
@@ -444,7 +477,7 @@ namespace dig_server
       }
 
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
-      bckt_mechanism.SetControl(position_command);
+      bckt_mech.SetControl(position_command);
     }
 
     /**
@@ -511,6 +544,8 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       double linkage_goal = goal_handle->get_goal()->link_pwr_goal;
       float& link_percent_done = feedback->percent_link_done;
 
+      link_mech.Periodic();
+
       execute_pwr(
         goal_handle,
         feedback,
@@ -533,6 +568,8 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       double bucket_goal = goal_handle->get_goal()->bckt_pwr_goal;
       float& bckt_percent_done = feedback->percent_bckt_done;
       RCLCPP_INFO(this->get_logger(), "buck goal = %f", bucket_goal);
+
+      bckt_mech.Periodic();
 
       execute_pwr(
         goal_handle,
@@ -658,6 +695,8 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       if (!linkage_in_bounds(pos)) { return; }
       (void)vel; // for unused warning
 
+      link_mech.Periodic();
+
       units::angle::turn_t angle{pos * 1_tr};
       units::angular_velocity::turns_per_second_t speed{vel};
 
@@ -666,7 +705,7 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       // l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
 
       controls::DifferentialPositionDutyCycle position_command{angle, 0 * 0_tr};
-      linkage_mechanism.SetControl(position_command);
+      link_mech.SetControl(position_command);
 
       current_link_pos_ = (double)l_link_mtr_.GetPosition().GetValue() / LINK_GEAR_RATIO_;
     }
@@ -680,6 +719,8 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       if (!bucket_in_bounds(pos)) { return; }
       (void)vel; // for unused warning
 
+      bckt_mech.Periodic();
+
       units::angle::turn_t angle{pos * 1_tr};
       units::angular_velocity::turns_per_second_t speed{vel};
 
@@ -688,7 +729,7 @@ RCLCPP_INFO(this->get_logger(), "cur %lf", (double)l_link_mtr_.GetPosition().Get
       // l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
 
       controls::DifferentialPositionDutyCycle position_command{angle, 0 * 0_tr};
-      bckt_mechanism.SetControl(position_command);
+      bckt_mech.SetControl(position_command);
 
       current_bckt_pos_ = (double)l_bckt_mtr_.GetPosition().GetValue() / BCKT_GEAR_RATIO_;
     }
