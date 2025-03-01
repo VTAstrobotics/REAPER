@@ -117,12 +117,12 @@ namespace drive_server
 	double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
 	if(max_magnitude > 1){
 	left_speed /= max_magnitude;
-	right_speed /= max_magnitude; 
+	right_speed /= max_magnitude;
 	}
 	std::vector<double> speeds = {left_speed, right_speed};
 	return speeds;
-    
-    
+
+
     }
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
@@ -159,6 +159,7 @@ namespace drive_server
 	right_motor.Heartbeat();
         left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
+      RCLCPP_INFO(this->get_logger(), "LEFT MOTOR TORQUE, RIGHT MOTOR TORQUE NM: %f NM, %f NM", left_motor.GetCurrent() * 19.57 *pow(10, -3), right_motor.GetCurrent() * 19.57 * pow(10, -3 ));
         feedback->inst_velocity.linear.x = v_left;
         feedback->inst_velocity.angular.z = v_right; //placeholders
         goal_handle->publish_feedback(feedback);

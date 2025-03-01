@@ -40,68 +40,76 @@ namespace dig_server
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
       // TODO: change to logging severity to INFO
-      RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
-      auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+//      RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
+//      auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
-      if (ret != RCUTILS_RET_OK) {
-        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
-        rcutils_reset_error();
-      }
+//      if (ret != RCUTILS_RET_OK) {
+//        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
+//        rcutils_reset_error();
+//      }
 
       // Linkage motor configuration
       // LAME BOOOOOOOOOOOOOO
-      // configs::Slot0Configs linkPIDConfig{};
+       configs::Slot0Configs linkPIDConfig{};
       float K_u = 1.0, T_u = 0.04;
-      // linkPIDConfig.kP = 0.8 * K_u;
-      // linkPIDConfig.kI = 0; // 0; PD controller
-      // linkPIDConfig.kD = 0.1 * K_u * T_u;
-      // l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
-      // r_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+       linkPIDConfig.kP = 0.8 * K_u;
+       linkPIDConfig.kI = 0; // 0; PD controller
+       linkPIDConfig.kD = 0.1 * K_u * T_u;
+       l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+       r_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
 
-      // configs::CurrentLimitsConfigs linkLimConfig{};
-      // // linkLimConfig.SupplyCurrentLimit = 60;
-      // linkLimConfig.SupplyCurrentLimit = 30; // for testing
-      // linkLimConfig.SupplyCurrentLimitEnable = true;
-      // l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
-      // r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+       configs::Slot1Configs linkPID2Config{};
+      //float K_u = 1.0, T_u = 0.04;
+       linkPIDConfig.kP = .03; // 0.8 * K_u;
+       linkPIDConfig.kI = 0; // 0; PD controller
+       linkPIDConfig.kD =0 ;//0.1 * K_u * T_u;
+       l_link_mtr_.GetConfigurator().Apply(linkPID2Config);
+       r_link_mtr_.GetConfigurator().Apply(linkPID2Config);
+
+       configs::CurrentLimitsConfigs linkLimConfig{};
+       //linkLimConfig.SupplyCurrentLimit = 60;
+       linkLimConfig.SupplyCurrentLimit = 30; // for testing
+       linkLimConfig.SupplyCurrentLimitEnable = true;
+       l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+       r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
       // // LAME BOOOOOOOOOOOOOO
 
       // EXCITING WOW TODO
 
-      configs::TalonFXConfiguration link_configs{};
+      //configs::TalonFXConfiguration link_configs{};
       // slot0
-      configs::Slot0Configs& linkSlot0 = link_configs.Slot0;
-      linkSlot0.kS = 0;
-      linkSlot0.kV = 0;
-      linkSlot0.kA = 0;
-      linkSlot0.kP = 0;
-      linkSlot0.kI = 0;
-      linkSlot0.kD = 0;
+      //configs::Slot0Configs& linkSlot0 = link_configs.Slot0;
+      //linkSlot0.kS = 0;
+      //linkSlot0.kV = 0;
+      //linkSlot0.kA = 0;
+      //linkSlot0.kP = 0;
+      //linkSlot0.kI = 0;
+      //linkSlot0.kD = 0;
 
       // slot1
-      configs::Slot1Configs& linkSlot1 = link_configs.Slot1;
-      linkSlot1.kS = 0;
-      linkSlot1.kV = 0;
-      linkSlot1.kA = 0;
-      linkSlot1.kP = 0;
-      linkSlot1.kI = 0;
-      linkSlot1.kD = 0;
+      //configs::Slot1Configs& linkSlot1 = link_configs.Slot1;
+      //linkSlot1.kS = 0;
+      //linkSlot1.kV = 0;
+      //linkSlot1.kA = 0;
+      //linkSlot1.kP = 0;
+      //linkSlot1.kI = 0;
+      //linkSlot1.kD = 0;
 
-      auto& link_mm_configs = link_configs.MotionMagic;
-      link_mm_configs.MotionMagicCruiseVelocity = 3;
-      link_mm_configs.MotionMagicAcceleration = 20;
+      //auto& link_mm_configs = link_configs.MotionMagic;
+     // link_mm_configs.MotionMagicCruiseVelocity = 3;
+     // link_mm_configs.MotionMagicAcceleration = 20;
       // link_mm_configs.MotionMagicJerk = 0; // optional value, skipping now
 
       // EXCITING WOW TODO
 
       // enable brake mode
-      // configs::MotorOutputConfigs link_mtr_configs{};
-      configs::MotorOutputConfigs link_mtr_configs = link_configs.MotorOutput;
+       configs::MotorOutputConfigs link_mtr_configs{};
+      //configs::MotorOutputConfigs link_mtr_configs = link_configs.MotorOutput;
       link_mtr_configs.NeutralMode = signals::NeutralModeValue::Brake;
-      link_mtr_configs.PeakForwardDutyCycle = 0.1;
-      link_mtr_configs.PeakReverseDutyCycle = -0.1;
-      l_link_mtr_.GetConfigurator().Apply(link_configs);
-      r_link_mtr_.GetConfigurator().Apply(link_configs);
+      link_mtr_configs.PeakForwardDutyCycle = 0.3;
+      link_mtr_configs.PeakReverseDutyCycle = -0.25;
+      l_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
+      r_link_mtr_.GetConfigurator().Apply(link_mtr_configs);
 
       // set right motors to follow left motors
       // r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
@@ -264,8 +272,8 @@ namespace dig_server
       RCLCPP_INFO(this->get_logger(), "/dig/link: %f", msg.data);
       if(abs(abs(starting_link_pos_) - 987654) < 2){ // first pos
         starting_link_pos_ = msg.data;
-        l_link_mtr_.SetPosition((starting_link_pos_ - LINK_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
-        r_link_mtr_.SetPosition(-1 * (starting_link_pos_ - LINK_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
+        //l_link_mtr_.SetPosition((starting_link_pos_ - LINK_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
+        //r_link_mtr_.SetPosition(-1 * (starting_link_pos_ - LINK_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
         RCLCPP_INFO(this->get_logger(), "starting linkage actuator positions are %f", starting_link_pos_);
 
       }
@@ -283,8 +291,8 @@ namespace dig_server
       RCLCPP_INFO(this->get_logger(), "/dig/bckt: %f", msg.data);
       if(abs(abs(starting_bckt_pos_) - 987654) < 2){ // first pos
         starting_bckt_pos_ = msg.data;
-        l_bckt_mtr_.SetPosition((starting_bckt_pos_ - BCKT_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
-        r_bckt_mtr_.SetPosition(-1 * (starting_bckt_pos_ - BCKT_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
+        //l_bckt_mtr_.SetPosition((starting_bckt_pos_ - BCKT_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
+        //r_bckt_mtr_.SetPosition(-1 * (starting_bckt_pos_ - BCKT_ABS_ENCODER_MAGIC_NUMBER_) * 0_tr);
         RCLCPP_INFO(this->get_logger(), "starting rotation motor positions are %f", starting_bckt_pos_);
 
       }

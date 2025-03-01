@@ -215,7 +215,7 @@ private:
 
         if (raw.buttons[BUTTON_RBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal = -0.1;
+            dig_goal.link_pwr_goal = -0.30;
         }
 
         if (valid_toggle_press(BUTTON_BACK, raw)) {
@@ -378,6 +378,10 @@ private:
  //           this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
 //        }
 
+	if(raw.axes[AXIS_DPAD_Y]){
+	dig_goal.vibr_pwr_goal = 0.2;
+	RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
+	}
         if (raw.buttons[BUTTON_B]) {
             dump_goal.pwr_goal = 0.25;
             RCLCPP_INFO(this->get_logger(), "B: Dump with power %f", dump_goal.pwr_goal);
