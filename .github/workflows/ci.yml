@@ -77,11 +77,11 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: HELP
-        run: ls -al ./build_scripts/
+        run: ls /
 
       - name: Run developer container
         run: docker run --rm astro-dev bash -c "
-          ls /home/astro-dev/ &&
+          ls / &&
           ~/build_scripts/build.sh"
 
       # - name: Clang Code Formatter
