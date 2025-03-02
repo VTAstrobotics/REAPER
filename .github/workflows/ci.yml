@@ -48,7 +48,7 @@ jobs:
           name: astro-dev
 
       - name: Load developer container
-        run: docker load -i astro-dev
+        run: docker load -i astro-dev.tar
 
       - name: Clang Code Formatter
         uses: ./.github/actions/cppformat
