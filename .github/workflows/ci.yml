@@ -52,7 +52,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
-        run: docker run --rm astro-dev .github/workflows/entrypoint.sh
+        run: docker run --rm --mount type=bind, src=${localWorkspaceFolder}, dst=/root/ros_ws/src/${localWorkspaceFolderBasename} astro-dev .github/workflows/entrypoint.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -78,11 +78,11 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: HELP
-        run: ls /
+        run: ls ~
 
       - name: Run developer container
         run: docker run --rm astro-dev bash -c "
-          ls / &&
+          ls . &&
           ~/build_scripts/build.sh"
 
       # - name: Clang Code Formatter
