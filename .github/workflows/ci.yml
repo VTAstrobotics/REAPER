@@ -51,7 +51,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
-        run: docker run --rm astro-dev bash -c ./.github/workflows/entrypoint.sh
+        run: docker run --rm astro-dev .github/workflows/entrypoint.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -77,7 +77,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
-        run: docker run --rm astro-dev ./build_scripts/build.sh
+        run: docker run --rm astro-dev build_scripts/build.sh
 
       # - name: Clang Code Formatter
       #   run: source ./.github/workflows/entrypoint.sh
