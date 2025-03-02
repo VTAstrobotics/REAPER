@@ -1,4 +1,3 @@
-
 #include "action_interfaces/action/drive.hpp"
 #include <functional>
 #include <memory>
@@ -13,7 +12,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "std_msgs/msg/float32.hpp"
-
+#include "geometry_msgs/msg/pose.hpp"
 namespace drive_server
 {
   class DriveActionServer : public rclcpp::Node
@@ -46,28 +45,34 @@ namespace drive_server
         // left_motor.SetSmartCurrentFreeLimit(50.0);
         right_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         right_motor.BurnFlash();
-        publisher_ = this->create_publisher<geometry_msgs::msg::twist>("drive velocity", 10);
+        velocity_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("drive/velocity", 10);
+        pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("drive/pose", 10);
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
 
   private:
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
-    // hardware::TalonFX drive_left{20, "can0"};
-    // hardware::TalonFX drive_right{21, "can0"};
-    // controls::DutyCycleOut drive_left_duty{0.0};
-    // controls::DutyCycleOut drive_right_duty{0.0};
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
         double drive_left_duty = 0;
         double drive_right_duty = 0;
         SparkMax left_motor{"can0", 10};
         SparkMax right_motor{"can0", 11};
-        // Motor 1
     bool has_goal{false};
     int loop_rate_hz{120};
     double track_width{1.0};
     double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
-    double wheelCircumference = 30; //placeholder
+    double wheelCircumference = 0.3; //placeholder
+    double currentLeftPos = 0;
+    double currentRightPos = 0;
+    double pastLeftPos, pastRightPos, rightVelocity, leftVelocity, new_left_position, 
+    new_right_position, left_dist, right_dist;
+
+    double x_     = 0.0;
+    double y_     = 0.0;
+    double theta_ = 0.0; 
 
 
     rclcpp_action::GoalResponse handle_goal(
@@ -108,10 +113,89 @@ namespace drive_server
       std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
     }
 
+    struct Quaterniond
+    {
+      double w;
+      double x;
+      double y;
+      double z;
+    };
+    
+    Quaterniond toQuat(double yaw, double pitch, double roll)  
+    {
+      double cy = std::cos(yaw   * 0.5);
+      double sy = std::sin(yaw   * 0.5);
+      double cp = std::cos(pitch * 0.5);
+      double sp = std::sin(pitch * 0.5);
+      double cr = std::cos(roll  * 0.5);
+      double sr = std::sin(roll  * 0.5);
+    
+      Quaterniond q;
+      q.w = cy * cp * cr + sy * sp * sr;
+      q.x = cy * cp * sr - sy * sp * cr;
+      q.y = sy * cp * sr + cy * sp * cr;
+      q.z = sy * cp * cr - cy * sp * sr;
+      return q;
+    }
+
+    void getVelocityMessage(geometry_msgs::msg::Twist &velocity_message, double dt){
+      new_left_position  = left_motor.GetPosition();  
+      new_right_position = right_motor.GetPosition(); 
+
+      double delta_left_ticks  = (new_left_position  - pastLeftPos);
+      double delta_right_ticks = (new_right_position - pastRightPos);
+
+      double left_revs  = delta_left_ticks  / 42; //42 ticks per revolution
+      double right_revs = delta_right_ticks / 42;
+
+    left_dist  = left_revs  * wheelCircumference;  
+    right_dist = right_revs * wheelCircumference;  
+      
+      if(dt > 0){
+        leftVelocity  = left_dist  / dt;
+        rightVelocity = right_dist / dt;
+      }
+      else{
+        leftVelocity  = 0;
+        rightVelocity = 0;
+      }
+  
+      
+      double v = (leftVelocity + rightVelocity) * 0.5;
+      double w = (rightVelocity - leftVelocity) / track_width;
+
+      velocity_message.linear.x = v;
+      velocity_message.angular.z = w;
+    }
+
+    void getPoseMessage(geometry_msgs::msg::Twist &velocity_message, geometry_msgs::msg::Pose &pose_message, double dt){
+      double v = velocity_message.linear.x;
+      double w = velocity_message.angular.z;
+
+      theta_ += w * dt;
+
+      x_ += v * std::cos(theta_) * dt;
+      y_ += v * std::sin(theta_) * dt;
+
+      pose_message.position.x = x_;
+      pose_message.position.y = y_;
+      pose_message.position.z = 0.0;
+
+      Quaterniond q = toQuat(theta_, 0.0, 0.0);
+
+      geometry_msgs::msg::Quaternion quat_msg;
+      quat_msg.w = q.w;
+      quat_msg.x = q.x;
+      quat_msg.y = q.y;
+      quat_msg.z = q.z;
+
+      pose_message.orientation = quat_msg;
+    }
+
+    
+
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
-      geometry_msgs::msg::twist velocity_message;
-
       RCLCPP_INFO(this->get_logger(), "Executing goal");
       rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
 
@@ -119,17 +203,23 @@ namespace drive_server
 
       auto feedback = std::make_shared<Drive::Feedback>();
       auto result = std::make_shared<Drive::Result>();
+      double linear  = goal->velocity_goal.linear.x;
+      double angular = goal->velocity_goal.angular.z;
 
       double v_left  = linear  - angular;
       double v_right = linear  + angular;
-
-
       auto start_time = this->now();
       auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
 
+      auto past_time = this->now();
+      pastLeftPos  = left_motor.GetPosition();
+      pastRightPos = right_motor.GetPosition();
 
       while (rclcpp::ok() && this->now() < end_time)
       {
+        auto current_time = this->now();
+        double dt = (current_time - past_time).seconds();
+        past_time = current_time;
         if (goal_handle->is_canceling()) {
           RCLCPP_INFO(this->get_logger(), "Goal is canceling");
           goal_handle->canceled(result);
@@ -138,31 +228,29 @@ namespace drive_server
           has_goal = false;
           return;
         }
-	left_motor.Heartbeat();
-	right_motor.Heartbeat();
+	      left_motor.Heartbeat();
+	      right_motor.Heartbeat();
         left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
-        feedback->inst_velocity.linear.x = v_left;
-        feedback->inst_velocity.angular.z = v_right; //placeholders
 
-        double left_wheel_rpm  = left_motor.GetVelocity();
-        double right_wheel_rpm = right_motor.GetVelocity();
-        double left_linear  = (wheelCircumference * left_wheel_rpm) / 60.0;
-        double right_linear = (wheelCircumference * right_wheel_rpm) / 60.0;
-        double angular = (right_linear - left_linear) / track_width;
-        velocity_message.linear.x = (right_linear+left_linear)/2;
-        velocity_message.angular.z=angular;
-        publisher_->publish(velocity_message);
+        geometry_msgs::msg::Twist velocity_message;
+        getVelocityMessage(velocity_message, dt);
 
+        geometry_msgs::msg::Pose pose_msg;
+        getPoseMessage(velocity_message, pose_msg, dt);
+
+        velocity_publisher_->publish(velocity_message);
+        pose_publisher_->publish(pose_msg);
         goal_handle->publish_feedback(feedback);
+
+        feedback->inst_velocity.linear.x  = velocity_message.linear.x;
+        feedback->inst_velocity.angular.z = velocity_message.angular.z;
+
+        pastLeftPos = new_left_position;
+        pastRightPos = new_right_position;
 
         loop_rate.sleep();
       }
-
-      // drive_left_duty.Output = 0.0;
-      // drive_right_duty.Output = 0.0;
-      // drive_left.SetControl(drive_left_duty);
-      // drive_right.SetControl(drive_right_duty);
 
       if (rclcpp::ok())
       {
