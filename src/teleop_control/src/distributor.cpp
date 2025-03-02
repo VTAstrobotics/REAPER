@@ -193,12 +193,12 @@ private:
 
         if (valid_press(BUTTON_LBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
-            dig_goal.dig_link_pwr_goal += 0.1;
+            dig_goal.dig_link_pwr_goal += 0.05;
         }
 
         if (valid_press(BUTTON_RBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.dig_link_pwr_goal -= 0.1;
+            dig_goal.dig_link_pwr_goal -= 0.15;
         }
 
         if (valid_press(BUTTON_BACK, raw)) {
@@ -270,7 +270,8 @@ private:
         LT = std::pow(LT, 3);
         RT = std::pow(RT, 3);
 
-        drive_vel.linear.x  = RT - LT; // [-1, 1]
+        drive_vel.linear.x = RT - LT; // [-1, 1]
+        drive_vel.linear.x *= 1.5;
 
         // Drive turning
         float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
