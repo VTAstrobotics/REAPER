@@ -13,8 +13,8 @@ sudo chmod 777 /workspaces/REAPER/.devcontainer/build.log
 ###############################################################################
 
 # ROS basic build and source
-cd /workspaces/REAPER/
-source build_scripts/build.sh
+cd /workspaces/REAPER/build_scripts/
+./build.sh
 
 # Give permissions to input devices, like Xbox controller
 printf "[INFO]: If you get a message like \"chmod: cannot access '/dev/input/js*': No such file or directory\" do not worry. If it ALSO says \"chmod: cannot access '/dev/input/event*': No such file or directory\" AND you have a controller plugged in, there may be an issue with seeing the controller. Note that the new Jetson Orin Nanos require a manual kernel patch to see Xbox controllers.\n"
