@@ -50,10 +50,7 @@ jobs:
       - name: Load developer container
         run: docker load -i astro-dev.tar
 
-      - name: Debug Action Directory
-        run: ls -al ./
-
       - name: Clang Code Formatter
-        uses: ./.github/actions/cppformat
+        run: source ./entrypoint.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
