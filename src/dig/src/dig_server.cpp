@@ -68,7 +68,7 @@ class DigActionServer : public rclcpp::Node
 
       // enable brake mode
       controls::StaticBrake static_brake;
-      l_link_mtr_.SetControl(static_brake);
+      // l_link_mtr_.SetControl(static_brake);
 
       // set right motors to follow left motors
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true}); // true because they are mounted inverted
@@ -88,7 +88,7 @@ class DigActionServer : public rclcpp::Node
         r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
 
       // enable brake mode
-      l_bckt_mtr_.SetControl(static_brake);
+      // l_bckt_mtr_.SetControl(static_brake);
 
       // set right motors to follow left motors
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
