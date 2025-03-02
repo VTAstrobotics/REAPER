@@ -19,13 +19,13 @@ jobs:
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> ./.github/actions/cppformat/Dockerfile
         echo "COPY entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
         echo "RUN sudo chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
-        echo "COPY ../../* /" >> ./.github/actions/cppformat/Dockerfile
+        echo "COPY ../* /" >> ./.github/actions/cppformat/Dockerfile
       # echo "USER root" >> ./.github/actions/cppformat/Dockerfile
       # echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
 
     - name: Build the developer container image
       run: |
-        docker build .devcontainer/ --file ./.github/actions/cppformat/Dockerfile --tag astro-dev
+        docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
         docker save astro-dev -o astro-dev.tar
 
     - name: Upload the devcontainer image
