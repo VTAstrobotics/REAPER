@@ -77,7 +77,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: HELP
-        run: ls -al ./
+        run: ls -al ./build_scripts/
 
       - name: Run developer container
         run: docker run --rm astro-dev ./build_scripts/build.sh
