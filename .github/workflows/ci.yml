@@ -80,10 +80,8 @@ jobs:
         run: ls -al ./build_scripts/
 
       - name: Run developer container
-        run: docker run --rm astro-dev bash -c
-          "ls &&
-          ls ~ &&
-          ls / &&
+        run: docker run --rm astro-dev bash -c "
+          ls /home/astro-dev/ &&
           ~/build_scripts/build.sh"
 
       # - name: Clang Code Formatter
