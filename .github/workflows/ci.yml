@@ -80,7 +80,11 @@ jobs:
         run: ls -al ./build_scripts/
 
       - name: Run developer container
-        run: docker run --rm astro-dev ./build_scripts/build.sh
+        run: docker run --rm astro-dev bash -c
+          "ls &&
+          ls ~ &&
+          ls / &&
+          ~/build_scripts/build.sh"
 
       # - name: Clang Code Formatter
       #   run: source ./.github/workflows/entrypoint.sh
