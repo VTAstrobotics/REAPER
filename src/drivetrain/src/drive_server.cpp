@@ -239,12 +239,12 @@ namespace drive_server
         geometry_msgs::msg::Pose pose_msg;
         getPoseMessage(velocity_message, pose_msg, dt);
 
+	feedback->inst_velocity.linear.x  = velocity_message.linear.x;
+        feedback->inst_velocity.angular.z = velocity_message.angular.z;
+
         velocity_publisher_->publish(velocity_message);
         pose_publisher_->publish(pose_msg);
         goal_handle->publish_feedback(feedback);
-
-        feedback->inst_velocity.linear.x  = velocity_message.linear.x;
-        feedback->inst_velocity.angular.z = velocity_message.angular.z;
 
         pastLeftPos = new_left_position;
         pastRightPos = new_right_position;
