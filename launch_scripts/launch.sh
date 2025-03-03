@@ -13,6 +13,8 @@ ros2 run dump DumpActionServer&
 ros2 run drivetrain DriveActionServer&
 ros2 run camera_streamer usbCamStreamer --cam 0 &
 ros2 run camera_streamer usbCamStreamer --cam 2 &
+ros2 run aruco_pose_estimation aruco_node --cam 0 &
+ros2 run aruco_pose_estimation aruco_node --cam 2 &
 ros2 run joy joy_node
 # Teardown
 echo "Shutting down..."
