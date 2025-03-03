@@ -6,7 +6,8 @@ motor_to_msg::motor_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name)
 {
     this->node_to_publish_under = node;
     this->msg = state_messages::msg::MotorState();
-    this->state_publisher = node->create_publisher<msg::MotorState>("motor_name/state", 2);
+    std::string name = motor_name + "/state";
+    this->state_publisher = node->create_publisher<msg::MotorState>(name, 2);
 }
 /**
  * creates a publisher attached to the passing node of topic name motor_name/state also publishes a motor state message at frequncy Hz
