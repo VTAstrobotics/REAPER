@@ -11,7 +11,7 @@ fi
 
 echo build.sh: building
 
-colcon build --packages-select action_interfaces
+colcon build --packages-select action_interfaces state_messages
 source install/setup.bash
 
 colcon build --cmake-args=-DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=ON
