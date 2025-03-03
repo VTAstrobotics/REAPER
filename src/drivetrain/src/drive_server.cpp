@@ -37,18 +37,18 @@ namespace drive_server
         left_motor.SetIdleMode(IdleMode::kBrake);
         left_motor.SetMotorType(MotorType::kBrushless);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(20.0); // 0.8 Nm
+        left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         left_motor.BurnFlash();
 
         right_motor.SetIdleMode(IdleMode::kBrake);
         right_motor.SetMotorType(MotorType::kBrushless);
         right_motor.SetInverted(true);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
+<<<<<<< HEAD
         left_motor.SetSmartCurrentStallLimit(20.0); // 0.8 Nm
-        right_motor.BurnFlash();
-
+=======
+        left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
-    }
 
   private:
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
