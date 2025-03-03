@@ -24,14 +24,14 @@ namespace state_messages
    
     class kraken_to_msg: motor_to_msg{
         private:
-    hardware::TalonFX& motor;
+    hardware::TalonFX* motor;
     double input_voltage{0}; //BUS VOLTAGE
     double current_speed{0}; //in units/S either m/s or rot/s or rad/s; clarify which in your code
     double current_current{0}; // in Amps
     double current_applied_voltage{0}; // in volts, this is the duty cycle * input voltage
     double current_position{0}; // the current position in m, rots, or radians, clarify which in your code         Float64 current_current
         public:
-        kraken_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name, hardware::TalonFX& motor, float frequency);
+        kraken_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name, hardware::TalonFX* motor, float frequency);
         void publish_state() override;
     };
    
