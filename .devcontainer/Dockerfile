@@ -81,9 +81,11 @@ RUN sudo apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup
 
-# For sw2urdf
-RUN sudo apt install -y gazebo
-RUN pip install tk==0.1.0
+# For simulation
+RUN sudo apt install -y \
+    gazebo \
+    ros-humble-joint-state-publisher-gui \
+    ros-humble-xacro
 
 # install turtlebot demo, including gz, unless on a Jetson
 # i swear that it worked before but it doesnt anymore. So basically install this manually if you want nav stuff until i can figure this out.
