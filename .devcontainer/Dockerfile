@@ -1,8 +1,8 @@
 FROM ros:humble-ros-base-jammy
 
 # Basic ROS2 setup
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-desktop=0.10.0-1* \
+RUN apt update && apt install -y --no-install-recommends \
+    ros-humble-desktop \
     python3 \
     python3-pip \
     && pip3 install setuptools==58.2.0 \
@@ -52,6 +52,9 @@ RUN rosdep update
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
 RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 
+# For UI on Windows
+ENV DISPLAY=host.docker.internal:0
+
 ###############################################################################
 #                                                                             #
 # Add dependencies below using RUN <command you used to install>              #
@@ -77,6 +80,10 @@ RUN sudo apt install sparkcan
 RUN sudo apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup
+
+# For sw2urdf
+RUN sudo apt install -y gazebo
+RUN pip install tk==0.1.0
 
 # install turtlebot demo, including gz, unless on a Jetson
 # i swear that it worked before but it doesnt anymore. So basically install this manually if you want nav stuff until i can figure this out.
