@@ -11,6 +11,7 @@
 #include "ctre/phoenix6/mechanisms/SimpleDifferentialMechanism.hpp"
 #include "SparkMax.hpp"
 #include "PIDController.hpp"
+#include "state_messages_utils/motor_to_msg.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -161,6 +162,10 @@ namespace dig_server
       // r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
       // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       // r_vib_mtr_.BurnFlash();
+
+
+        kraken_to_msg::kraken_to_msg(this, "Left Linkage Motor", &l_link_mtr_, 50);
+        kraken_to_msg::kraken_to_msg(this, "Left Bucket Motor", &l_bckt_mtr_, 50);
     }
 
   private:

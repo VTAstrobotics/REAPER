@@ -15,7 +15,11 @@ find_package(rclcpp_components REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+
 find_package(action_interfaces REQUIRED)
+find_package(state_messages REQUIRED)
+find_package(state_messages_utils REQUIRED)
+
 find_package(sparkcan REQUIRED)
 find_package(std_msgs REQUIRED)
 
@@ -36,6 +40,8 @@ target_compile_definitions(Dig_action PRIVATE
 "DIG_ACTION_CPP_BUILDING_DLL")
 ament_target_dependencies(Dig_action
   "action_interfaces"
+  "state_messages"
+  "state_messages_utils"
   "sparkcan"
   "rclcpp"
   "rclcpp_action"
