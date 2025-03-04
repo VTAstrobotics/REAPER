@@ -13,7 +13,6 @@
 #include "PIDController.hpp"
 #include "state_messages_utils/motor_to_msg.hpp"
 
-#include "state_messages_utils/motor_to_msg.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -313,7 +312,12 @@ namespace dig_server
      */
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-    static auto motorlogger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 10);
+    static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 50);
+    static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 50);
+    static auto left_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_bucket", &l_bckt_mtr_, 50);
+    static auto right_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_bucket", &r_bckt_mtr_, 50);
+
+
 
       const auto goal = goal_handle->get_goal();
       auto feedback = std::make_shared<Dig::Feedback>();
@@ -385,21 +389,7 @@ namespace dig_server
         pwr = 0;
       }
 
-      float position = l_link_mtr_.GetPosition().GetValueAsDouble();
-      float current = l_link_mtr_.GetTorqueCurrent().GetValueAsDouble();
-      float output_voltage = l_link_mtr_.GetMotorVoltage().GetValueAsDouble();
-      float input_voltage = l_link_mtr_.GetSupplyVoltage().GetValueAsDouble();
-      float velocity = l_link_mtr_.GetVelocity().GetValueAsDouble();
 
-      state_messages::msg::MotorState msg = state_messages::msg::MotorState();
-
-      msg.current_applied_voltage = output_voltage;
-      msg.input_voltage = input_voltage;
-      msg.current_current = current;
-      msg.current_speed = velocity;
-      msg.current_position = position;
-
-      link_pub_->publish(msg);
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "link_pwr: link_ptr %lf | %lf", (double) l_link_mtr_.GetPosition().GetValue(),
@@ -420,21 +410,9 @@ namespace dig_server
         pwr = 0;
       }
 
-      float position = l_bckt_mtr_.GetPosition().GetValueAsDouble();
-      float current = l_bckt_mtr_.GetTorqueCurrent().GetValueAsDouble();
-      float output_voltage = l_bckt_mtr_.GetMotorVoltage().GetValueAsDouble();
-      float input_voltage = l_bckt_mtr_.GetSupplyVoltage().GetValueAsDouble();
-      float velocity = l_bckt_mtr_.GetVelocity().GetValueAsDouble();
+      
 
-      state_messages::msg::MotorState msg = state_messages::msg::MotorState();
 
-      msg.current_applied_voltage = output_voltage;
-      msg.input_voltage = input_voltage;
-      msg.current_current = current;
-      msg.current_speed = velocity;
-      msg.current_position = position;
-
-      bckt_pub_->publish(msg);
 
       // l_vib_mtr_.Heartbeat();
       // r_vib_mtr_.Heartbeat();
