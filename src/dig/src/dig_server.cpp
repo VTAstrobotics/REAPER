@@ -142,7 +142,7 @@ namespace dig_server
       l_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
       r_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
 
-      // Simple Differential Mechanism configs
+      // Set linkage and bucket to SimpleDifferentialMechanisms
       link_mech.ApplyConfigs();
       bckt_mech.ApplyConfigs();
 
@@ -163,8 +163,8 @@ namespace dig_server
       // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       // r_vib_mtr_.BurnFlash();
 
-      state_messages_utils::kraken_to_msg{shared_from_this(), "Left Linkage Motor", &l_link_mtr_, 50.};
-      state_messages_utils::kraken_to_msg(shared_from_this(), "Left Bucket Motor", &l_bckt_mtr_, 50.);
+      link_pub_ = this->create_publisher<state_messages::msg::MotorState>("/dig/link/state", 2);
+      bckt_pub_ = this->create_publisher<state_messages::msg::MotorState>("/dig/bckt/state", 2);
     }
 
   private:
@@ -217,6 +217,9 @@ namespace dig_server
       5,0.5,5,0.6,
       6,0.5,5,0,
     };
+
+    rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr link_pub_;
+    rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr bckt_pub_;
 
     /**************************************************************************
      * General action server handling                                         *
@@ -353,6 +356,22 @@ namespace dig_server
         pwr = 0;
       }
 
+      float position = l_link_mtr_.GetPosition().GetValueAsDouble();
+      float current = l_link_mtr_.GetTorqueCurrent().GetValueAsDouble();
+      float output_voltage = l_link_mtr_.GetMotorVoltage().GetValueAsDouble();
+      float input_voltage = l_link_mtr_.GetSupplyVoltage().GetValueAsDouble();
+      float velocity = l_link_mtr_.GetVelocity().GetValueAsDouble();
+
+      state_messages::msg::MotorState msg = state_messages::msg::MotorState();
+
+      msg.current_applied_voltage = output_voltage;
+      msg.input_voltage = input_voltage;
+      msg.current_current = current;
+      msg.current_speed = velocity;
+      msg.current_position = position;
+
+      link_pub_->publish(msg);
+
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "link_pwr: link_ptr %lf | %lf", (double) l_link_mtr_.GetPosition().GetValue(),
         (double) r_link_mtr_.GetPosition().GetValue());
@@ -371,6 +390,22 @@ namespace dig_server
         RCLCPP_ERROR(this->get_logger(), "bckt_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
         pwr = 0;
       }
+
+      float position = l_bckt_mtr_.GetPosition().GetValueAsDouble();
+      float current = l_bckt_mtr_.GetTorqueCurrent().GetValueAsDouble();
+      float output_voltage = l_bckt_mtr_.GetMotorVoltage().GetValueAsDouble();
+      float input_voltage = l_bckt_mtr_.GetSupplyVoltage().GetValueAsDouble();
+      float velocity = l_bckt_mtr_.GetVelocity().GetValueAsDouble();
+
+      state_messages::msg::MotorState msg = state_messages::msg::MotorState();
+
+      msg.current_applied_voltage = output_voltage;
+      msg.input_voltage = input_voltage;
+      msg.current_current = current;
+      msg.current_speed = velocity;
+      msg.current_position = position;
+
+      bckt_pub_->publish(msg);
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "bckt_pwr: link_ptr %lf | %lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
