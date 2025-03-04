@@ -23,7 +23,7 @@ find_package(action_interfaces REQUIRED)
 find_package(sparkcan REQUIRED)
 find_package(std_msgs REQUIRED)
 set(HEADER_FILES include/state_messages_utils/motor_to_msg.hpp)
-add_library(state_messages_utils src/motor_to_msg.cpp ${HEADER_FILES})
+add_library(state_messages_utils SHARED src/motor_to_msg.cpp ${HEADER_FILES})
 
   ament_target_dependencies(state_messages_utils
   rclcpp
@@ -58,10 +58,13 @@ install(
 
 install(
   TARGETS state_messages_utils
-  EXPORT state_messages_utils
+  EXPORT export_${PROJECT_NAME} 
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
-  INCLUDES DESTINATION include/state_messages_utils
 )
+target_compile_options(state_messages_utils PRIVATE -fPIC)
+ament_export_include_directories(include)
+ament_export_targets(export_${PROJECT_NAME} NAMESPACE state_messages_utils:: HAS_LIBRARY_TARGET)
+ament_export_libraries(state_messages_utils)
 ament_package()

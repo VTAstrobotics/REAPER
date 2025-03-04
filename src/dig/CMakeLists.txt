@@ -18,6 +18,8 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(action_interfaces REQUIRED)
 find_package(sparkcan REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(state_messages REQUIRED)
+find_package(state_messages_utils REQUIRED)
 
 find_package(unique_identifier_msgs REQUIRED)
 
@@ -34,6 +36,7 @@ target_include_directories(Dig_action PRIVATE
 )
 target_compile_definitions(Dig_action PRIVATE
 "DIG_ACTION_CPP_BUILDING_DLL")
+target_link_libraries(Dig_action state_messages_utils::state_messages_utils)
 ament_target_dependencies(Dig_action
   "action_interfaces"
   "sparkcan"
@@ -42,6 +45,8 @@ ament_target_dependencies(Dig_action
   "rclcpp_components"
   "std_msgs"
   "phoenix6"
+  "state_messages"
+  "state_messages_utils"
   )
 rclcpp_components_register_node(Dig_action PLUGIN "dig_server::DigActionServer" EXECUTABLE DigActionServer)
 
@@ -63,5 +68,4 @@ install(TARGETS
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
-
 ament_package()

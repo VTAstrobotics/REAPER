@@ -6,7 +6,7 @@
 
 using namespace ctre::phoenix6;
 
-namespace state_messages
+namespace state_messages_utils
 {
     class motor_to_msg
     {
@@ -18,11 +18,11 @@ namespace state_messages
 
     public:
         motor_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name);
-        ~motor_to_msg();
+        virtual  ~motor_to_msg() ;
         virtual void publish_state();
     };
    
-    class kraken_to_msg: motor_to_msg{
+    class kraken_to_msg: public motor_to_msg{
         private:
     hardware::TalonFX* motor;
     double input_voltage{0}; //BUS VOLTAGE
@@ -32,6 +32,7 @@ namespace state_messages
     double current_position{0}; // the current position in m, rots, or radians, clarify which in your code         Float64 current_current
         public:
         kraken_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name, hardware::TalonFX* motor, float frequency);
+        ~kraken_to_msg();
         void publish_state() override;
     };
    
