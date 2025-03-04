@@ -40,7 +40,7 @@ target_include_directories(Dig_action PRIVATE
 )
 target_compile_definitions(Dig_action PRIVATE
 "DIG_ACTION_CPP_BUILDING_DLL")
-target_link_libraries(Dig_action state_messages_utils::state_messages_utils)
+
 ament_target_dependencies(Dig_action
   "action_interfaces"
   "state_messages"
