@@ -216,7 +216,7 @@ private:
         if (raw.buttons[BUTTON_RBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
             dig_goal.link_pwr_goal = -0.30;
-        }
+
             // dump_goal.deposition_goal = 0.1;
             // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
@@ -270,8 +270,8 @@ private:
          **********************************************************************/
 
         // Drive throttle
-//        float LT = raw.axes[AXIS_LTRIGGER];
- //       float RT = raw.axes[AXIS_RTRIGGER];
+        // float LT = raw.axes[AXIS_LTRIGGER];
+        // float RT = raw.axes[AXIS_RTRIGGER];
 
         /*
          * Shift triggers from [-1, 1], where
@@ -282,35 +282,32 @@ private:
          *    0 = not pressed
          *    1 = fully pressed
          */
-  //      LT = ((-1 * LT) + 1) * 0.5;
-   //     RT = ((-1 * RT) + 1) * 0.5;
+        // LT = ((-1 * LT) + 1) * 0.5;
+        // RT = ((-1 * RT) + 1) * 0.5;
 
         // Apply cubic function for better control
-    //    LT = std::pow(LT, 3);
-     ////   RT = std::pow(RT, 3);
+        // LT = std::pow(LT, 3);
+        // RT = std::pow(RT, 3);
 
-       // drive_vel.linear.x  = RT - LT; // [-1, 1]
+        // drive_vel.linear.x  = RT - LT; // [-1, 1]
 
         // Drive turning
-        //float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+        // float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
 
         // Apply cubic function for better control
-//        LSX = std::pow(LSX, 3);
+        // LSX = std::pow(LSX, 3);
 
- //       drive_vel.angular.z = LSX; // [-1, 1]
+        // drive_vel.angular.z = LSX; // [-1, 1]
 
-  //      if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-
-
-	// Cameron
-
-	float LSY = raw.axes[AXIS_LEFTY];
-	LSY = std::pow(LSY, 3);
-	drive_vel.linear.x = LSY;
+        // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
 
 
-  //    // Drive turning
+        // Cameron
+        float LSY = raw.axes[AXIS_LEFTY];
+        LSY = std::pow(LSY, 3);
+        drive_vel.linear.x = LSY;
+
+        // Drive turning
         float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
 
         // Apply cubic function for better control
@@ -320,28 +317,26 @@ private:
 
         if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
 
-
         /**********************************************************************
          *                                                                    *
          * DIG SYSTEM CONTROLS                                                *
          *                                                                    *
          **********************************************************************/
         // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-       // float RSY = raw.axes[AXIS_RIGHTY];
+        // float RSY = raw.axes[AXIS_RIGHTY];
 
         // Apply cubic function for better control
-      //  RSY = std::pow(RSY, 3);
-     //   dig_goal.bckt_pwr_goal = RSY;
-    //    dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+        // RSY = std::pow(RSY, 3);
+        // dig_goal.bckt_pwr_goal = RSY;
+        // dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
 
-   //     if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
-  //          RCLCPP_INFO(this->get_logger(), "Dpad Y: Dig hardstop manual control");
- //           dig_goal.hstp_pwr_goal = raw.axes[AXIS_DPAD_Y];
-//        }
+        // if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
+        // RCLCPP_INFO(this->get_logger(), "Dpad Y: Dig hardstop manual control");
+        // dig_goal.hstp_pwr_goal = raw.axes[AXIS_DPAD_Y];
+        // }
 
 
-	//Cameron
-
+        // Cameron
         float LT = raw.axes[AXIS_LTRIGGER];
         float RT = raw.axes[AXIS_RTRIGGER];
 
@@ -369,16 +364,18 @@ private:
          * DUMP SYSTEM CONTROLS                                               *
          *                                                                    *
          **********************************************************************/
-    //    if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
-   //         dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
-  //          RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
- //           this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
-//        }
+        // if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
+        // dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
+        // RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
+        // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+        // }
 
-	if(raw.axes[AXIS_DPAD_Y]){
-	dig_goal.vibr_pwr_goal = 0.2;
-	RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
-	}
+        if (raw.axes[AXIS_DPAD_Y]){
+            dig_goal.vibr_pwr_goal = 0.2;
+            RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
+
+        }
+
         if (raw.buttons[BUTTON_B]) {
             dump_goal.pwr_goal = 0.25;
             RCLCPP_INFO(this->get_logger(), "B: Dump with power %f", dump_goal.pwr_goal);
@@ -386,11 +383,11 @@ private:
         }
 
         // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-//        float LSY = raw.axes[AXIS_LEFTY];
+        // float LSY = raw.axes[AXIS_LEFTY];
 
         // Apply cubic function for better control
- //       LSY = std::pow(LSY, 3);
-  //      dump_goal.pwr_goal = LSY;
+        // LSY = std::pow(LSY, 3);
+        // dump_goal.pwr_goal = LSY;
 
         /**********************************************************************
          *                                                                    *
