@@ -14,7 +14,7 @@ namespace state_messages_utils
         rclcpp::Node::SharedPtr node_to_publish_under;
         state_messages::msg::MotorState msg;
         rclcpp::TimerBase::SharedPtr timer;
-        rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr state_publisher;        
+        rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr state_publisher;
 
     public:
         motor_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name);
@@ -35,6 +35,6 @@ namespace state_messages_utils
         ~kraken_to_msg();
         void publish_state() override;
     };
-   
+
 
 } // namespace state_messages

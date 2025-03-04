@@ -45,9 +45,7 @@ namespace drive_server
         right_motor.SetInverted(true);
         // left_motor.SetSmartCurrentFreeLimit(50.0);
         left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
-        right_motor.BurnFlash();
-
-      RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
+        RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
 
   private:
@@ -105,6 +103,25 @@ namespace drive_server
       std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
     }
 
+    std::vector<double> curvatureDrive(double linear_speed, double z_rotation){
+    	linear_speed = std::clamp(linear_speed, -1.0, 1.0);
+	z_rotation = std::clamp(z_rotation, -1.0 , 1.0);
+
+	double left_speed = linear_speed - z_rotation;
+	double right_speed = linear_speed + z_rotation;
+
+	//this desaturates
+	//
+	double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
+	if(max_magnitude > 1){
+	left_speed /= max_magnitude;
+	right_speed /= max_magnitude;
+	}
+	std::vector<double> speeds = {left_speed, right_speed};
+	return speeds;
+
+
+    }
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
 
@@ -140,6 +157,7 @@ namespace drive_server
 	right_motor.Heartbeat();
         left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
+      RCLCPP_INFO(this->get_logger(), "LEFT MOTOR TORQUE, RIGHT MOTOR TORQUE NM: %f NM, %f NM", left_motor.GetCurrent() * 19.57 *pow(10, -3), right_motor.GetCurrent() * 19.57 * pow(10, -3 ));
         feedback->inst_velocity.linear.x = v_left;
         feedback->inst_velocity.angular.z = v_right; //placeholders
         goal_handle->publish_feedback(feedback);
