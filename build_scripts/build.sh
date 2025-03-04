@@ -12,6 +12,7 @@ cd /workspaces/REAPER
 echo build.sh: building
 
 colcon build --packages-select action_interfaces state_messages
+colcon build --packages-select state_messages_utils
 source install/setup.bash
 
 colcon build --packages-select state_messages_utils

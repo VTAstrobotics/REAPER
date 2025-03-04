@@ -61,13 +61,13 @@ install(
 
 install(
   TARGETS state_messages_utils
-  EXPORT state_messages_utils
+  EXPORT export_${PROJECT_NAME} 
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
-  INCLUDES DESTINATION include/state_messages_utils
 )
-
+target_compile_options(state_messages_utils PRIVATE -fPIC)
 ament_export_include_directories(include)
-
+ament_export_targets(export_${PROJECT_NAME} NAMESPACE state_messages_utils:: HAS_LIBRARY_TARGET)
+ament_export_libraries(state_messages_utils)
 ament_package()
