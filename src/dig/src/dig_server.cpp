@@ -98,37 +98,37 @@ namespace dig_server
       // TODO finish this?
       // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
-      // Left vibration motor (neo550) configuration
-      l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      l_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      l_vib_mtr_.BurnFlash();
+      // // Left vibration motor (neo550) configuration
+      // l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      // l_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      // l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      // l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      // l_vib_mtr_.BurnFlash();
 
-      // Right vibration motor (neo550) configuration
-      r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      r_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      r_vib_mtr_.BurnFlash();
+      // // Right vibration motor (neo550) configuration
+      // r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      // r_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      // r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      // r_vib_mtr_.BurnFlash();
 
       // Hardstop linear actuator configuration
-      hstp_mtr_.SetIdleMode(IdleMode::kBrake);
-      hstp_mtr_.SetMotorType(MotorType::kBrushed);
-      hstp_mtr_.SetSmartCurrentFreeLimit(10.0);
-      hstp_mtr_.SetSmartCurrentStallLimit(10.0);
+      // hstp_mtr_.SetIdleMode(IdleMode::kBrake);
+      // hstp_mtr_.SetMotorType(MotorType::kBrushed);
+      // hstp_mtr_.SetSmartCurrentFreeLimit(10.0);
+      // hstp_mtr_.SetSmartCurrentStallLimit(10.0);
 
-      PIDController hstp_pid(hstp_mtr_);
-      K_u = 3.9, T_u = 0.04; // TODO: tune these values for the hardstop.
-      hstp_pid.SetP(0, 0.8 * K_u);
-      hstp_pid.SetI(0, 0.);
-      hstp_pid.SetD(0, 0.1 * K_u * T_u); // 0; PD controller
+      // // PIDController hstp_pid(hstp_mtr_);
+      // K_u = 3.9, T_u = 0.04; // TODO: tune these values for the hardstop.
+      // hstp_pid.SetP(0, 0.8 * K_u);
+      // hstp_pid.SetI(0, 0.);
+      // hstp_pid.SetD(0, 0.1 * K_u * T_u); // 0; PD controller
 
-      // Configure smart motion settings for velocity control
-      hstp_pid.SetSmartMotionMaxVelocity(0, 100.);  // Max velocity in RPM
-      hstp_pid.SetSmartMotionMaxAccel(0, 10.);     // Max acceleration in RPM/s
+      // // Configure smart motion settings for velocity control
+      // hstp_pid.SetSmartMotionMaxVelocity(0, 100.);  // Max velocity in RPM
+      // hstp_pid.SetSmartMotionMaxAccel(0, 10.);     // Max acceleration in RPM/s
 
-      hstp_mtr_.BurnFlash();
+      // hstp_mtr_.BurnFlash();
 
 
 
@@ -139,7 +139,6 @@ namespace dig_server
 
 
 
-      auto motorlogger = state_messages_utils::kraken_to_msg(shared_from_this(), "left_linkage", &l_link_mtr_, 10);
     }
 
   private:
@@ -158,11 +157,11 @@ namespace dig_server
     hardware::TalonFX r_bckt_mtr_{24, "can0"};
 
     // hardstop linear actuator
-    SparkMax hstp_mtr_{"can0", 26};
+    // SparkMax hstp_mtr_{"can0", 26};
 
     // vibration motors
-    SparkMax l_vib_mtr_{"can0", 22};
-    SparkMax r_vib_mtr_{"can0", 25};
+    // SparkMax l_vib_mtr_{"can0", 22};
+    // SparkMax r_vib_mtr_{"can0", 25};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{50};
@@ -332,6 +331,8 @@ namespace dig_server
      */
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
+    static auto motorlogger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 10);
+
       const auto goal = goal_handle->get_goal();
 
       if (goal->auton) {
@@ -399,11 +400,11 @@ namespace dig_server
         std::clamp(pwr, -1., 1.);
       }
 
-      l_vib_mtr_.Heartbeat();
-      r_vib_mtr_.Heartbeat();
+      // l_vib_mtr_.Heartbeat();
+      // r_vib_mtr_.Heartbeat();
 
-      l_vib_mtr_.SetDutyCycle(pwr);
-      r_vib_mtr_.SetDutyCycle(pwr);
+      // l_vib_mtr_.SetDutyCycle(pwr);
+      // r_vib_mtr_.SetDutyCycle(pwr);
     }
 
     /**
@@ -418,8 +419,8 @@ namespace dig_server
         std::clamp(pwr, -1., 1.);
       }
 
-      hstp_mtr_.Heartbeat();
-      hstp_mtr_.SetDutyCycle(pwr);
+      // hstp_mtr_.Heartbeat();
+      // hstp_mtr_.SetDutyCycle(pwr);
     }
 
     /**
