@@ -1,5 +1,6 @@
 #include "state_messages_utils/motor_to_msg.hpp"
 
+using namespace state_messages_utils;
 using namespace state_messages;
 
 motor_to_msg::motor_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name)

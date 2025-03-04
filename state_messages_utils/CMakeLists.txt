@@ -23,23 +23,25 @@ find_package(action_interfaces REQUIRED)
 find_package(sparkcan REQUIRED)
 find_package(std_msgs REQUIRED)
 set(HEADER_FILES include/state_messages_utils/motor_to_msg.hpp)
-add_library(state_messages_utils src/motor_to_msg.cpp ${HEADER_FILES})
+add_library(state_messages_utils SHARED src/motor_to_msg.cpp ${HEADER_FILES})
 
-  ament_target_dependencies(state_messages_utils
-  rclcpp
-  rclcpp_action
-  rclcpp_components
-  state_messages
-  action_interfaces
-  sparkcan
-  std_msgs
-  rosidl_default_runtime
-  phoenix6)
+ament_target_dependencies(state_messages_utils
+  "rclcpp"
+  "rclcpp_action"
+  "rclcpp_components"
+  "state_messages"
+  "action_interfaces"
+  "sparkcan"
+  "std_msgs"
+  "rosidl_default_runtime"
+  "phoenix6"
+  )
 
-target_include_directories(  
+target_include_directories(
   state_messages_utils PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -51,6 +53,7 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
 install(
   DIRECTORY include/state_messages_utils
   DESTINATION include
@@ -64,4 +67,7 @@ install(
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include/state_messages_utils
 )
+
+ament_export_include_directories(include)
+
 ament_package()

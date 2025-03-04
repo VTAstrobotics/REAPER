@@ -6,7 +6,7 @@
 
 using namespace ctre::phoenix6;
 
-namespace state_messages
+namespace state_messages_utils
 {
     class motor_to_msg
     {
@@ -14,14 +14,14 @@ namespace state_messages
         rclcpp::Node::SharedPtr node_to_publish_under;
         state_messages::msg::MotorState msg;
         rclcpp::TimerBase::SharedPtr timer;
-        rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr state_publisher;        
+        rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr state_publisher;
 
     public:
         motor_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name);
         ~motor_to_msg();
         virtual void publish_state();
     };
-   
+
     class kraken_to_msg: motor_to_msg{
         private:
     hardware::TalonFX* motor;
@@ -34,6 +34,6 @@ namespace state_messages
         kraken_to_msg(rclcpp::Node::SharedPtr node, std::string motor_name, hardware::TalonFX* motor, float frequency);
         void publish_state() override;
     };
-   
+
 
 } // namespace state_messages

@@ -163,9 +163,8 @@ namespace dig_server
       // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       // r_vib_mtr_.BurnFlash();
 
-
-        kraken_to_msg::kraken_to_msg(this, "Left Linkage Motor", &l_link_mtr_, 50);
-        kraken_to_msg::kraken_to_msg(this, "Left Bucket Motor", &l_bckt_mtr_, 50);
+      state_messages_utils::kraken_to_msg{shared_from_this(), "Left Linkage Motor", &l_link_mtr_, 50.};
+      state_messages_utils::kraken_to_msg(shared_from_this(), "Left Bucket Motor", &l_bckt_mtr_, 50.);
     }
 
   private:
