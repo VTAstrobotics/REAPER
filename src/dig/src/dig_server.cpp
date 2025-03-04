@@ -13,6 +13,7 @@
 #include "PIDController.hpp"
 #include "state_messages_utils/motor_to_msg.hpp"
 
+
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
@@ -149,7 +150,7 @@ namespace dig_server
       // TODO finish this?
       // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
-      // Left vibration motor (NEO550) configuration
+      // // Left vibration motor (neo550) configuration
       // l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
       // l_vib_mtr_.SetMotorType(MotorType::kBrushless);
       // l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
@@ -163,8 +164,32 @@ namespace dig_server
       // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       // r_vib_mtr_.BurnFlash();
 
-      link_pub_ = this->create_publisher<state_messages::msg::MotorState>("/dig/link/state", 2);
-      bckt_pub_ = this->create_publisher<state_messages::msg::MotorState>("/dig/bckt/state", 2);
+      // Hardstop linear actuator configuration
+      // hstp_mtr_.SetIdleMode(IdleMode::kBrake);
+      // hstp_mtr_.SetMotorType(MotorType::kBrushed);
+      // hstp_mtr_.SetSmartCurrentFreeLimit(10.0);
+      // hstp_mtr_.SetSmartCurrentStallLimit(10.0);
+
+      // // PIDController hstp_pid(hstp_mtr_);
+      // K_u = 3.9, T_u = 0.04; // TODO: tune these values for the hardstop.
+      // hstp_pid.SetP(0, 0.8 * K_u);
+      // hstp_pid.SetI(0, 0.);
+      // hstp_pid.SetD(0, 0.1 * K_u * T_u); // 0; PD controller
+
+      // // Configure smart motion settings for velocity control
+      // hstp_pid.SetSmartMotionMaxVelocity(0, 100.);  // Max velocity in RPM
+      // hstp_pid.SetSmartMotionMaxAccel(0, 10.);     // Max acceleration in RPM/s
+
+      // hstp_mtr_.BurnFlash();
+
+
+
+      RCLCPP_DEBUG(this->get_logger(), "Ready for action");
+      if(&l_bckt_mtr_ == nullptr){
+              RCLCPP_DEBUG(this->get_logger(), "null pointer");
+      }
+
+
     }
 
   private:
@@ -180,6 +205,9 @@ namespace dig_server
     // bucket rotators
     hardware::TalonFX l_bckt_mtr_{21, "can0"};
     hardware::TalonFX r_bckt_mtr_{24, "can0"};
+
+    // hardstop linear actuator
+    // SparkMax hstp_mtr_{"can0", 26};
     hardware::CANcoder bckt_cancoder_{1, "can0"};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, true};
@@ -218,8 +246,6 @@ namespace dig_server
       6,0.5,5,0,
     };
 
-    rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr link_pub_;
-    rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr bckt_pub_;
 
     /**************************************************************************
      * General action server handling                                         *
@@ -286,6 +312,13 @@ namespace dig_server
      */
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
+    static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 50);
+    static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 50);
+    static auto left_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_bucket", &l_bckt_mtr_, 50);
+    static auto right_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_bucket", &r_bckt_mtr_, 50);
+
+
+
       const auto goal = goal_handle->get_goal();
       auto feedback = std::make_shared<Dig::Feedback>();
       auto result = std::make_shared<Dig::Result>();
@@ -356,21 +389,7 @@ namespace dig_server
         pwr = 0;
       }
 
-      float position = l_link_mtr_.GetPosition().GetValueAsDouble();
-      float current = l_link_mtr_.GetTorqueCurrent().GetValueAsDouble();
-      float output_voltage = l_link_mtr_.GetMotorVoltage().GetValueAsDouble();
-      float input_voltage = l_link_mtr_.GetSupplyVoltage().GetValueAsDouble();
-      float velocity = l_link_mtr_.GetVelocity().GetValueAsDouble();
 
-      state_messages::msg::MotorState msg = state_messages::msg::MotorState();
-
-      msg.current_applied_voltage = output_voltage;
-      msg.input_voltage = input_voltage;
-      msg.current_current = current;
-      msg.current_speed = velocity;
-      msg.current_position = position;
-
-      link_pub_->publish(msg);
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "link_pwr: link_ptr %lf | %lf", (double) l_link_mtr_.GetPosition().GetValue(),
@@ -391,22 +410,15 @@ namespace dig_server
         pwr = 0;
       }
 
-      float position = l_bckt_mtr_.GetPosition().GetValueAsDouble();
-      float current = l_bckt_mtr_.GetTorqueCurrent().GetValueAsDouble();
-      float output_voltage = l_bckt_mtr_.GetMotorVoltage().GetValueAsDouble();
-      float input_voltage = l_bckt_mtr_.GetSupplyVoltage().GetValueAsDouble();
-      float velocity = l_bckt_mtr_.GetVelocity().GetValueAsDouble();
+      
 
-      state_messages::msg::MotorState msg = state_messages::msg::MotorState();
 
-      msg.current_applied_voltage = output_voltage;
-      msg.input_voltage = input_voltage;
-      msg.current_current = current;
-      msg.current_speed = velocity;
-      msg.current_position = position;
 
-      bckt_pub_->publish(msg);
+      // l_vib_mtr_.Heartbeat();
+      // r_vib_mtr_.Heartbeat();
 
+      // l_vib_mtr_.SetDutyCycle(pwr);
+      // r_vib_mtr_.SetDutyCycle(pwr);
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "bckt_pwr: link_ptr %lf | %lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
         (double) r_bckt_mtr_.GetPosition().GetValue());
@@ -426,6 +438,8 @@ namespace dig_server
         pwr = 0;
       }
 
+      // hstp_mtr_.Heartbeat();
+      // hstp_mtr_.SetDutyCycle(pwr);
       // l_vib_mtr_.Heartbeat();
       // r_vib_mtr_.Heartbeat();
 
