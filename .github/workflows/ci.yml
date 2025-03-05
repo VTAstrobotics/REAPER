@@ -26,9 +26,11 @@ jobs:
       # echo "USER root" >> ./.github/actions/cppformat/Dockerfile
       # echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
 
+    - name: Print the container image
+      run: cat ./.github/actions/cppformat/Dockerfile
+
     - name: Build the developer container image
       run: |
-        cat ./.github/actions/cppformat/Dockerfile
         docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
         docker save astro-dev -o astro-dev.tar
 
