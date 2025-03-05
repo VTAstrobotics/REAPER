@@ -14,14 +14,14 @@ jobs:
     - name: Copy Dockerfile
       run: |
         cp ./.devcontainer/Dockerfile ./.github/actions/cppformat/
-        cp -r src/ ./.github/actions/cppformat/
+        cp -r . ./.github/actions/cppformat/
 
     - name: Modify Dockerfile for clang testing
       run: |
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> ./.github/actions/cppformat/Dockerfile
         echo "COPY ./.github/workflows/entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
         echo "RUN sudo chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
-        echo "COPY ./.github/actions/cppformat/src /" >> ./.github/actions/cppformat/Dockerfile
+        echo "COPY ./.github/actions/cppformat/ /" >> ./.github/actions/cppformat/Dockerfile
       # echo "COPY ../* /" >> ./.github/actions/cppformat/Dockerfile
       # echo "USER root" >> ./.github/actions/cppformat/Dockerfile
       # echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
