@@ -12,13 +12,16 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Copy Dockerfile
-      run: cp ./.devcontainer/Dockerfile ./.github/actions/cppformat
+      run: |
+        cp ./.devcontainer/Dockerfile ./.github/actions/cppformat/
+        cp -r src/ ./.github/actions/cppformat/
 
     - name: Modify Dockerfile for clang testing
       run: |
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> ./.github/actions/cppformat/Dockerfile
         echo "COPY ./.github/workflows/entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
         echo "RUN sudo chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
+        echo "COPY ./.github/workflows/src /" >> ./.github/actions/cppformat/Dockerfile
       # echo "COPY ../* /" >> ./.github/actions/cppformat/Dockerfile
       # echo "USER root" >> ./.github/actions/cppformat/Dockerfile
       # echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
@@ -78,11 +81,11 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: HELP
-        run: ls ~
+        run: ls
 
       - name: Run developer container
         run: docker run --rm
-          astro-dev bash -c "ls . && ~/build_scripts/build.sh"
+          astro-dev bash -c "ls / && /build_scripts/build.sh"
 
       # - name: Clang Code Formatter
       #   run: source ./.github/workflows/entrypoint.sh
