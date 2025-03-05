@@ -21,7 +21,7 @@ jobs:
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> ./.github/actions/cppformat/Dockerfile
         echo "COPY ./.github/workflows/entrypoint.sh /" >> ./.github/actions/cppformat/Dockerfile
         echo "RUN sudo chmod +x /entrypoint.sh" >> ./.github/actions/cppformat/Dockerfile
-        echo "COPY ./.github/actions/cppformat/* /" >> ./.github/actions/cppformat/Dockerfile
+        echo "COPY ./.github/actions/cppformat/ /" >> ./.github/actions/cppformat/Dockerfile
       # echo "COPY ../* /" >> ./.github/actions/cppformat/Dockerfile
       # echo "USER root" >> ./.github/actions/cppformat/Dockerfile
       # echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> ./.github/actions/cppformat/Dockerfile
@@ -55,7 +55,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
-        run: docker run --rm astro-dev bash -c "ls -a / && .github/workflows/entrypoint.sh"
+        run: docker run --rm astro-dev bash -c "ls -a / && /entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -81,7 +81,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: HELP
-        run: ls /
+        run: ls -a /
 
       - name: Run developer container
         run: docker run --rm
