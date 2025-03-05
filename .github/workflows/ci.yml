@@ -28,6 +28,7 @@ jobs:
 
     - name: Build the developer container image
       run: |
+        cat ./.github/actions/cppformat/Dockerfile
         docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
         docker save astro-dev -o astro-dev.tar
 
@@ -55,7 +56,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
-        run: sudo docker run --rm astro-dev bash -c "ls -a / && chmod u+x /entrypoint.sh && /entrypoint.sh"
+        run: sudo docker run --rm astro-dev bash -c "ls -a / && chmod u+x /entrypoint.sh && source /entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
