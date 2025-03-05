@@ -215,7 +215,7 @@ private:
 
         if (raw.buttons[BUTTON_RBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal = -0.30;
+            dig_goal.link_pwr_goal = -0.20;
 
             // dump_goal.deposition_goal = 0.1;
             // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);

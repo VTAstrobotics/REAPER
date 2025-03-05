@@ -41,13 +41,14 @@ namespace dig_server
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
-//      RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
-//      auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+      // TODO: change to logging severity to INFO
+      RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
+      auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
-//      if (ret != RCUTILS_RET_OK) {
-//        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
-//        rcutils_reset_error();
-//      }
+      if (ret != RCUTILS_RET_OK) {
+        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
+        rcutils_reset_error();
+      }
 
       // Linkage motor configuration
       configs::TalonFXConfiguration link_configs{};
