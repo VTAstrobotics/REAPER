@@ -1,10 +1,13 @@
 import tkinter as tk
 from tkinter import messagebox
-from PIL import Image, ImageTk  # Required for PNG handling
+from PIL import Image, ImageTk
 import threading
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from sensor_msgs.msg import Image as RosImage
+import cv2
+from cv_bridge import CvBridge
 
 class MultiTopicSubscriber(Node):
 
@@ -13,6 +16,8 @@ class MultiTopicSubscriber(Node):
         super().__init__("multi_topic_subscriber")
         self.custom_subscriptions = {}  
         self.messages = {}
+        self.bridge = CvBridge()
+        self.camera_frames = {}
 
     def subscribe_to_topic(self, topic_name):
 
@@ -25,15 +30,24 @@ class MultiTopicSubscriber(Node):
 
             self.messages[topic] = msg.data
 
-        subscription = self.create_subscription(
-
-            String, topic_name, callback, 10
-
-        )
-
+        subscription = self.create_subscription(String, topic_name, callback, 10)
         self.custom_subscriptions[topic_name] = subscription
         self.messages[topic_name] = "No data received yet"
         self.get_logger().info(f"Subscribed to topic: {topic_name}")
+
+    def subscribe_to_camera(self, camera_topic):
+        if camera_topic in self.custom_subscriptions:
+            self.get_logger().warn(f"Already subscribed to camera: {camera_topic}")
+            return
+
+        def callback(msg, topic=camera_topic):
+            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+            self.camera_frames[topic] = cv_image
+
+        subscription = self.create_subscription(RosImage, camera_topic, callback, 10)
+        self.custom_subscriptions[camera_topic] = subscription
+        self.camera_frames[camera_topic] = None
+        self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
  
 class TkMultiTopicApp:
     
@@ -57,9 +71,7 @@ class TkMultiTopicApp:
         self.topic_entry = tk.Entry(self.input_frame, width=30)
         self.topic_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        self.subscribe_button = tk.Button(
-            self.input_frame, text="Subscribe", command=self.subscribe_to_topic, bg="red", fg="white"
-        )
+        self.subscribe_button = tk.Button(self.input_frame, text="Subscribe", command=self.subscribe_to_topic, bg="red", fg="white")
         self.subscribe_button.grid(row=0, column=2, padx=5, pady=5)
 
         # Camera topic labels, grid, and buttons
@@ -69,9 +81,7 @@ class TkMultiTopicApp:
         self.camera_entry = tk.Entry(self.input_frame, width=30)
         self.camera_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        self.camera_subscribe_button = tk.Button(
-            self.input_frame, text="Subscribe", command=self.subscribe_to_camera_topic, bg="red", fg="white"
-        )
+        self.camera_subscribe_button = tk.Button(self.input_frame, text="Subscribe", command=self.subscribe_to_camera_topic, bg="red", fg="white")
         self.camera_subscribe_button.grid(row=1, column=2, padx=5, pady=5)
 
         # Frame for messages
@@ -92,6 +102,10 @@ class TkMultiTopicApp:
         self.update_message_thread = threading.Thread(target=self.update_messages)
         self.update_message_thread.daemon = True
         self.update_message_thread.start()
+
+        self.update_camera_thread = threading.Thread(target=self.update_camera_frames)
+        self.update_camera_thread.daemon = True
+        self.update_camera_thread.start()
 
         # Launch RViz in a subprocess
         self.launch_rviz()
@@ -126,14 +140,13 @@ class TkMultiTopicApp:
 
         if camera_topic_name:
 
-            if camera_topic_name in self.messages_widgets:
+            if camera_topic_name in self.camera_labels:
 
                 messagebox.showinfo("Already Subscribed", f"Already subscribed to {camera_topic_name}.")
                 return
-
+            
             try:
-
-                self.ros_node.subscribe_to_topic(camera_topic_name)
+                self.ros_node.subscribe_to_camera(camera_topic_name)
                 self.add_camera_label(camera_topic_name)
 
             except Exception as e:
@@ -273,6 +286,16 @@ class TkMultiTopicApp:
                         widgets["timeout_timer"].cancel()
 
                     self.check_data_timeout(topic_name, label_message)
+                    
+    def update_camera_frames(self):
+        while rclpy.ok():
+            for topic, frame in self.ros_node.camera_frames.items():
+                if frame is not None and topic in self.camera_labels:
+                    cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    img = Image.fromarray(cv_image)
+                    img_tk = ImageTk.PhotoImage(image=img)
+                    self.camera_labels[topic].config(image=img_tk)
+                    self.camera_labels[topic].image = img_tk
 
     def check_data_timeout(self, topic_name, label_message):
  
