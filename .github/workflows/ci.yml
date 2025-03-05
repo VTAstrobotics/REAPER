@@ -55,7 +55,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
-        run: docker run --rm astro-dev bash -c "ls -a / && sudo /entrypoint.sh"
+        run: docker run --rm astro-dev bash -c "ls -a / && sudo chmod u+x /entrypoint.sh && /entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
