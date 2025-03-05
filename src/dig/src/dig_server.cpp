@@ -368,12 +368,11 @@ namespace dig_server
         pwr = 0;
       }
 
-
-
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "link_pwr: link_ptr %lf | %lf", (double) l_link_mtr_.GetPosition().GetValue(),
         (double) r_link_mtr_.GetPosition().GetValue());
 
+      // SLOW IF NOT CONNECTED TO THE MOTOR.
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
       link_mech.SetControl(position_command);
     }
@@ -389,19 +388,11 @@ namespace dig_server
         pwr = 0;
       }
 
-
-
-
-
-      // l_vib_mtr_.Heartbeat();
-      // r_vib_mtr_.Heartbeat();
-
-      // l_vib_mtr_.SetDutyCycle(pwr);
-      // r_vib_mtr_.SetDutyCycle(pwr);
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
         "bckt_pwr: link_ptr %lf | %lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
+      // SLOW IF NOT CONNECTED TO THE MOTOR.
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
       bckt_mech.SetControl(position_command);
     }
