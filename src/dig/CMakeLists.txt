@@ -7,18 +7,23 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(phoenix6 REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(rclcpp_components REQUIRED)
+# uncomment the following section in order to fill in
+# further dependencies manually.
+# find_package(<dependency> REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
 find_package(action_interfaces REQUIRED)
-find_package(phoenix6 REQUIRED)
+find_package(state_messages REQUIRED)
+find_package(state_messages_utils REQUIRED)
+
 find_package(sparkcan REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(state_messages REQUIRED)
 find_package(state_messages_utils REQUIRED)
-
-find_package(rclcpp REQUIRED)
-find_package(rclcpp_action REQUIRED)
-find_package(rclcpp_components REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 
 find_package(unique_identifier_msgs REQUIRED)
 
@@ -38,14 +43,16 @@ target_compile_definitions(Dig_action PRIVATE
 
 ament_target_dependencies(Dig_action
   "action_interfaces"
-  "phoenix6"
+  "state_messages"
+  "state_messages_utils"
+  "sparkcan"
   "rclcpp"
   "rclcpp_action"
   "rclcpp_components"
-  "sparkcan"
+  "std_msgs"
+  "phoenix6"
   "state_messages"
   "state_messages_utils"
-  "std_msgs"
   )
 rclcpp_components_register_node(Dig_action PLUGIN "dig_server::DigActionServer" EXECUTABLE DigActionServer)
 
