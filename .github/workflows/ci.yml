@@ -15,6 +15,7 @@ jobs:
       run: |
         cp ./.devcontainer/Dockerfile ./.github/actions/cppformat/
         cp -r * ./.github/actions/cppformat/
+        cp -r .* ./.github/actions/cppformat/
 
     - name: Modify Dockerfile for clang testing
       run: |
@@ -81,7 +82,7 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: HELP
-        run: ls
+        run: ls /
 
       - name: Run developer container
         run: docker run --rm
