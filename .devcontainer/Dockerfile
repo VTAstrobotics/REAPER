@@ -77,7 +77,7 @@ RUN sudo apt install sparkcan
 RUN sudo apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup
-
+RUN pip install numpy pandas
 # install turtlebot demo, including gz, unless on a Jetson
 # i swear that it worked before but it doesnt anymore. So basically install this manually if you want nav stuff until i can figure this out.
 # RUN if ! grep -q "Jetson" /proc/device-tree/model; then \
