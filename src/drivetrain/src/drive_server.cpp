@@ -9,10 +9,12 @@
 #include "SparkBase.hpp"
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/time.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 namespace drive_server
 {
   class DriveActionServer : public rclcpp::Node
@@ -25,6 +27,7 @@ namespace drive_server
         : Node("drive_action_server", options)
     {
       using namespace std::placeholders;
+      
 
       this->action_server_ = rclcpp_action::create_server<Drive>(
           this,
@@ -47,6 +50,8 @@ namespace drive_server
         right_motor.BurnFlash();
         velocity_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("drive/velocity", 10);
         pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("drive/pose", 10);
+        imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>("imu/data", 10, std::bind(&DriveActionServer::imu_callback, this, _1));
+        timer_ = this->create_wall_timer(std::chrono::milliseconds(8), std::bind(&DriveActionServer::timer_callback, this));
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
@@ -55,24 +60,34 @@ namespace drive_server
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
+    rclcpp::TimerBase::SharedPtr timer_;
+    sensor_msgs::msg::Imu current_imu;
+
         double drive_left_duty = 0;
         double drive_right_duty = 0;
         SparkMax left_motor{"can0", 10};
         SparkMax right_motor{"can0", 11};
     bool has_goal{false};
     int loop_rate_hz{120};
-    double track_width{1.0};
-    double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
-    double wheelCircumference = 0.3; //placeholder
     double currentLeftPos = 0;
     double currentRightPos = 0;
-    double pastLeftPos, pastRightPos, rightVelocity, leftVelocity, new_left_position, 
+    double rightVelocity, leftVelocity, new_left_position, 
     new_right_position, left_dist, right_dist;
-
     double x_     = 0.0;
     double y_     = 0.0;
     double theta_ = 0.0; 
+    rclcpp::Time past_time = this->now();
+    double pastLeftPos  = left_motor.GetPosition();
+    double pastRightPos = right_motor.GetPosition();
+
+
+    //*****************NOTE***************
+    //THESE VALUES NEED TO BE CHANGED TO THE ACTUAL ROBOT VALUES TO TEST
+    double wheelCircumference = 0.3; //placeholder
+    double normalization_constant = 1; //change this during testing
+    double track_width{1.0};
 
 
     rclcpp_action::GoalResponse handle_goal(
@@ -111,6 +126,11 @@ namespace drive_server
       using namespace std::placeholders;
       // this needs to return quickly to avoid blocking the executor, so spin up a new thread
       std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
+    }
+
+    void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg){
+      current_imu = *msg;
+
     }
 
     struct Quaterniond
@@ -170,30 +190,48 @@ namespace drive_server
 
     void getPoseMessage(geometry_msgs::msg::Twist &velocity_message, geometry_msgs::msg::Pose &pose_message, double dt){
       double v = velocity_message.linear.x;
-      double w = velocity_message.angular.z;
 
-      theta_ += w * dt;
+      auto q = current_imu.orientation;
 
-      x_ += v * std::cos(theta_) * dt;
-      y_ += v * std::sin(theta_) * dt;
+
+      double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+      double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+      double yaw = std::atan2(siny_cosp, cosy_cosp);
+
+      x_ += v * std::cos(yaw) * dt;
+      y_ += v * std::sin(yaw) * dt;
 
       pose_message.position.x = x_;
       pose_message.position.y = y_;
       pose_message.position.z = 0.0;
 
-      Quaterniond q = toQuat(theta_, 0.0, 0.0);
+      Quaterniond quat = toQuat(yaw, 0.0, 0.0);
 
       geometry_msgs::msg::Quaternion quat_msg;
-      quat_msg.w = q.w;
-      quat_msg.x = q.x;
-      quat_msg.y = q.y;
-      quat_msg.z = q.z;
+      quat_msg.w = quat.w;
+      quat_msg.x = quat.x;
+      quat_msg.y = quat.y;
+      quat_msg.z = quat.z;
 
       pose_message.orientation = quat_msg;
     }
 
-    
+    void timer_callback(){
+      auto current_time = this->now();
+      double dt = (current_time - past_time).seconds();
+      past_time = current_time;
+      geometry_msgs::msg::Twist velocity_message;
+      getVelocityMessage(velocity_message, dt);
+      geometry_msgs::msg::Pose pose_msg;
+      getPoseMessage(velocity_message, pose_msg, dt);
+      
+      velocity_publisher_->publish(velocity_message);
+      pose_publisher_->publish(pose_msg);
+      pastLeftPos = new_left_position;
+      pastRightPos = new_right_position;
+    }
 
+    
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Executing goal");
@@ -210,16 +248,8 @@ namespace drive_server
       double v_right = linear  + angular;
       auto start_time = this->now();
       auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
-
-      auto past_time = this->now();
-      pastLeftPos  = left_motor.GetPosition();
-      pastRightPos = right_motor.GetPosition();
-
       while (rclcpp::ok() && this->now() < end_time)
       {
-        auto current_time = this->now();
-        double dt = (current_time - past_time).seconds();
-        past_time = current_time;
         if (goal_handle->is_canceling()) {
           RCLCPP_INFO(this->get_logger(), "Goal is canceling");
           goal_handle->canceled(result);
@@ -233,21 +263,9 @@ namespace drive_server
         left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
 
-        geometry_msgs::msg::Twist velocity_message;
-        getVelocityMessage(velocity_message, dt);
-
-        geometry_msgs::msg::Pose pose_msg;
-        getPoseMessage(velocity_message, pose_msg, dt);
-
-	feedback->inst_velocity.linear.x  = velocity_message.linear.x;
-        feedback->inst_velocity.angular.z = velocity_message.angular.z;
-
-        velocity_publisher_->publish(velocity_message);
-        pose_publisher_->publish(pose_msg);
+	      feedback->inst_velocity.linear.x  = linear;
+        feedback->inst_velocity.angular.z = angular;
         goal_handle->publish_feedback(feedback);
-
-        pastLeftPos = new_left_position;
-        pastRightPos = new_right_position;
 
         loop_rate.sleep();
       }
@@ -266,4 +284,3 @@ namespace drive_server
 } // namespace drive_server
 
 RCLCPP_COMPONENTS_REGISTER_NODE(drive_server::DriveActionServer)
-
