@@ -33,7 +33,6 @@ class system_identifier(Node):
             self.right_logger,
             2
         )
-        self.subscription  # prevent unused variable warning
 
     def left_logger(self, msg):
         self.left_data["VoltageApplied"].append(msg.current_applied_voltage)
@@ -47,8 +46,11 @@ class system_identifier(Node):
         self.right_data["time"].append(self.time)
     def timer_callback(self):
         self.time += self.period
+        print("wrote file")
         self.currentOutput += self.period * .25
         self.send_goal(self.currentOutput)
+        if((int(self.time) % 1) == 0):
+            self.write_data() 
         
     def write_data(self):
         (pd.DataFrame.from_dict(data=self.left_data, orient='index').to_csv('left_data.csv', header=True))
@@ -72,7 +74,6 @@ def main(args=None):
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
     # when the garbage collector destroys the node object)
-    minimal_subscriber.write_data()
     minimal_subscriber.destroy_node()
     rclpy.shutdown()
 
