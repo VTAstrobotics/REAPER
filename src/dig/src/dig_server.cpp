@@ -33,7 +33,10 @@ namespace dig_server
     explicit DigActionServer(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
         : Node("dig_action_server", options)
     {
-
+      l_link_mtr_.ClearStickyFaults();
+      r_link_mtr_.ClearStickyFaults();
+      r_bckt_mtr_.ClearStickyFaults();
+      l_bckt_mtr_.ClearStickyFaults();
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
           "dig",
@@ -42,22 +45,24 @@ namespace dig_server
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
       // TODO: change to logging severity to INFO
-      RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
-      auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+      // RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
+      // auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
-      if (ret != RCUTILS_RET_OK) {
-        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
-        rcutils_reset_error();
-      }
+      // if (ret != RCUTILS_RET_OK) {
+      //   RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
+      //   rcutils_reset_error();
+      // }
 
       // Linkage motor configuration
       configs::TalonFXConfiguration link_configs{};
 
       // Slot 0 gains
       float K_u = 1.0, T_u = 0.04;
+      link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       //link_configs.Slot0.kS = 0;
       //link_configs.Slot0.kV = 0;
       //link_configs.Slot0.kA = 0;
+      link_configs.Slot0.kG = 0;
       link_configs.Slot0.kP = 0.8 * K_u;
       link_configs.Slot0.kI = 0; // 0; PD controller
       link_configs.Slot0.kD = 0.1 * K_u * T_u;
@@ -65,9 +70,11 @@ namespace dig_server
       r_link_mtr_.GetConfigurator().Apply(link_configs.Slot0);
 
       // Slot 1 gains
+      link_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
       // link_configs.Slot1.kS = 0;
       // link_configs.Slot1.kV = 0;
       // link_configs.Slot1.kA = 0;
+      link_configs.Slot1.kG = 0;
       // link_configs.Slot1.kP = .03; // 0.8 * K_u;
       // link_configs.Slot1.kI = 0; // 0; PD controller
       // link_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
@@ -78,9 +85,18 @@ namespace dig_server
       link_configs.CurrentLimits.SupplyCurrentLimit = 30;
       link_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-      // Use absolute encoder on the linkage!
-      link_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
-      link_configs.Feedback.FeedbackRemoteSensorID = link_cancoder_.GetDeviceID();
+      //link cancoder configs
+
+      configs::CANcoderConfiguration l_link_cancoder_config_;
+      l_link_cancoder_config_.MagnetSensor.WithAbsoluteSensorRange(signals::AbsoluteSensorRangeValue::Unsigned_0To1);
+      l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
+
+      configs::CANcoderConfiguration r_link_cancoder_config_;
+      r_link_cancoder_config_.MagnetSensor.WithAbsoluteSensorRange(signals::AbsoluteSensorRangeValue::Unsigned_0To1);
+      r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
+
+      l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
+      r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
 
       // TODO: motion magic!!
       // link_configs.MotionMagic.MotionMagicCruiseVelocity = 3;
@@ -89,17 +105,44 @@ namespace dig_server
 
       // Enable brake mode on the linkage
       link_configs.MotorOutput.NeutralMode = signals::NeutralModeValue::Brake;
-      link_configs.MotorOutput.PeakForwardDutyCycle = 0.3;
-      link_configs.MotorOutput.PeakReverseDutyCycle = -0.3;
+      link_configs.MotorOutput.Inverted= signals::InvertedValue::Clockwise_Positive;
+      link_configs.MotorOutput.PeakForwardDutyCycle = 0.1;
+      link_configs.MotorOutput.PeakReverseDutyCycle = -0.1;
 
       // Soft limits
       link_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-      link_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = LINK_MIN_POS_;
+      link_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = LINK_MAX_POS_;
       link_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-      link_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = LINK_MAX_POS_;
+      link_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = LINK_MIN_POS_;
 
-      // Apply linkage configs to both motors
+      // Individual configs for the left linkage motor
+      // Use absolute cancoder on the linkage!
+      link_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
+      link_configs.Feedback.FeedbackRemoteSensorID = l_link_cancoder_.GetDeviceID();
+      link_configs.Feedback.RotorToSensorRatio = 100;
+
+      // Differential sensor (for left, we compare to the right encoder!)
+      link_configs.DifferentialSensors.DifferentialSensorSource = signals::DifferentialSensorSourceValue::RemoteCANcoder;
+      link_configs.DifferentialSensors.DifferentialRemoteSensorID =  r_link_cancoder_.GetDeviceID();
+      link_configs.DifferentialSensors.DifferentialTalonFXSensorID = r_link_mtr_.GetDeviceID();
+
+      // Apply left linkage configs
       l_link_mtr_.GetConfigurator().Apply(link_configs);
+      // link_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+      // link_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = LINK_MIN_POS_;
+      // link_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+      // link_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = LINK_MAX_POS_;
+
+      // Individual configs for the right linkage motor
+      // Use absolute cancoder on the linkage!
+      link_configs.Feedback.FeedbackRemoteSensorID = r_link_cancoder_.GetDeviceID();
+
+      // Differential sensor (for right, we compare to the left encoder!)
+      link_configs.DifferentialSensors.DifferentialRemoteSensorID =  l_link_cancoder_.GetDeviceID();
+      link_configs.DifferentialSensors.DifferentialTalonFXSensorID = l_link_mtr_.GetDeviceID();
+
+      link_configs.MotorOutput.Inverted= signals::InvertedValue::CounterClockwise_Positive;
+      // Apply right linkage configs
       r_link_mtr_.GetConfigurator().Apply(link_configs);
 
       // Bucket motor configuration
@@ -126,10 +169,6 @@ namespace dig_server
       bckt_configs.CurrentLimits.SupplyCurrentLimit = 20;
       bckt_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-      // Use absolute encoder on the bucket!
-      bckt_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
-      bckt_configs.Feedback.FeedbackRemoteSensorID = bckt_cancoder_.GetDeviceID();
-
       // TODO: motion magic!!
       // link_configs.MotionMagic.MotionMagicCruiseVelocity = 3;
       // link_configs.MotionMagic.MotionMagicAcceleration = 20;
@@ -140,8 +179,28 @@ namespace dig_server
       bckt_configs.MotorOutput.PeakForwardDutyCycle = 0.2;
       bckt_configs.MotorOutput.PeakReverseDutyCycle = -0.2;
 
-      // Apply bucket configs to both motors
+      // Individual configs for the left bucket motor
+      // Use absolute cancoder on the bucket!
+      bckt_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
+      bckt_configs.Feedback.FeedbackRemoteSensorID = l_bckt_cancoder_.GetDeviceID();
+
+      // Differential sensor (for left, we compare to the right encoder!)
+      bckt_configs.DifferentialSensors.DifferentialSensorSource = signals::DifferentialSensorSourceValue::RemoteCANcoder;
+      bckt_configs.DifferentialSensors.DifferentialRemoteSensorID = r_bckt_cancoder_.GetDeviceID();
+      bckt_configs.DifferentialSensors.DifferentialTalonFXSensorID = r_bckt_mtr_.GetDeviceID();
+
+      // Apply left bucket configs
       l_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
+
+      // Individual configs for the right bucket motor
+      // Use absolute cancoder on the bucket!
+      bckt_configs.Feedback.FeedbackRemoteSensorID = r_bckt_cancoder_.GetDeviceID();
+
+      // Differential sensor (for right, we compare to the left encoder!)
+      bckt_configs.DifferentialSensors.DifferentialRemoteSensorID = l_bckt_cancoder_.GetDeviceID();
+      bckt_configs.DifferentialSensors.DifferentialTalonFXSensorID = l_bckt_mtr_.GetDeviceID();
+
+      // Apply right bucket configs
       r_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
 
       // Set linkage and bucket to SimpleDifferentialMechanisms
@@ -166,7 +225,7 @@ namespace dig_server
       // r_vib_mtr_.BurnFlash();
 
 
-      RCLCPP_DEBUG(this->get_logger(), "Ready for action");
+      RCLCPP_DEBUG(this->get_logger(), "Ready for actireturnon");
       if(&l_bckt_mtr_ == nullptr){
               RCLCPP_DEBUG(this->get_logger(), "null pointer");
       }
@@ -179,15 +238,17 @@ namespace dig_server
 
     // linkage actuators
     hardware::TalonFX l_link_mtr_{20, "can0"}; // canid (each motor), can interface (same for all)
+    hardware::CANcoder l_link_cancoder_{1, "can0"};
     hardware::TalonFX r_link_mtr_{23, "can0"};
-    hardware::CANcoder link_cancoder_{0, "can0"};
+    hardware::CANcoder r_link_cancoder_{2, "can0"};
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     mechanisms::SimpleDifferentialMechanism link_mech{l_link_mtr_, r_link_mtr_, false};
 
     // bucket rotators
     hardware::TalonFX l_bckt_mtr_{21, "can0"};
+    hardware::CANcoder l_bckt_cancoder_{3, "can0"};
     hardware::TalonFX r_bckt_mtr_{24, "can0"};
-    hardware::CANcoder bckt_cancoder_{1, "can0"};
+    hardware::CANcoder r_bckt_cancoder_{4, "can0"};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, true};
 
@@ -208,8 +269,8 @@ namespace dig_server
     const float BCKT_ABS_ENCODER_MAGIC_NUMBER_{0.}; // TODO
 
     // position limits
-    const float LINK_MIN_POS_{-1}; // TODO replace temp value
-    const float LINK_MAX_POS_{1}; // TODO replace temp value
+    const float LINK_MIN_POS_{0.32};
+    const float LINK_MAX_POS_{0.80};
     const float BCKT_MIN_POS_{-1}; // TODO replace temp value
     const float BCKT_MAX_POS_{1}; // TODO replace temp value
 
@@ -291,12 +352,10 @@ namespace dig_server
      */
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-    static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 50);
-    static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 50);
-    static auto left_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_bucket", &l_bckt_mtr_, 50);
-    static auto right_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_bucket", &r_bckt_mtr_, 50);
-
-
+      static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 50);
+      static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 50);
+      static auto left_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_bucket", &l_bckt_mtr_, 50);
+      static auto right_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_bucket", &r_bckt_mtr_, 50);
 
       const auto goal = goal_handle->get_goal();
       auto feedback = std::make_shared<Dig::Feedback>();
@@ -366,15 +425,24 @@ namespace dig_server
       {
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
         pwr = 0;
+      } else {
+
+
+        // l_link_mtr_.ClearStickyFault_ForwardSoftLimit();
+        // l_link_mtr_.ClearStickyFault_ReverseSoftLimit();
+        // r_link_mtr_.ClearStickyFault_ForwardSoftLimit();
+        // r_link_mtr_.ClearStickyFault_ReverseSoftLimit();
+
       }
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-        "link_pwr: link_ptr %lf | %lf", (double) l_link_mtr_.GetPosition().GetValue(),
-        (double) r_link_mtr_.GetPosition().GetValue());
+        "link_pwr: link_ptr %lf | %lf", (double) l_link_cancoder_.GetAbsolutePosition().GetValue(),
+        (double) r_link_cancoder_.GetAbsolutePosition().GetValue());
 
-      // SLOW IF NOT CONNECTED TO THE MOTOR.
+      RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
+
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
-      link_mech.SetControl(position_command);
+      link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
     }
 
     /**
@@ -392,9 +460,8 @@ namespace dig_server
         "bckt_pwr: link_ptr %lf | %lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
-      // SLOW IF NOT CONNECTED TO THE MOTOR.
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
-      bckt_mech.SetControl(position_command);
+      // bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
     }
 
     /**
@@ -405,7 +472,7 @@ namespace dig_server
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "vibr_pwr: %lf was out of bounds. Power goals should always be in [-1, 1]", pwr);
-        pwr = 0;
+        return;
       }
 
       // l_vib_mtr_.Heartbeat();
