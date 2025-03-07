@@ -69,7 +69,7 @@ jobs:
   build-src-code:
     name: Build Source Code
     runs-on: ubuntu-latest
-    needs: build-dev-container
+    # needs: build-dev-container
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
