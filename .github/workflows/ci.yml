@@ -61,39 +61,39 @@ jobs:
   #       env:
   #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  #     # - name: Clang Code Formatter
-  #     #   run: source ./.github/workflows/entrypoint.sh
-  #     #   env:
-  #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Clang Code Formatter
+      #   run: source ./.github/workflows/entrypoint.sh
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # build-src-code:
-  #   name: Build Source Code
-  #   runs-on: ubuntu-latest
-  #   needs: build-dev-container
-  #   steps:
-  #     - name: Check out repository
-  #       uses: actions/checkout@v3
+  build-src-code:
+    name: Build Source Code
+    runs-on: ubuntu-latest
+    needs: build-dev-container
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
 
-  #     - name: Get developer container image
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: astro-dev
+      # - name: Get developer container image
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: astro-dev
 
-  #     - name: Load developer container
-  #       run: docker load -i astro-dev.tar
+      # - name: Load developer container
+      #   run: docker load -i astro-dev.tar
 
-  #     - name: HELP
-  #       run: |
-  #         ls -a /
-  #         docker image ls
+      # - name: HELP
+      #   run: |
+      #     ls -a /
+      #     docker image ls
 
-  #     - name: Run developer container
-  #       run: |
-  #         docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
-  #         docker run --rm astro-dev bash -c "source /build_scripts/build.sh"
-  #       # astro-dev bash -c "source /build_scripts/build.sh"
+      - name: Run developer container
+        run: |
+          docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
+          docker run --rm astro-dev bash -c "source /build_scripts/build.sh"
+        # astro-dev bash -c "source /build_scripts/build.sh"
 
-  #     # - name: Clang Code Formatter
-  #     #   run: source ./.github/workflows/entrypoint.sh
-  #     #   env:
-  #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Clang Code Formatter
+      #   run: source ./.github/workflows/entrypoint.sh
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
