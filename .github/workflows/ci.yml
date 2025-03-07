@@ -58,6 +58,10 @@ jobs:
         run: docker load -i astro-dev.tar
 
       - name: Run developer container
+        runs:
+          using: 'docker'
+          image: 'Dockerfile'
+
         run: sudo docker run --rm astro-dev bash -c "ls -al / && sudo chmod u+x /entrypoint.sh && source /entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -86,12 +90,16 @@ jobs:
       - name: HELP
         run: |
           ls -a /
-          which ros2
-          which colcon
+          docker image ls
 
       - name: Run developer container
-        run: docker run --rm
-          astro-dev bash -c "source /build_scripts/build.sh"
+        runs:
+          using: 'docker'
+          image: 'Dockerfile'
+
+      # - name: Run developer container
+      #   run: docker run --rm
+      #     astro-dev bash -c "source /build_scripts/build.sh"
 
       # - name: Clang Code Formatter
       #   run: source ./.github/workflows/entrypoint.sh
