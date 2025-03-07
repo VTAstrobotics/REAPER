@@ -200,7 +200,6 @@ private:
         }
 
         if (valid_toggle_press(BUTTON_Y, raw)) {
-		dig_goal.link_pos_goal = 0; //TODO: set
             RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
             // dig_goal.link_pos_goal = 0;
@@ -210,12 +209,12 @@ private:
 
         if (raw.buttons[BUTTON_LBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
-            dig_goal.link_pwr_goal = 0.1;
+            dig_goal.link_pwr_goal = -0.1;
         }
 
         if (raw.buttons[BUTTON_RBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal = -0.20;
+            dig_goal.link_pwr_goal = 0.20;
 
             // dump_goal.deposition_goal = 0.1;
             // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
@@ -371,7 +370,7 @@ private:
         // }
 
         if (raw.axes[AXIS_DPAD_Y]){
-            dig_goal.vibr_pwr_goal = 0.2;
+            dig_goal.vibr_pwr_goal = -0.2;
             RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
 
         }

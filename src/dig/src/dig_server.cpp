@@ -270,7 +270,7 @@ namespace dig_server
 
     // position limits
     const float LINK_MIN_POS_{0.32};
-    const float LINK_MAX_POS_{0.80};
+    const float LINK_MAX_POS_{0.70};
     const float BCKT_MIN_POS_{-1}; // TODO replace temp value
     const float BCKT_MAX_POS_{1}; // TODO replace temp value
 

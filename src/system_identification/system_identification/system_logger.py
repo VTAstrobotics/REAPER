@@ -2,7 +2,8 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 import pandas as pd
-
+from time import sleep
+import datetime
 
 
 from state_messages.msg import MotorState
@@ -16,17 +17,17 @@ class system_identifier(Node):
         self.action_client = ActionClient(self, Dig, 'dig')
         self.period = .010
         self.time = 0
-        self.timer = self.create_timer(self.period, self.timer_callback)        
-        self.left_data = {"VoltageApplied": [], "VoltageInput":[], "velocity":[], "time":[]}
-        self.right_data = {"VoltageApplied": [], "VoltageInput":[], "velocity":[], "time": []}
-        
+        self.timer = self.create_timer(self.period, self.timer_callback)
+        self.left_data = {"VoltageApplied": [], "VoltageInput":[], "Velocity":[], "time":[]}
+        self.right_data = {"VoltageApplied": [], "VoltageInput":[], "Velocity":[], "time": []}
+
         self.currentOutput = 0
         self.left_logger_sub = self.create_subscription(
             MotorState,
             'left_linkage/state',
             self.left_logger,
             2)
-        
+
         self.right_logger_sub = self.create_subscription(
             MotorState,
             "right_linkage/state",
@@ -49,27 +50,31 @@ class system_identifier(Node):
         print("wrote file")
         self.currentOutput += self.period * .25
         self.send_goal(self.currentOutput)
-        if((int(self.time) % 1) == 0):
-            self.write_data() 
-        
+
+
     def write_data(self):
-        (pd.DataFrame.from_dict(data=self.left_data, orient='index').to_csv('left_data.csv', header=True))
-        (pd.DataFrame.from_dict(data=self.right_data, orient='index').to_csv('right_data.csv', header=True))
-        
+        (pd.DataFrame.from_dict(data=self.left_data, orient='columns').to_csv('left_data.csv', header=True, mode='w+'))
+        (pd.DataFrame.from_dict(data=self.right_data, orient='columns').to_csv('right_data.csv', header=True, mode='w+'))
+
     def send_goal(self, power_out):
         goal_msg = Dig.Goal()
-        goal_msg.dig_link_pwr_goal = power_out
-        
+        goal_msg.link_pwr_goal = power_out
+
         self.action_client.wait_for_server()
-        
+
         return self.action_client.send_goal_async(goal_msg)
 
 def main(args=None):
     rclpy.init(args=args)
 
+    time = datetime.datetime.now()
     minimal_subscriber = system_identifier()
 
-    rclpy.spin(minimal_subscriber)
+    while((datetime.datetime.now() - time).seconds < 20):
+
+
+        rclpy.spin_once(minimal_subscriber)
+
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
