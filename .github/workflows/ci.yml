@@ -89,7 +89,7 @@ jobs:
 
       - name: Run developer container
         run: |
-          docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
+          docker build --file .devcontainer/Dockerfile --tag astro-dev .
           docker run --rm astro-dev bash -c "source /build_scripts/build.sh"
         # astro-dev bash -c "source /build_scripts/build.sh"
 
