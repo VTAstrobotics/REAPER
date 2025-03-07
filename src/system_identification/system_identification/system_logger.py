@@ -53,8 +53,8 @@ class system_identifier(Node):
 
 
     def write_data(self):
-        (pd.DataFrame.from_dict(data=self.left_data, orient='columns').to_csv('left_data.csv', header=True, mode='w+'))
-        (pd.DataFrame.from_dict(data=self.right_data, orient='columns').to_csv('right_data.csv', header=True, mode='w+'))
+        (pd.DataFrame.from_dict(data=self.left_data, orient='columns').to_csv('left_data.csv', header=True, mode='x'))
+        (pd.DataFrame.from_dict(data=self.right_data, orient='columns').to_csv('right_data.csv', header=True, mode='x'))
 
     def send_goal(self, power_out):
         goal_msg = Dig.Goal()
@@ -74,7 +74,7 @@ def main(args=None):
 
 
         rclpy.spin_once(minimal_subscriber)
-
+    minimal_subscriber.write_data()
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
