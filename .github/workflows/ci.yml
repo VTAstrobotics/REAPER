@@ -57,10 +57,10 @@ jobs:
       - name: Load developer container
         run: docker load -i astro-dev.tar
 
-      - name: Run developer container
-        runs:
-          using: 'docker'
-          image: 'Dockerfile'
+      # - name: Run developer container
+      #   runs:
+      #     using: 'docker'
+      #     image: 'Dockerfile'
 
         run: sudo docker run --rm astro-dev bash -c "ls -al / && sudo chmod u+x /entrypoint.sh && source /entrypoint.sh"
         env:
