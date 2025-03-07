@@ -15,7 +15,7 @@ class system_identifier(Node):
     def __init__(self):
         super().__init__('system_identifier')
         self.action_client = ActionClient(self, Dig, 'dig')
-        self.period = .010
+        self.period = .005
         self.time = 0
         self.timer = self.create_timer(self.period, self.timer_callback)
         self.left_data = {"VoltageApplied": [], "VoltageInput":[], "Velocity":[], "time":[]}
@@ -36,19 +36,19 @@ class system_identifier(Node):
         )
 
     def left_logger(self, msg):
-        self.left_data["VoltageApplied"].append(msg.current_applied_voltage)
+        self.left_data["VoltageApplied"].append(self.currentOutput)
         self.left_data["VoltageInput"].append(msg.input_voltage)
-        self.left_data["Velocity"].append(msg.current_position)
+        self.left_data["Velocity"].append(msg.current_speed)
         self.left_data["time"].append(self.time)
     def right_logger(self, msg):
-        self.right_data["VoltageApplied"].append(msg.current_applied_voltage)
+        self.right_data["VoltageApplied"].append(self.currentOutput)
         self.right_data["VoltageInput"].append(msg.input_voltage)
-        self.right_data["Velocity"].append(msg.current_position)
+        self.right_data["Velocity"].append(msg.current_speed)
         self.right_data["time"].append(self.time)
     def timer_callback(self):
         self.time += self.period
         print("wrote file")
-        self.currentOutput += self.period * .01
+        self.currentOutput += self.period * .1
         self.send_goal(self.currentOutput)
 
 

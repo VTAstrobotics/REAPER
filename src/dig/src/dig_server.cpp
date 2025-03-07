@@ -59,13 +59,13 @@ namespace dig_server
       // Slot 0 gains
       float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      //link_configs.Slot0.kS = 0;
-      //link_configs.Slot0.kV = 0;
+      link_configs.Slot0.kS = 0.01;//0.3;
+      link_configs.Slot0.kV = 0.5;
       //link_configs.Slot0.kA = 0;
-      link_configs.Slot0.kG = 0;
-      link_configs.Slot0.kP = 0.8 * K_u;
+      link_configs.Slot0.kG = 0.03;
+      link_configs.Slot0.kP = 0;//0.8 * K_u;
       link_configs.Slot0.kI = 0; // 0; PD controller
-      link_configs.Slot0.kD = 0.1 * K_u * T_u;
+      link_configs.Slot0.kD = 0;//0.1 * K_u * T_u;
       l_link_mtr_.GetConfigurator().Apply(link_configs.Slot0);
       r_link_mtr_.GetConfigurator().Apply(link_configs.Slot0);
 
@@ -88,19 +88,18 @@ namespace dig_server
       //link cancoder configs
 
       configs::CANcoderConfiguration l_link_cancoder_config_;
-      l_link_cancoder_config_.MagnetSensor.WithAbsoluteSensorRange(signals::AbsoluteSensorRangeValue::Unsigned_0To1);
       l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-
+      l_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
       configs::CANcoderConfiguration r_link_cancoder_config_;
-      r_link_cancoder_config_.MagnetSensor.WithAbsoluteSensorRange(signals::AbsoluteSensorRangeValue::Unsigned_0To1);
       r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
+      r_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.341309 ;
 
       l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
       r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
 
       // TODO: motion magic!!
-      // link_configs.MotionMagic.MotionMagicCruiseVelocity = 3;
-      // link_configs.MotionMagic.MotionMagicAcceleration = 20;
+       link_configs.MotionMagic.MotionMagicCruiseVelocity = .1 ;
+       link_configs.MotionMagic.MotionMagicAcceleration = .2;
       // link_configs.MotionMagic.MotionMagicJerk = 0; // optional value, skipping now
 
       // Enable brake mode on the linkage
@@ -176,7 +175,7 @@ namespace dig_server
 
       // Enable brake mode on the bucket
       bckt_configs.MotorOutput.NeutralMode = signals::NeutralModeValue::Brake;
-      bckt_configs.MotorOutput.PeakForwardDutyCycle = 0.2;
+      bckt_configs.MotorOutput.PeakForwardDutyCycle = 0.25;
       bckt_configs.MotorOutput.PeakReverseDutyCycle = -0.2;
 
       // Individual configs for the left bucket motor
@@ -269,8 +268,8 @@ namespace dig_server
     const float BCKT_ABS_ENCODER_MAGIC_NUMBER_{0.}; // TODO
 
     // position limits
-    const float LINK_MIN_POS_{0.32};
-    const float LINK_MAX_POS_{0.70};
+    const float LINK_MIN_POS_{-.15};
+    const float LINK_MAX_POS_{0.35};
     const float BCKT_MIN_POS_{-1}; // TODO replace temp value
     const float BCKT_MAX_POS_{1}; // TODO replace temp value
 
@@ -352,8 +351,8 @@ namespace dig_server
      */
     void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
     {
-      static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 50);
-      static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 50);
+      static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 100);
+      static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 100);
       static auto left_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_bucket", &l_bckt_mtr_, 50);
       static auto right_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_bucket", &r_bckt_mtr_, 50);
 
@@ -424,15 +423,12 @@ namespace dig_server
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
-        pwr = 0;
+        // pwr = 0;
+        RCLCPP_INFO(this->get_logger(), "link_pwr: going to stay at %lf", l_link_cancoder_.GetAbsolutePosition().GetValueAsDouble());
+        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
+        link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+        return;
       } else {
-
-
-        // l_link_mtr_.ClearStickyFault_ForwardSoftLimit();
-        // l_link_mtr_.ClearStickyFault_ReverseSoftLimit();
-        // r_link_mtr_.ClearStickyFault_ForwardSoftLimit();
-        // r_link_mtr_.ClearStickyFault_ReverseSoftLimit();
-
       }
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
@@ -441,7 +437,7 @@ namespace dig_server
 
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
-      controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
+      controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0_tr};
       link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
     }
 
@@ -625,7 +621,12 @@ namespace dig_server
      * @param pos the position for the linkage to go to
      */
     void link_pos(double pos, double vel = 1) {
-      if (!linkage_in_bounds(pos)) { return; }
+      if (!linkage_in_bounds(pos)) {
+        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
+        link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+        return;
+      }
+
       (void)vel; // for unused warning
 
       link_mech.Periodic();
@@ -637,7 +638,8 @@ namespace dig_server
       // l_link_mtr_.SetControl(link_req);
       // l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
 
-      controls::DifferentialPositionDutyCycle position_command{angle, 0 * 0_tr};
+      // controls::DifferentialPositionDutyCycle position_command{angle, 0_tr};
+      controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
       link_mech.SetControl(position_command);
     }
 
