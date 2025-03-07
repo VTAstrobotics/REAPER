@@ -48,7 +48,7 @@ class system_identifier(Node):
     def timer_callback(self):
         self.time += self.period
         print("wrote file")
-        self.currentOutput += self.period * .25
+        self.currentOutput += self.period * .01
         self.send_goal(self.currentOutput)
 
 
