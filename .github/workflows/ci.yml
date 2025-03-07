@@ -93,7 +93,7 @@ jobs:
           docker image ls
 
       - name: Run developer container
-        runs:
+        run:
           using: 'docker'
           image: 'Dockerfile'
 
