@@ -24,7 +24,7 @@ jobs:
       run: |
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
         docker pull vtastrobotics/astro-dev:main || \
-        echo "Building from scratch"
+        echo "Building the developer container from scratch"
 
     - name: Copy Dockerfile
       run: |
@@ -45,9 +45,10 @@ jobs:
       run: cat ./.github/actions/cppformat/Dockerfile
 
     - name: Build the developer container image
-      run: |
-        docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
-        docker push vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
+      run: docker build --file ./.github/actions/cppformat/Dockerfile --tag vtastrobotics/astro-dev .
+
+    - name: Push to DockerHub
+      run: docker push vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
 
     - name: Run developer container
       run: |
