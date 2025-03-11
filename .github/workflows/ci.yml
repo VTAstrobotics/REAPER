@@ -23,7 +23,8 @@ jobs:
     - name: Pull dev container image
       run: |
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
-        docker pull vtastrobotics/astro-dev:main
+        docker pull vtastrobotics/astro-dev:main || \
+        echo "Building from scratch"
 
     - name: Copy Dockerfile
       run: |
