@@ -45,15 +45,16 @@ jobs:
       run: cat ./.github/actions/cppformat/Dockerfile
 
     - name: Build the developer container image
-      run: docker build --file ./.github/actions/cppformat/Dockerfile --tag vtastrobotics/astro-dev .
+      run: docker build --file ./.github/actions/cppformat/Dockerfile --tag vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} .
 
     - name: Push to DockerHub
       run: docker push vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
 
     - name: Run developer container
       run: |
-        docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
-        docker run --rm astro-dev bash -c "source /build_scripts/build.sh"
+        docker run --rm vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} -c "source /build_scripts/build.sh"
+      # docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
+      # docker run --rm astro-dev bash -c "source /build_scripts/build.sh"
 
     # - name: Upload the devcontainer image
     #   uses: actions/upload-artifact@v4
