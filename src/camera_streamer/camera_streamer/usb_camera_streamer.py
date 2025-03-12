@@ -23,7 +23,7 @@ class CameraNode(Node):
             self.publisher_.publish(msg)  # Publish the Image message
             # cv2.imshow('Webcam', frame)  # Display the frame in an OpenCV window
         else:
-            self.get_logger().error('Failed to capture image')  # Log an error message if the frame was not captured
+            self.get_logger().error('Failed to capture image', throttle_duration_sec=1)  # Log an error message if the frame was not captured
 def main(args=None):
     parser = argparse.ArgumentParser(description='ROS2 USB Camera Node')
     parser.add_argument('--cam', type=int, default=0, help='Index of the camera (default is 0)')
