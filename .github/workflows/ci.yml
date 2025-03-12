@@ -28,12 +28,12 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Pull dev container image
-      run: |
+      run:
         echo "IMAGE=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
-        echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV
+        echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV && \
         docker pull vtastrobotics/astro-dev:main || \
-        echo "IMAGE=none" >> $GITHUB_ENV
+        echo "IMAGE=none" >> $GITHUB_ENV && \
         echo "Building the developer container from scratch"
 
     - name: Copy Dockerfile
