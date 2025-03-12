@@ -29,7 +29,7 @@ jobs:
 
     - name: Pull dev container image
       run:
-        echo "IMAGE=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV
+        echo "IMAGE=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV && \
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
         echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV && \
         docker pull vtastrobotics/astro-dev:main || \
