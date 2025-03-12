@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: "main"
 
+env:
+  BRANCH_NAME: $(echo ${GITHUB_REF#refs/heads/} | tr / _)
+  DOCKER_TAG: vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
+  IMAGE: None
+
 jobs:
   build-dev-container:
     runs-on: ubuntu-latest
@@ -11,15 +16,15 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Extract sanitized branch name
-      run: |
-        echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
+    # - name: Extract sanitized branch name
+    #   run: |
+    #     echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
 
-    - name: docker tag
-      run: echo "DOCKER_TAG=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV
+    # - name: docker tag
+    #   run: echo "DOCKER_TAG=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV
 
     - name: print docker tag
-      run: echo $DOCKER_TAG
+      run: echo ${{ env.DOCKER_TAG }}
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
@@ -29,7 +34,7 @@ jobs:
 
     - name: Pull dev container image
       run:
-        echo "IMAGE=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV ; \
+        echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV ; \
         echo "testing" ; \
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
         echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV ; \
@@ -39,7 +44,7 @@ jobs:
 
     - name: Copy Dockerfile
       run: |
-        echo $IMAGE
+        echo ${{ env.IMAGE }}
         mkdir -p .github/workflows/ci/
         cp .devcontainer/Dockerfile .github/workflows/ci/
         cp -r * .github/workflows/ci/
