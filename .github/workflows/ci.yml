@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: "main"
 
+env:
+  DEV_CONTAINER_NAME: astro-dev
+
 jobs:
   build-dev-container:
     runs-on: ubuntu-latest
@@ -16,7 +19,7 @@ jobs:
         echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
 
     - name: Docker tag
-      run: echo "CUR_DOCKER_TAG=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV
+      run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ DEV_CONTAINER_NAME }}:$BRANCH_NAME" >> $GITHUB_ENV
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
@@ -26,10 +29,10 @@ jobs:
 
     - name: Pull dev container image
       run:
-        (echo "CACHE_DOCKER_TAG=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV &&
-        docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}) ||
-        (echo "CACHE_DOCKER_TAG=vtastrobotics/astro-dev:main" >> $GITHUB_ENV ;
-        docker pull vtastrobotics/astro-dev:main) ||
+        (echo "CACHE_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ DEV_CONTAINER_NAME }}:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV &&
+        docker pull ${{ secrets.DOCKER_USERNAME }}/${{ DEV_CONTAINER_NAME }}:${{ env.BRANCH_NAME }}) ||
+        (echo "CACHE_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ DEV_CONTAINER_NAME }}:main" >> $GITHUB_ENV ;
+        docker pull ${{ secrets.DOCKER_USERNAME }}/${{ DEV_CONTAINER_NAME }}:main) ||
         (echo "CACHE_DOCKER_TAG=none" >> $GITHUB_ENV ;
         echo "Building the developer container from scratch")
 
@@ -56,9 +59,10 @@ jobs:
         --tag ${{ env.CUR_DOCKER_TAG }}
         --cache-to type=inline
         --cache-from=${{ env.CACHE_DOCKER_TAG }}
+        .
 
     - name: Push to DockerHub
-      run: docker push vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
+      run: docker push ${{ env.CUR_DOCKER_TAG }}
 
     - name: Run developer container
       run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "source /build_scripts/build.sh"
