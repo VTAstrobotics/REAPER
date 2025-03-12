@@ -14,7 +14,8 @@ jobs:
     - name: Extract sanitized branch name
       run: |
         echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
-        echo "DOCKER_TAG=vtastrobotics/astro-dev:$BRANCH_NAME" >> $GITHUB_ENV
+        echo "DOCKER_TAG=vtastrobotics/astro-dev:$env.BRANCH_NAME" >> $GITHUB_ENV
+        echo "hello world"
         echo $DOCKER_TAG
 
     - name: Log in to DockerHub
@@ -29,7 +30,7 @@ jobs:
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
         echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV
         docker pull vtastrobotics/astro-dev:main || \
-        echo "IMAGE=" >> $GITHUB_ENV
+        echo "IMAGE=none" >> $GITHUB_ENV
         echo "Building the developer container from scratch"
 
     - name: Copy Dockerfile
