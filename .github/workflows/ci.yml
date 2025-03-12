@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: "main"
 
-# env:
+env:
 #   BRANCH_NAME: ${echo ${GITHUB_REF#refs/heads/} | tr / _}
 #   DOCKER_TAG: vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
-#   IMAGE: None
+  IMAGE: None
 
 jobs:
   build-dev-container:
@@ -33,8 +33,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Pull dev container image
-      run: \
-        echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV ; \
+      run: echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV ; \
         echo "testing" ; \
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
         echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV ; \
