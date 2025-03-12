@@ -4,11 +4,6 @@ on:
   pull_request:
     branches: "main"
 
-env:
-#   BRANCH_NAME: ${echo ${GITHUB_REF#refs/heads/} | tr / _}
-#   DOCKER_TAG: vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
-  IMAGE: None
-
 jobs:
   build-dev-container:
     runs-on: ubuntu-latest
@@ -33,13 +28,13 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Pull dev container image
-      run: echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV ;
-        echo "testing" ;
-        docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} ||
-        echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV ;
-        docker pull vtastrobotics/astro-dev:main ||
-        echo "IMAGE=none" >> $GITHUB_ENV ;
-        echo "Building the developer container from scratch"
+      run:
+        (echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV &&
+        docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}) ||
+        (echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV ;
+        docker pull vtastrobotics/astro-dev:main) ||
+        (echo "IMAGE=none" >> $GITHUB_ENV ;
+        echo "Building the developer container from scratch")
 
     - name: Copy Dockerfile
       run: |
