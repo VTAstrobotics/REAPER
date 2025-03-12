@@ -33,7 +33,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Pull dev container image
-      run:
+      run: \
         echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV ; \
         echo "testing" ; \
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
