@@ -5,7 +5,7 @@ on:
     branches: "main"
 
 env:
-  BRANCH_NAME: $(echo ${GITHUB_REF#refs/heads/} | tr / _)
+  BRANCH_NAME: ${echo ${GITHUB_REF#refs/heads/} | tr / _}
   DOCKER_TAG: vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
   IMAGE: None
 
