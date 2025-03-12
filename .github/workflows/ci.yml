@@ -64,7 +64,7 @@ jobs:
       run: docker push ${{ env.CUR_DOCKER_TAG }}
 
     - name: Run developer container
-      run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "ls && source /build_scripts/build.sh"
+      run: sudo docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "ls && source build_scripts/build.sh"
 
   # apply-cpp-formatting:
   #   name: clang-format Code Formatter
