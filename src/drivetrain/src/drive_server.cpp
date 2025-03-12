@@ -1,10 +1,13 @@
 
-#include <cmath>
+#include "action_interfaces/action/drive.hpp"
 #include <functional>
 #include <memory>
 #include <thread>
 #include <cmath>
 #include "geometry_msgs/msg/twist.hpp"
+#include "SparkMax.hpp"
+#include "SparkFlex.hpp"
+#include "SparkBase.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -13,23 +16,23 @@
 
 namespace drive_server
 {
-class DriveActionServer : public rclcpp::Node
-{
-   public:
+  class DriveActionServer : public rclcpp::Node
+  {
+  public:
     using Drive = action_interfaces::action::Drive;
     using GoalHandleDrive = rclcpp_action::ServerGoalHandle<Drive>;
 
-    explicit DriveActionServer(
-        const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+    explicit DriveActionServer(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
         : Node("drive_action_server", options)
     {
-        using namespace std::placeholders;
+      using namespace std::placeholders;
 
-        this->action_server_ = rclcpp_action::create_server<Drive>(
-            this, "drive",
-            std::bind(&DriveActionServer::handle_goal, this, _1, _2),
-            std::bind(&DriveActionServer::handle_cancel, this, _1),
-            std::bind(&DriveActionServer::handle_accepted, this, _1));
+      this->action_server_ = rclcpp_action::create_server<Drive>(
+          this,
+          "drive",
+          std::bind(&DriveActionServer::handle_goal, this, _1, _2),
+          std::bind(&DriveActionServer::handle_cancel, this, _1),
+          std::bind(&DriveActionServer::handle_accepted, this, _1));
 
         left_motor.SetIdleMode(IdleMode::kBrake);
         left_motor.SetMotorType(MotorType::kBrushless);
@@ -44,10 +47,10 @@ class DriveActionServer : public rclcpp::Node
         left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         right_motor.BurnFlash();
 
-        RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
+      RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
 
-   private:
+  private:
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
     // hardware::TalonFX drive_left{20, "can0"};
     // hardware::TalonFX drive_right{21, "can0"};
@@ -61,57 +64,50 @@ class DriveActionServer : public rclcpp::Node
     bool has_goal{false};
     int loop_rate_hz{120};
     double track_width{1.0};
-    double normalization_constant = 1; // change this during testing
+    double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
 
     rclcpp_action::GoalResponse handle_goal(
         const rclcpp_action::GoalUUID &uuid,
         std::shared_ptr<const Drive::Goal> goal)
     {
-        RCLCPP_INFO(this->get_logger(), "Received goal request with order %f",
-                    goal->velocity_goal.linear.x); // change to drive specific
-        (void)uuid;
-        if (!has_goal)
-        {
-            RCLCPP_INFO(this->get_logger(),
-                        "Accepted Goal and Will soon Execute it");
-            has_goal = true;
-            return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-        }
-        else
-        {
-            RCLCPP_INFO(this->get_logger(),
-                        "rejected goal, there must be one still executing");
-            return rclcpp_action::GoalResponse::REJECT;
-        }
+      RCLCPP_INFO(this->get_logger(), "Received goal request with order %f", goal->velocity_goal.linear.x); // change to drive specific
+      (void)uuid;
+      if(!has_goal){
+        RCLCPP_INFO(this->get_logger(),"Accepted Goal and Will soon Execute it");
+        has_goal = true;
+        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+      }
+      else{
+        RCLCPP_INFO(this->get_logger(),"rejected goal, there must be one still executing");
+        return rclcpp_action::GoalResponse::REJECT;
+      }
     }
 
     rclcpp_action::CancelResponse handle_cancel(
         const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
-        RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-        // Stop motors immediately
+      RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+         // Stop motors immediately
         left_motor.SetDutyCycle(0.0);
         right_motor.SetDutyCycle(0.0);
         RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
         has_goal = false;
         (void)goal_handle;
-        return rclcpp_action::CancelResponse::ACCEPT;
+      return rclcpp_action::CancelResponse::ACCEPT;
     }
 
     void handle_accepted(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
-        using namespace std::placeholders;
-        // this needs to return quickly to avoid blocking the executor, so spin
-        // up a new thread
-        std::thread{std::bind(&DriveActionServer::execute, this, _1),
-                    goal_handle}
-            .detach();
+      using namespace std::placeholders;
+      // this needs to return quickly to avoid blocking the executor, so spin up a new thread
+      std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
     }
 
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
+
       RCLCPP_INFO(this->get_logger(), "Executing goal");
       rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
 
@@ -148,17 +144,26 @@ class DriveActionServer : public rclcpp::Node
         feedback->inst_velocity.angular.z = v_right; //placeholders
         goal_handle->publish_feedback(feedback);
 
-        if (rclcpp::ok())
-        {
-            result->curr_velocity = goal->velocity_goal;
-            goal_handle->succeed(result);
-            RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-            Drive_Goal_Handle = nullptr;
-            has_goal = false;
-        }
+        loop_rate.sleep();
+      }
+
+      // drive_left_duty.Output = 0.0;
+      // drive_right_duty.Output = 0.0;
+      // drive_left.SetControl(drive_left_duty);
+      // drive_right.SetControl(drive_right_duty);
+
+      if (rclcpp::ok())
+      {
+        result->curr_velocity = goal->velocity_goal;
+        goal_handle->succeed(result);
+        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+        Drive_Goal_Handle = nullptr;
+        has_goal = false;
+      }
     }
-}; // class DriveActionServer
+  }; // class DriveActionServer
 
 } // namespace drive_server
 
 RCLCPP_COMPONENTS_REGISTER_NODE(drive_server::DriveActionServer)
+
