@@ -14,8 +14,8 @@ jobs:
     - name: Extract sanitized branch name
       run: |
         echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
-        echo "DOCKER_TAG=vtastrobotics/astro-dev:$(echo ${ env.BRANCH_NAME })" >> $GITHUB_ENV
-        echo "$({DOCKER_TAG})"
+        echo "DOCKER_TAG=vtastrobotics/astro-dev:$(${ env.BRANCH_NAME })" >> $GITHUB_ENV
+        echo "$(echo ${ env.DOCKER_TAG })"
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
@@ -25,8 +25,11 @@ jobs:
 
     - name: Pull dev container image
       run: |
+        echo "IMAGE=vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV
         docker pull vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} || \
+        echo "IMAGE=vtastrobotics/astro-dev:main" >> $GITHUB_ENV
         docker pull vtastrobotics/astro-dev:main || \
+        echo "IMAGE=" >> $GITHUB_ENV
         echo "Building the developer container from scratch"
 
     - name: Copy Dockerfile
@@ -37,23 +40,27 @@ jobs:
 
     - name: Modify Dockerfile for clang testing
       run: |
-        echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> ./.github/workflows/ci/Dockerfile
-        echo "COPY ./.github/workflows/entrypoint.sh /" >> ./.github/workflows/ci/Dockerfile
-        echo "RUN sudo chmod +x /entrypoint.sh" >> ./.github/workflows/ci/Dockerfile
-        echo "COPY ./.github/actions/cppformat/ /" >> ./.github/workflows/ci/Dockerfile
+        echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/workflows/entrypoint.sh /" >> .github/workflows/ci/Dockerfile
+        echo "RUN sudo chmod +x /entrypoint.sh" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/actions/cppformat/ /" >> .github/workflows/ci/Dockerfile
 
     - name: Print the container image
-      run: cat ./.github/workflows/ci/Dockerfile
+      run: cat .github/workflows/ci/Dockerfile
 
     - name: Build the developer container image
-      run: docker build --file ./.github/workflows/ci/Dockerfile --tag vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} .
+      run: docker build
+        --file .github/workflows/ci/Dockerfile
+        --tag vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
+        --cache-from=${{ env.IMAGE }}
+        .
 
     - name: Push to DockerHub
       run: docker push vtastrobotics/astro-dev:${{ env.BRANCH_NAME }}
 
     - name: Run developer container
       run: |
-        docker run --rm vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} -c "source /build_scripts/build.sh"
+        docker run --rm vtastrobotics/astro-dev:${{ env.BRANCH_NAME }} bash -c "source /build_scripts/build.sh"
 
   # apply-cpp-formatting:
   #   name: clang-format Code Formatter
@@ -80,7 +87,7 @@ jobs:
   #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   #     - name: Clang Code Formatter
-  #       run: source ./.github/workflows/entrypoint.sh
+  #       run: source .github/workflows/entrypoint.sh
   #       env:
   #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -107,11 +114,11 @@ jobs:
 
   #     - name: Run developer container
   #       run: |
-  #         docker build --file ./.github/actions/cppformat/Dockerfile --tag astro-dev .
+  #         docker build --file .github/actions/cppformat/Dockerfile --tag astro-dev .
   #         docker run --rm astro-dev bash -c "source /build_scripts/build.sh"
   #       # astro-dev bash -c "source /build_scripts/build.sh"
 
   #     # - name: Clang Code Formatter
-  #     #   run: source ./.github/workflows/entrypoint.sh
+  #     #   run: source .github/workflows/entrypoint.sh
   #     #   env:
   #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
