@@ -33,6 +33,7 @@ RUN sudo curl -s --compressed -o /usr/share/keyrings/ctr-pubkey.gpg "https://deb
 RUN sudo curl -s --compressed -o /etc/apt/sources.list.d/ctr2024.list "https://deb.ctr-electronics.com/ctr2024.list"
 RUN sudo apt update
 RUN sudo apt install -y phoenix6 can-utils
+RUN pip install numpy opencv-python
 #allows phoenix 6 to work
 RUN echo "export LD_LIBRARY_PATH=/usr/lib/phoenix6:\$LD_LIBRARY_PATH" >> ~/.bashrc
 
