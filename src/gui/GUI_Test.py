@@ -57,6 +57,9 @@ class TkMultiTopicApp:
         self.root = root
         self.ros_node = ros_node
 
+        # Initialize camera_labels dictionary
+        self.camera_labels = {}
+
         # Set colors
         self.root.configure(bg="white")
 
@@ -189,6 +192,9 @@ class TkMultiTopicApp:
         label_message = tk.Label(label_frame, text="No data received yet", font=("Arial", 12))
         label_message.pack(side="top", padx=5, pady=2)
 
+        # Store message
+        self.camera_labels[camera_topic_name] = label_message
+        
         # Enable dragging 
         self.bind_drag_events(label_frame)
 
