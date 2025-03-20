@@ -59,8 +59,8 @@ namespace dig_server
       // Slot 0 gains
       float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      link_configs.Slot0.kS = 0.01;//0.3;
-      link_configs.Slot0.kV = 0.5;
+      //link_configs.Slot0.kS = 0.01;//0.3;
+      //link_configs.Slot0.kV = 0.5;
       //link_configs.Slot0.kA = 0;
       link_configs.Slot0.kG = 0.03;
       link_configs.Slot0.kP = 0;//0.8 * K_u;
