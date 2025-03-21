@@ -47,7 +47,7 @@ jobs:
       run: |
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> .github/workflows/ci/Dockerfile
         echo "COPY .github/workflows/entrypoint.sh ~/" >> .github/workflows/ci/Dockerfile
-        echo "ls ~" >> .github/workflows/ci/Dockerfile
+        echo "RUN ls ~" >> .github/workflows/ci/Dockerfile
         echo "RUN sudo chmod +x ~/entrypoint.sh" >> .github/workflows/ci/Dockerfile
         echo "COPY .github/workflows/ci/ ~" >> .github/workflows/ci/Dockerfile
 
