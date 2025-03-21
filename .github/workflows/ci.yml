@@ -22,7 +22,7 @@ jobs:
 
     - name: Docker tag
       id: step1
-      run: echo "HELLO WORLD`" | tee -a $GITHUB_ENV > $GITHUB_OUTPUT
+      run: echo "HELLO WORLD" | tee -a $GITHUB_ENV > $GITHUB_OUTPUT
         # echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}:${{ env.BRANCH_NAME }}" | tee -a $GITHUB_ENV > $GITHUB_OUTPUT
 
     # - name: Log in to DockerHub
