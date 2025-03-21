@@ -46,10 +46,10 @@ jobs:
     - name: Modify Dockerfile for clang testing
       run: |
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> .github/workflows/ci/Dockerfile
-        echo "COPY .github/workflows/entrypoint.sh ~/" >> .github/workflows/ci/Dockerfile
-        echo "RUN ls ~" >> .github/workflows/ci/Dockerfile
-        echo "RUN sudo chmod +x ~/entrypoint.sh" >> .github/workflows/ci/Dockerfile
-        echo "COPY .github/workflows/ci/ ~" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/workflows/entrypoint.sh /home/astro-dev/" >> .github/workflows/ci/Dockerfile
+        echo "RUN ls /home/astro-dev/" >> .github/workflows/ci/Dockerfile
+        echo "RUN sudo chmod +x /home/astro-dev/entrypoint.sh" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/workflows/ci/ /home/astro-dev/" >> .github/workflows/ci/Dockerfile
 
     - name: Print the container image
       run: cat .github/workflows/ci/Dockerfile
