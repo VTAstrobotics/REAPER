@@ -12,7 +12,7 @@ jobs:
     name: Build developer container
     runs-on: ubuntu-latest
     outputs:
-      output1: ${{ steps.step1.outputs.CUR_DOCKER_TAG }}
+      cur_docker_tag: ${{ steps.step1.outputs.CUR_DOCKER_TAG }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -104,10 +104,11 @@ jobs:
       - name: Docker tag
         run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-      - env:
-          OUTPUT1: ${{needs.build-dev-container.outputs.output1}}
-        run: echo "$OUTPUT1"
+      # - env:
+      #     OUTPUT1: ${{needs.build-dev-container.outputs.output1}}
+      #   run: echo "$OUTPUT1"
 
-      # - name: Run developer container
+      - name: Run developer container
+        run: echo "hi"
       #   run: |
       #     docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
