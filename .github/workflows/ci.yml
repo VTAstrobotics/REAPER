@@ -11,7 +11,7 @@ jobs:
   build-dev-container:
     runs-on: ubuntu-latest
     outputs:
-      cur_docker_tag: ${{ steps.output-docker-tag.outputs.CUR_DOCKER_TAG }}
+      cur_docker_tag: ${{ steps.output-docker-tag.outputs.cur_docker_tag }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
 
     - name: Output docker tag
       id: output-docker-tag
-      run: echo "${{ env.CUR_DOCKER_TAG }}" >> $GITHUB_OUTPUT
+      run: echo "cur_docker_tag=${{ env.CUR_DOCKER_TAG }}" >> $GITHUB_OUTPUT
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
