@@ -10,7 +10,7 @@
 #include "std_msgs/msg/float32.hpp"
 
 #include "SparkMax.hpp"
-#include "PIDController.hpp"
+// #include "PIDController.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -116,17 +116,17 @@ namespace dig_server
       hstp_mtr_.SetSmartCurrentFreeLimit(10.0);
       hstp_mtr_.SetSmartCurrentStallLimit(10.0);
 
-      PIDController hstp_pid(hstp_mtr_);
-      K_u = 3.9, T_u = 0.04; // TODO: tune these values for the hardstop.
-      hstp_pid.SetP(0, 0.8 * K_u);
-      hstp_pid.SetI(0, 0.);
-      hstp_pid.SetD(0, 0.1 * K_u * T_u); // 0; PD controller
+      // PIDController hstp_pid(hstp_mtr_);
+      // K_u = 3.9, T_u = 0.04; // TODO: tune these values for the hardstop.
+      // hstp_pid.SetP(0, 0.8 * K_u);
+      // hstp_pid.SetI(0, 0.);
+      // hstp_pid.SetD(0, 0.1 * K_u * T_u); // 0; PD controller
 
-      // Configure smart motion settings for velocity control
-      hstp_pid.SetSmartMotionMaxVelocity(0, 100.);  // Max velocity in RPM
-      hstp_pid.SetSmartMotionMaxAccel(0, 10.);     // Max acceleration in RPM/s
+      // // Configure smart motion settings for velocity control
+      // hstp_pid.SetSmartMotionMaxVelocity(0, 100.);  // Max velocity in RPM
+      // hstp_pid.SetSmartMotionMaxAccel(0, 10.);     // Max acceleration in RPM/s
 
-      hstp_mtr_.BurnFlash();
+      // hstp_mtr_.BurnFlash();
 
       RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }

@@ -11,7 +11,7 @@ jobs:
   build-dev-container:
     runs-on: ubuntu-latest
     outputs:
-      CUR_DOCKER_TAG: ${{ steps.output-docker-tag.outputs.CUR_DOCKER_TAG }}
+      cur_docker_tag: ${{ steps.output-docker-tag.outputs.CUR_DOCKER_TAG }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
 
     - name: Output docker tag
       id: output-docker-tag
-      run: echo "::set-output name=CUR_DOCKER_TAG::${{ env.CUR_DOCKER_TAG }}"
+      run: echo "${{ env.CUR_DOCKER_TAG }}" >> $GITHUB_OUTPUT
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
@@ -100,9 +100,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-dev-container
     steps:
+      - env:
+          CUR_DOCKER_TAG: ${{ needs.build-dev-container.outputs.cur_docker_tag }}
+
       - name: Check out repository
         uses: actions/checkout@v3
 
       - name: Run developer container
         run: |
-          docker run --rm ${{ needs.build-dev-container.outputs.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
+          docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
