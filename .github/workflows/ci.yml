@@ -89,13 +89,13 @@ jobs:
   #     #   env:
   #     #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # build-src-code:
-  #   name: Build Source Code
-  #   runs-on: ubuntu-latest
-  #   needs: build-dev-container
-  #   steps:
-  #     - name: Check out repository
-  #       uses: actions/checkout@v3
+  build-src-code:
+    name: Build Source Code
+    runs-on: ubuntu-latest
+    needs: build-dev-container
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
 
-  #     - name: Run developer container
-  #       run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
+      - name: Run developer container
+        run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
