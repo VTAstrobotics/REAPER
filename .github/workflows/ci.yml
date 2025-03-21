@@ -32,7 +32,7 @@ jobs:
     name: Build developer container
     runs-on: ubuntu-latest
     outputs:
-      cur_docker_tag: ${{ steps.output-docker-tag.outputs.cur_docker_tag }}
+      output1: ${{ steps.step1.outputs.a }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -44,8 +44,8 @@ jobs:
       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}:$BRANCH_NAME" >> $GITHUB_ENV
 
     # - name: Output docker tag
-    - id: output-docker-tag
-      run: echo "cur_docker_tag=${{ env.CUR_DOCKER_TAG }}" >> $GITHUB_OUTPUT
+    - id: step1
+      run: echo "a=${{ env.CUR_DOCKER_TAG }}" >> "$GITHUB_OUTPUT"
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
@@ -126,6 +126,10 @@ jobs:
 
       - name: Docker tag
         run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+
+      - env:
+          OUTPUT1: ${{needs.build-dev-container.outputs.output1}}
+        run: echo "$OUTPUT1"
 
       - name: Run developer container
         run: |
