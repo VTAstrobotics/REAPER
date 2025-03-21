@@ -100,11 +100,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-dev-container
     steps:
-      - env:
-          CUR_DOCKER_TAG: ${{ needs.build-dev-container.outputs.cur_docker_tag }}
-
       - name: Check out repository
         uses: actions/checkout@v3
+
+      - name: Docker tag
+        run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }} >> $GITHUB_ENV
 
       - name: Run developer container
         run: |
