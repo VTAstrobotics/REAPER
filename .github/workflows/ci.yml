@@ -108,4 +108,4 @@ jobs:
 
       - name: Run developer container
         run: |
-          docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
+          docker run --rm $CUR_DOCKER_TAG bash -c "cd && source build_scripts/build.sh"
