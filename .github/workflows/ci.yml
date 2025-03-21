@@ -12,7 +12,7 @@ jobs:
     name: Build developer container
     runs-on: ubuntu-latest
     outputs:
-      cur_docker_tag: ${{ steps.step1.outputs.CUR_DOCKER_TAG }}
+      cur_docker_tag: ${{ steps.docker-tag.outputs.CUR_DOCKER_TAG }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -20,8 +20,8 @@ jobs:
     - name: Extract sanitized branch name
       run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)" >> $GITHUB_ENV
 
-    - name: Docker tag
-      id: step1
+    - name: Generate Docker tag
+      id: docker-tag
       run: echo "CUR_DOCKER_TAG=vtastrobotics/$DEV_CONTAINER_NAME:$BRANCH_NAME" | tee -a $GITHUB_ENV > $GITHUB_OUTPUT
 
     # - name: Log in to DockerHub
@@ -101,14 +101,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
-      - name: Docker tag
+      - name: Get Docker tag
         run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-      # - env:
-      #     OUTPUT1: ${{needs.build-dev-container.outputs.output1}}
-      #   run: echo "$OUTPUT1"
-
       - name: Run developer container
-        run: echo "hi"
-      #   run: |
-      #     docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
+        run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
