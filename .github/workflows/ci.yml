@@ -104,8 +104,8 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Docker tag
-        run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }} >> $GITHUB_ENV
+        run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
       - name: Run developer container
         run: |
-          docker run --rm $CUR_DOCKER_TAG bash -c "cd && source build_scripts/build.sh"
+          docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd && source build_scripts/build.sh"
