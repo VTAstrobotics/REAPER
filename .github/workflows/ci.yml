@@ -109,7 +109,7 @@ jobs:
         run: |
           docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
             cd /home/astro-dev/src/;
-            source build_scripts/build.sh 2> err.log;
+            source build_scripts/build.sh 2> >(tee err.log >&2);
             if [ -s err.log ]; then
               echo "Build failed due to output in stderr.";
               cat err.log;
