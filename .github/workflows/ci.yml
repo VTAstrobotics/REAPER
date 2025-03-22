@@ -94,9 +94,9 @@ jobs:
 
       - name: Run code formatting (clang-format and clang-tidy)
         run: |
-          docker run \
-          --rm ${{ env.CUR_DOCKER_TAG }} \
+          docker run --rm \
           -e GITHUB_EVENT_PATH \
+          ${{ env.CUR_DOCKER_TAG }} \
           bash -c "cd /home/astro-dev/src/ && sudo chmod u+x entrypoint.sh && source entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -124,8 +124,7 @@ jobs:
             cd /home/astro-dev/src/;
             source build_scripts/build.sh 2> >(tee err.log >&2);
             if [ -s err.log ]; then
-              echo "Build failed due to output in stderr.";
-              cat err.log;
+              echo Build failed due to output in stderr.;
               exit 1;
             fi
             "
