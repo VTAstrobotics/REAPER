@@ -1,5 +1,6 @@
 #!/bin/bash
 
+echo "HELLO I AM IN THE ENTRYPOINT SCRIPT OK"
 sh -c "git config --global --add safe.directory $PWD"
 
 set -eu
