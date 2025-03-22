@@ -31,12 +31,6 @@ jobs:
       env:
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-dev-container
-        path: out.txt
-
     - name: Log in to DockerHub
       uses: docker/login-action@v2
       with:
