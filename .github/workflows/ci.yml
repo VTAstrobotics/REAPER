@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [features/phoenix_actions]
   workflow_run:
     workflows: [Main Branch Update]
     types: [completed]
@@ -38,6 +40,7 @@ jobs:
 
   build-src-code:
     name: Build source code
+    needs: build-dev-container
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
