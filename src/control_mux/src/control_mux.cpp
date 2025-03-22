@@ -10,7 +10,7 @@ static const int DUMP_BUTTON{3}; // Y
 // manual controls
 static const int DEPOSIT_TO_DUMP_MANUAL{11}; // DPAD UP
 static const int MOVE_TO_DIGGING_POS{12}; // DPAD DOWN
-// manual drivetrain controls 
+// manual drivetrain controls
 static const int DRIVETRAIN_DRIVE_POWER_AXIS{1}; // left stick y axis
 static const int DRIVETRAIN_TURNING_AXIS{2};// right stick x axis
 // safety controls
@@ -33,6 +33,7 @@ class MinimalSubscriber : public rclcpp::Node
   private:
     void topic_callback(const sensor_msgs::msg::Joy msg) const
     {
+      (void) msg; // for unused warning
       // handle all the buttons actually doing things
     }
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_;

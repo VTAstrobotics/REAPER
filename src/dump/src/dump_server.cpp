@@ -89,10 +89,12 @@ namespace dump_server
     rclcpp_action::CancelResponse handle_cancel(
         const std::shared_ptr<GoalHandleDump> goal_handle)
     {
+      (void)goal_handle; // for unused warning
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-        conveyorDutyCycle.Output = 0;
-        Dump_Goal_Handle = nullptr;
-        has_goal = false;
+
+      conveyorDutyCycle.Output = 0;
+      Dump_Goal_Handle = nullptr;
+      has_goal = false;
       return rclcpp_action::CancelResponse::ACCEPT;
     }
 
