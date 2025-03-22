@@ -22,7 +22,7 @@ jobs:
 
     - name: Generate Docker tag
       id: docker-tag
-      run: echo "CUR_DOCKER_TAG=vtastrobotics/$DEV_CONTAINER_NAME:$BRANCH_NAME" | tee -a $GITHUB_ENV >> $GITHUB_OUTPUT
+      run: echo "CUR_DOCKER_TAG=USERNAME/$DEV_CONTAINER_NAME:$BRANCH_NAME" | tee -a $GITHUB_ENV >> $GITHUB_OUTPUT
       env:
         USERNAME: ${{ secrets.DOCKER_USERNAME }}
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
