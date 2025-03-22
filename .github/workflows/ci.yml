@@ -24,7 +24,7 @@ jobs:
       id: docker-tag
       run: echo "CUR_DOCKER_TAG=$USERNAME/$DEV_CONTAINER_NAME:$BRANCH_NAME" | tee -a $GITHUB_ENV >> $GITHUB_OUTPUT
       env:
-        USERNAME: ${{ env.secrets.DOCKER_USERNAME }}
+        USERNAME: ${{ secrets.DOCKER_USERNAME }}
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
 
     - name: Log in to DockerHub
