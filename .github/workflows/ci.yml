@@ -15,13 +15,15 @@ jobs:
     name: Test job
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
+      - name: Waste time
+        run: sleep 10
 
   apply-cpp-formatting:
     name: Code Formatter
     runs-on: ubuntu-latest
     steps:
+      - name: Waste time
+        run: sleep 10
       - name: Check out repository
         uses: actions/checkout@v3
 
@@ -40,9 +42,10 @@ jobs:
 
   build-src-code:
     name: Build source code
-    # needs: build-dev-container
     runs-on: ubuntu-latest
     steps:
+      - name: Waste time
+        run: sleep 10
       - name: Check out repository
         uses: actions/checkout@v3
 
