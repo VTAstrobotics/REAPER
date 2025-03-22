@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows: [Main-Branch-Update]
     types: [completed]
-  workflow_dispatch:
 
 env:
   DEV_CONTAINER_NAME: astro-dev
@@ -14,16 +13,14 @@ jobs:
     name: Code Formatter
     runs-on: ubuntu-latest
     steps:
-      - name: Waste time # TODO
-        run: sleep 10
+      - name: Check out repository
+        uses: actions/checkout@v3
 
-      - name: Debug Outputs
-        run: echo "${{ toJson(github.event) }}"
-  #     - name: Check out repository
-  #       uses: actions/checkout@v3
+      - name: Get Docker tag
+        run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ github.event.workflow_run.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-  #     - name: Get Docker tag
-  #       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ github.event.workflow_run.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+      - name: Test
+        run: echo "what is the value of CUR_DOCKER_TAG? ${{ env.CUR_DOCKER_TAG }}"
 
   #     - name: Run code formatting (clang-format and clang-tidy)
   #       run: docker run
