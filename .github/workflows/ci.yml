@@ -40,7 +40,7 @@ jobs:
 
   build-src-code:
     name: Build source code
-    needs: build-dev-container
+    # needs: build-dev-container
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
