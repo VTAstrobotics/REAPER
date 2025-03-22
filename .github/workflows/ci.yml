@@ -94,11 +94,11 @@ jobs:
 
       - name: Run code formatting (clang-format and clang-tidy)
         run: |
-          sudo docker run --rm \
+          docker run --rm \
           -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH \
           -v /home/runner/:/home/runner/ \
           ${{ env.CUR_DOCKER_TAG }} \
-          bash -c "cd /home/astro-dev/src/ && sudo chmod u+x entrypoint.sh && source entrypoint.sh"
+          bash -c "cd /home/astro-dev/src/ && sudo chmod u+x entrypoint.sh && sudo chmod -R +r /home/ && source entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_PATH: ${{ env.GITHUB_EVENT_PATH }}
