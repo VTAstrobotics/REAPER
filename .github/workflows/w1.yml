@@ -1,7 +1,7 @@
 name: Workflow 1
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
