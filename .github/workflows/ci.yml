@@ -106,7 +106,8 @@ jobs:
         run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
       - name: Build our source code in our developer container
-        run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
+        run: |
+          docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
           cd /home/astro-dev/src/;
           source build_scripts/build.sh 2> err.log;
           if [ -s err.log ]; then
