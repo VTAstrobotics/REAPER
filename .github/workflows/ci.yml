@@ -22,9 +22,10 @@ jobs:
 
     - name: Generate Docker tag
       id: docker-tag
-      run: echo "CUR_DOCKER_TAG=USERNAME/$DEV_CONTAINER_NAME:$BRANCH_NAME" | tee -a $GITHUB_ENV >> $GITHUB_OUTPUT
+      run: |
+        echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/$DEV_CONTAINER_NAME:$BRANCH_NAME" >> $GITHUB_ENV
+        echo "CUR_DOCKER_TAG=/$DEV_CONTAINER_NAME:$BRANCH_NAME" >> $GITHUB_OUTPUT
       env:
-        USERNAME: ${{ secrets.DOCKER_USERNAME }}
         BRANCH_NAME: ${{ env.BRANCH_NAME }}
 
     - name: Log in to DockerHub
@@ -102,7 +103,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Get Docker tag
-        run: echo "CUR_DOCKER_TAG=${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+        run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
       - name: Build our source code in our developer container
         run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "cd /home/astro-dev/src/ && source build_scripts/build.sh"
