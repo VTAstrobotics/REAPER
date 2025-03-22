@@ -7,7 +7,7 @@
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
     ],
-    "cmake.sourceDirectory": "C:/Users/alexa/OneDrive/Desktop/REAPER/src/action_interfaces",
+    "cmake.sourceDirectory": "/workspaces/REAPER/src/action_interfaces",
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "array": "cpp",

@@ -4,6 +4,8 @@
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
   name="URDFassy">
+  
+  <!-- Chassis Link -->
   <link
     name="Chassis">
     <inertial>
@@ -44,6 +46,8 @@
       </geometry>
     </collision>
   </link>
+
+  <!-- Linkage Link -->
   <link
     name="Linkage">
     <inertial>
@@ -84,8 +88,10 @@
       </geometry>
     </collision>
   </link>
+
+  <!-- Joint: Chassis to Linkage -->
   <joint
-    name="Linkage"
+    name="joint_Linkage"
     type="revolute">
     <origin
       xyz="-0.33975 0 0.23217"
@@ -97,11 +103,13 @@
     <axis
       xyz="0 0 1" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-2.6"
+      upper="0.4"
+      effort="100"
+      velocity="5.0" />
   </joint>
+
+  <!-- Bucket Link -->
   <link
     name="Bucket">
     <inertial>
@@ -142,8 +150,10 @@
       </geometry>
     </collision>
   </link>
+
+  <!-- Joint: Linkage to Bucket -->
   <joint
-    name="Bucket"
+    name="joint_Bucket"
     type="revolute">
     <origin
       xyz="-0.29504 -0.29876 0"
@@ -155,9 +165,10 @@
     <axis
       xyz="0 0 1" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.57"
+      upper="1.57"
+      effort="100"
+      velocity="5.0" />
   </joint>
+
 </robot>
