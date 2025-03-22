@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [features/phoenix_actions] # TODO
   workflow_run:
     workflows: [Main Branch Update]
     types: [completed]
@@ -11,13 +9,6 @@ env:
   DEV_CONTAINER_NAME: astro-dev
 
 jobs:
-  test: # TODO
-    name: Test job
-    runs-on: ubuntu-latest
-    steps:
-      - name: Waste time
-        run: sleep 10
-
   apply-cpp-formatting:
     name: Code Formatter
     runs-on: ubuntu-latest
