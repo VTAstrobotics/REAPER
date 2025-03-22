@@ -60,20 +60,12 @@ jobs:
         echo "COPY .github/workflows/ci/ /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
 
     - name: Build the developer container image
-      run: |
-        docker build \
-        --file .github/workflows/ci/Dockerfile \
-        --tag ${{ env.CUR_DOCKER_TAG }} \
-        --cache-to type=inline \
-        --cache-from=${{ env.CACHE_DOCKER_TAG }} \
+      run: docker build
+        --file .github/workflows/ci/Dockerfile
+        --tag ${{ env.CUR_DOCKER_TAG }}
+        --cache-to type=inline
+        --cache-from=${{ env.CACHE_DOCKER_TAG }}
         .
-
-      # run: docker build
-      #   --file .github/workflows/ci/Dockerfile
-      #   --tag ${{ env.CUR_DOCKER_TAG }}
-      #   --cache-to type=inline
-      #   --cache-from=${{ env.CACHE_DOCKER_TAG }}
-      #   .
 
     - name: Push to DockerHub
       run: docker push ${{ env.CUR_DOCKER_TAG }}
@@ -93,12 +85,12 @@ jobs:
         run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
       - name: Run code formatting (clang-format and clang-tidy)
-        run: |
-          docker run --rm \
-          -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH \
-          -v /home/runner/:/home/runner/ \
-          ${{ env.CUR_DOCKER_TAG }} \
-          bash -c "cd /home/astro-dev/src/ && sudo chmod u+x entrypoint.sh && sudo chmod -R u+r /home/ && source entrypoint.sh"
+        run: docker run
+          --rm
+          -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH
+          -v /home/runner/:/home/runner/
+          ${{ env.CUR_DOCKER_TAG }}
+          sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && source entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_EVENT_PATH: ${{ env.GITHUB_EVENT_PATH }}
