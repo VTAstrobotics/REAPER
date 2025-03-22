@@ -2,7 +2,7 @@ name: CI
 
 on:
   workflow_run:
-    workflows: [Main Branch Update]
+    workflows: [Main-Branch-Update]
     types: [completed]
 
 env:
