@@ -95,7 +95,7 @@ jobs:
       - name: Run code formatting (clang-format and clang-tidy)
         run: |
           sudo docker run --rm \
-          -e GITHUB_EVENT_PATH \
+          -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH \
           -v /home/runner/:/home/runner/ \
           ${{ env.CUR_DOCKER_TAG }} \
           bash -c "cd /home/astro-dev/src/ && sudo chmod u+x entrypoint.sh && source entrypoint.sh"
