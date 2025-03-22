@@ -16,8 +16,8 @@ jobs:
       - name: Waste time # TODO
         run: sleep 10
 
-      - name: Debug Outputs
-        run: echo "${{ toJson(github.event) }}"
+      # - name: Debug Outputs
+      #   run: echo "${{ toJson(github.event) }}"
   #     - name: Check out repository
   #       uses: actions/checkout@v3
 
