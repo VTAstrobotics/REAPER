@@ -1,9 +1,9 @@
 name: Workflow 1
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - features/phoenix_actions
 
 jobs:
   test:
