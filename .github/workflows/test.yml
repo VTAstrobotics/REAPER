@@ -1,0 +1,11 @@
+name: Debug Workflow Dispatch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo a message
+        run: echo "Workflow dispatched successfully!"
