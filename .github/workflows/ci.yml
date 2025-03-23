@@ -101,9 +101,8 @@ jobs:
           --rm
           -v /home/runner/:/home/runner/
           --env-file <(env)
-          -e GITHUB_TOKEN=$GITHUB_TOKEN
           ${{ env.CUR_DOCKER_TAG }}
-          sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && source entrypoint.sh"
+          sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && source entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
