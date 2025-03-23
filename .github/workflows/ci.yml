@@ -73,10 +73,10 @@ jobs:
         docker build \
         --file .github/workflows/ci/Dockerfile \
         --tag ${{ env.CUR_DOCKER_TAG }} \
-        --cache-from type=registry,ref=${{ env.CACHE_DOCKER_TAG }} \
+        --cache-from type=inline,ref=${{ env.CACHE_DOCKER_TAG }} \
+        --cache-to type=inline,ref=${{ env.CUR_DOCKER_TAG }} \
         --push \
         .
-      # --cache-to type=inline,ref=${{ env.CUR_DOCKER_TAG }} \
 
     - name: Run developer container
       run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "echo testing that it can run"
