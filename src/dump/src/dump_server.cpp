@@ -207,7 +207,8 @@ class DumpActionServer : public rclcpp::Node
       return;
     }
 
-    ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0 / (double)(loop_rate_hz_)));
+    ctre::phoenix::unmanaged::FeedEnable(1000 *
+                                         (1.0 / (double)(loop_rate_hz_)));
 
     conveyorDutyCycle.Output = power_goal;
     conveyorMotor.SetControl(conveyorDutyCycle);
