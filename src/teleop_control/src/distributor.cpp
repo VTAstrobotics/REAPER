@@ -69,15 +69,15 @@ class Distributor : public rclcpp::Node
   rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
 
   bool slow_turn_ = false;                // toggle to slow drive turning
-  const float SLOW_DRIVE_TURN_VAL_ = 0.5; // what rate to slow turning
-  const float SLOW_BCKT_ROT_VAL_ = 0.125;
+  const float slow_drive_turn_val_ = 0.5; // what rate to slow turning
+  const float slow_bckt_rot_val_ = 0.125;
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
    * array structure is same as the joy message buttons array!
    */
   float last_btn_press_[11];
-  const float BUTTON_COOLDOWN_MS_ = 0.050;
+  const float button_cooldown_ms_ = 0.050;
   bool teleop_disabled_ = false;
   bool stop_mode_ = false;
 
@@ -92,7 +92,7 @@ class Distributor : public rclcpp::Node
   {
     return (raw.buttons[button] &&
             ((this->now().seconds() - last_btn_press_[button]) >
-             BUTTON_COOLDOWN_MS_));
+             button_cooldown_ms_));
   }
 
   /**
@@ -334,7 +334,7 @@ class Distributor : public rclcpp::Node
 
     if (slow_turn_)
     {
-      drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_;
+      drive_vel.angular.z *= slow_drive_turn_val_;
     }
 
     /**********************************************************************
