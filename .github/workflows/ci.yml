@@ -97,6 +97,8 @@ jobs:
         run: docker run
           --rm
           -v /home/runner/:/home/runner/
+          -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH
+          -v $GITHUB_EVENT_PATH:$GITHUB_EVENT_PATH
           ${{ env.CUR_DOCKER_TAG }}
           sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && source entrypoint.sh"
         env:
