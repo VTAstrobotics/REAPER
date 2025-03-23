@@ -69,12 +69,12 @@ jobs:
       run: |
         docker buildx create --use --driver docker-container
         docker buildx ls
-        docker build
-        --file .github/workflows/ci/Dockerfile
-        --tag ${{ env.CUR_DOCKER_TAG }}
-        --cache-from type=registry,ref=${{ env.CACHE_DOCKER_TAG }}
-        --cache-to type=registry,ref=${{ env.CUR_DOCKER_TAG }}
-        --push
+        docker build \
+        --file .github/workflows/ci/Dockerfile \
+        --tag ${{ env.CUR_DOCKER_TAG }} \
+        --cache-from type=registry,ref=${{ env.CACHE_DOCKER_TAG }} \
+        --cache-to type=registry,ref=${{ env.CUR_DOCKER_TAG }} \
+        --push \
         .
 
     - name: Run developer container
