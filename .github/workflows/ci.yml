@@ -1,17 +1,86 @@
 name: CI
 
 on:
-  workflow_run:
-    workflows: [Main-Branch-Update]
-    types: [completed]
+  pull_request:
+    branches: main
+  push:
+    branches: main
 
 env:
   DEV_CONTAINER_NAME: astro-dev
 
 jobs:
+  build-dev-container:
+    name: Build developer container
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Determine branch name
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "Detected pull request event"
+          echo "BRANCH_NAME=$(echo ${{ github.head_ref }} | tr / _)" >> $GITHUB_ENV
+        else
+          echo "Detected push event"
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+        fi
+
+    - name: Generate Docker tag
+      run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/$DEV_CONTAINER_NAME:$BRANCH_NAME" >> $GITHUB_ENV
+
+    - name: Log in to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Pull dev container image
+      run:
+        (echo "CACHE_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}:${{ env.BRANCH_NAME }}" >> $GITHUB_ENV &&
+        docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}:${{ env.BRANCH_NAME }}) ||
+        (echo "CACHE_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}:main" >> $GITHUB_ENV ;
+        docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}:main) ||
+        (echo "CACHE_DOCKER_TAG=none" >> $GITHUB_ENV ;
+        echo "Building the developer container from scratch")
+
+    - name: Copy current Dockerfile
+      run: |
+        echo ${{ env.CACHE_DOCKER_TAG }}
+        mkdir -p .github/workflows/ci/
+        cp .devcontainer/Dockerfile .github/workflows/ci/
+        cp -r * .github/workflows/ci/
+
+    - name: Modify that Dockerfile for the other jobs
+      run: |
+        echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> .github/workflows/ci/Dockerfile
+        echo "RUN mkdir /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/workflows/entrypoint.sh /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
+        echo "RUN ls /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
+        echo "RUN sudo chmod +x /home/astro-dev/src/entrypoint.sh" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/workflows/ci/ /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
+
+    - name: Build the developer container image
+      run: docker build
+        --file .github/workflows/ci/Dockerfile
+        --tag ${{ env.CUR_DOCKER_TAG }}
+        --cache-to type=inline
+        --cache-from=${{ env.CACHE_DOCKER_TAG }}
+        .
+
+    - name: Push to DockerHub
+      run: docker push ${{ env.CUR_DOCKER_TAG }}
+
+    - name: Run developer container
+      run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "echo testing that it can run"
+
   apply-cpp-formatting:
     name: Code Formatter
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: build-dev-container
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -22,35 +91,37 @@ jobs:
       - name: Test
         run: echo "what is the value of CUR_DOCKER_TAG? ${{ env.CUR_DOCKER_TAG }}"
 
-  #     - name: Run code formatting (clang-format and clang-tidy)
-  #       run: docker run
-  #         --rm
-  #         -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH
-  #         -v /home/runner/:/home/runner/
-  #         ${{ env.CUR_DOCKER_TAG }}
-  #         sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && source entrypoint.sh"
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run code formatting (clang-format and clang-tidy)
+        run: docker run
+          --rm
+          -e GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH
+          -v /home/runner/:/home/runner/
+          ${{ env.CUR_DOCKER_TAG }}
+          sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && source entrypoint.sh"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # build-src-code:
-  #   name: Build source code
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Waste time # TODO
-  #       run: sleep 10
-  #     - name: Check out repository
-  #       uses: actions/checkout@v3
+  build-src-code:
+    name: Build source code
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    needs: build-dev-container
+    steps:
+      - name: Waste time # TODO
+        run: sleep 10
+      - name: Check out repository
+        uses: actions/checkout@v3
 
-  #     - name: Get Docker tag
-  #       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ github.event.workflow_run.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+      - name: Get Docker tag
+        run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ github.event.workflow_run.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-  #     - name: Build our source code in our developer container
-  #       run: |
-  #         docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
-  #           cd /home/astro-dev/src/;
-  #           source build_scripts/build.sh 2> >(tee err.log >&2);
-  #           if [ -s err.log ]; then
-  #             echo Build failed due to output in stderr. Yes, this fails on warnings. Fix them.;
-  #             exit 1;
-  #           fi
-  #           "
+      - name: Build our source code in our developer container
+        run: |
+          docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
+            cd /home/astro-dev/src/;
+            source build_scripts/build.sh 2> >(tee err.log >&2);
+            if [ -s err.log ]; then
+              echo Build failed due to output in stderr. Yes, this fails on warnings. Fix them.;
+              exit 1;
+            fi
+            "
