@@ -71,6 +71,8 @@ jobs:
         docker buildx ls
         docker buildx inspect my-builder --bootstrap
         docker buildx ls
+        docker context rm default
+        docker buildx ls
         docker buildx rm default || true
         docker buildx ls
         docker build \
