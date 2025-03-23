@@ -67,10 +67,6 @@ jobs:
 
     - name: Build the developer container image and push to DockerHub
       run: |
-        docker buildx create --name my-builder --driver docker-container --use
-        docker buildx ls
-        docker buildx inspect my-builder --bootstrap
-        docker buildx ls
         export DOCKER_BUILDKIT=1
         docker build \
         --file .github/workflows/ci/Dockerfile \
@@ -101,7 +97,7 @@ jobs:
           -v /home/runner/:/home/runner/
           --env-file <(env)
           ${{ env.CUR_DOCKER_TAG }}
-          sudo bash -c "cd /home/astro-dev/src/ci/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh"
+          bash -c "cd /home/astro-dev/src/ci/ && sudo chmod u+x entrypoint.sh && sudo chmod -R u+r /home/ && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

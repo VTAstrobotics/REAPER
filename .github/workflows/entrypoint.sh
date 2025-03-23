@@ -35,7 +35,6 @@ SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -
 
 # for clang-tidy
 echo "## Building source code"
-cd ..
 echo "### build action_interfaces"
 colcon build --packages-select action_interfaces
 echo "### source reaper"
