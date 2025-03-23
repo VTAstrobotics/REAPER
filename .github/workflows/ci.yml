@@ -71,6 +71,7 @@ jobs:
         docker buildx ls
         docker buildx inspect my-builder --bootstrap
         docker buildx ls
+        export DOCKER_BUILDKIT=1
         docker build \
         --file .github/workflows/ci/Dockerfile \
         --tag ${{ env.CUR_DOCKER_TAG }} \
