@@ -12,20 +12,3 @@ git init
 echo "### Adding git remote..."
 git remote add origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
 # git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
-
-echo "### Getting branch"
-# BRANCH=${GITHUB_REF#*refs/heads/} # this doesnt work on PR, only on push
-BRANCH=${GITHUB_HEAD_REF} # this doesnt work on push, only on PR
-
-echo "### git fetch $BRANCH ..."
-git fetch origin $BRANCH
-
-echo "### Branch: $BRANCH (ref: $GITHUB_REF )"
-git checkout $BRANCH
-
-echo "## Configuring git author..."
-git config --global user.email "clang-format@1337z.ninja"
-git config --global user.name "Clang Format"
-
-# Ignore workflow files (we may not touch them)
-git update-index --assume-unchanged .github/workflows/*

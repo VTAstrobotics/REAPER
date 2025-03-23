@@ -1,6 +1,22 @@
 #!/bin/bash
 
+echo "### Getting branch"
+# BRANCH=${GITHUB_REF#*refs/heads/} # this doesnt work on PR, only on push
 BRANCH=${GITHUB_HEAD_REF} # this doesnt work on push, only on PR
+
+echo "### git fetch $BRANCH ..."
+git fetch origin $BRANCH
+
+echo "### Branch: $BRANCH (ref: $GITHUB_REF )"
+git checkout $BRANCH
+
+echo "## Configuring git author..."
+git config --global user.email "clang-format@1337z.ninja"
+git config --global user.name "Clang Format"
+
+# Ignore workflow files (we may not touch them)
+git update-index --assume-unchanged .github/workflows/*
+
 echo "## Setting up clang-format on C/C++ source"
 SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -f 2)
 
