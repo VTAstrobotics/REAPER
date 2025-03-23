@@ -71,8 +71,6 @@ jobs:
       run: docker build
         --file .github/workflows/ci/Dockerfile
         --tag ${{ env.CUR_DOCKER_TAG }}
-        # --cache-to type=inline
-        # --cache-from=${{ env.CACHE_DOCKER_TAG }}
         .
 
     - name: Push to DockerHub
