@@ -42,19 +42,19 @@ class DumpActionServer : public rclcpp::Node
   }
 
  private:
-  rclcpp_action::Server<Dump>::shared_ptr_ action_server_;
-  hardware::TalonFX conveyor_motor_{30, "can0"};
-  controls::DutyCycleOut conveyor_duty_cycle_{0};
-  float volume_deposited_{0};
+  rclcpp_action::Server<Dump>::SharedPtr action_server_;
+  hardware::TalonFX conveyorMotor{30, "can0"};
+  controls::DutyCycleOut conveyorDutyCycle{0};
+  float volume_deposited{0};
   bool has_goal_{false};
-  int loop_rate_hz_{20};
-  std::shared_ptr<GoalHandleDump> dump_goal_handle_;
+  int loop_rate_hz{20};
+  std::shared_ptr<GoalHandleDump> Dump_Goal_Handle;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description =
     this->create_subscription<std_msgs::msg::Float32>(
       "/dump/volume", 2,
       std::bind(&DumpActionServer::dump_volume_callback, this,
                 std::placeholders::_1));
-  float starting_volume_{
+  float starting_volume{
     -802000}; // if this is negative 8020 then it means that we have not
               // reseeded the starting volume for the run. Note that even
               // the absolute value is an entirely unrealistic volume
@@ -62,7 +62,7 @@ class DumpActionServer : public rclcpp::Node
   void dump_volume_callback(const std_msgs::msg::Float32 msg)
   {
     RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
-    if (abs(abs(starting_volume_) - 802000) < 2)
+    if (abs(abs(starting_volume) - 802000) < 2)
     {
       starting_volume = msg.data;
       RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
@@ -70,7 +70,7 @@ class DumpActionServer : public rclcpp::Node
     else
     {
       volume_deposited = starting_volume - msg.data;
-      RCLCPP_INFO(this->get_logger(), "I have deposited %f", volume_deposited_);
+      RCLCPP_INFO(this->get_logger(), "I have deposited %f", volume_deposited);
     }
   }
 
@@ -132,7 +132,7 @@ class DumpActionServer : public rclcpp::Node
       execute_pwr_dump(goal_handle);
     }
   }
-  void execute_with_force(const std::shared_ptr<GoalHandleDump> goal_handle)
+  void execute_withForce(const std::shared_ptr<GoalHandleDump> goal_handle)
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
@@ -172,7 +172,7 @@ class DumpActionServer : public rclcpp::Node
       result->est_deposit_goal = volume_deposited;
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-      volume_deposited_ = 0;
+      volume_deposited = 0;
       Dump_Goal_Handle = nullptr;
       has_goal_ = false;
     }

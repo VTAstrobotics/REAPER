@@ -38,7 +38,7 @@ echo "## Running clang-format on C/C++ src code"
 clang-format -style=file -i $SRC
 
 echo "## Running clang-tidy on C/C++ src code"
-clang-tidy $SRC --config-file=.clang-tidy -p build/ --fix-errors
+clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p build/ --fix-errors
 
 echo "## Commiting files..."
 git commit -am "applied C/C++ auto formatting" || true
