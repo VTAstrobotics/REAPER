@@ -4,6 +4,9 @@ echo "### Getting branch"
 # BRANCH=${GITHUB_REF#*refs/heads/} # this doesnt work on PR, only on push
 BRANCH=${GITHUB_HEAD_REF} # this doesnt work on push, only on PR
 
+echo "### Add safe directory"
+git config --global --add safe.directory /home/astro-dev/src/ci
+
 echo "### git fetch $BRANCH ..."
 git fetch origin $BRANCH
 
