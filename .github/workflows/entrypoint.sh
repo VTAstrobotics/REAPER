@@ -36,12 +36,13 @@ SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -
 # for clang-tidy
 echo "## Building source code"
 echo "### build action_interfaces"
-runuser -u astro-dev -- colcon build --packages-select action_interfaces
-# colcon build --packages-select action_interfaces
+$(colcon build --packages-select action_interfaces)
+
 echo "### source reaper"
 source install/setup.bash
+
 echo "### build reaper"
-runuser -u astro-dev -- colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-format on C/C++ src code"
 clang-format -style=file -i $SRC

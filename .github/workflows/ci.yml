@@ -97,7 +97,7 @@ jobs:
         -v /home/runner/:/home/runner/
         --env-file <(env)
         ${{ env.CUR_DOCKER_TAG }}
-        sudo bash -c "cd /home/astro-dev/src/ci/ && chmod u+x entrypoint.sh && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh"
+        bash -c "cd /home/astro-dev/src/ci/ && sudo chmod u+x entrypoint.sh && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && sudo ./entrypoint.sh"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -142,7 +142,8 @@ jobs:
       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
     - name: Remove dangling images
-      run: curl -su "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}/images/" | jq -r '.results[] | select(.tags | length == 0) | .id' | while read IMAGE_ID; do
+      run: |
+        curl -su "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}/images/" | jq -r '.results[] | select(.tags | length == 0) | .id' | while read IMAGE_ID; do
             curl -sX DELETE -u "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_TOKEN }}" \
                 "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}/images/sha256:$IMAGE_ID/"
         done
