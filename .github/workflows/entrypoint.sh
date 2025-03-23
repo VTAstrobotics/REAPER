@@ -10,11 +10,13 @@ REPO_FULLNAME=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
 
 echo "## Initializing git repo..."
 git init
+
 echo "### Adding git remote..."
 git remote add origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
 # git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
 echo "### Getting branch"
 # BRANCH=${GITHUB_REF#*refs/heads/} # this doesnt work on PR, only on push
+
 BRANCH=${GITHUB_HEAD_REF} # this doesnt work on push, only on PR
 echo "### git fetch $BRANCH ..."
 git fetch origin $BRANCH
