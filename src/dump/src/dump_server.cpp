@@ -49,7 +49,7 @@ class DumpActionServer : public rclcpp::Node
   bool has_goal_{false};
   int loop_rate_hz_{20};
   std::shared_ptr<GoalHandleDump> dump_goal_handle_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description =
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description_ =
     this->create_subscription<std_msgs::msg::Float32>(
       "/dump/volume", 2,
       std::bind(&DumpActionServer::dump_volume_callback, this,
