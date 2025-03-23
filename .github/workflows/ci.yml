@@ -61,8 +61,8 @@ jobs:
     - name: Modify that Dockerfile for the other jobs
       run: |
         echo "RUN sudo apt update && sudo apt install -y jq xz-utils" >> .github/workflows/ci/Dockerfile
-        echo "RUN mkdir /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
-        echo "COPY .github/workflows/entrypoint.sh /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
+        echo "RUN mkdir -p /home/astro-dev/src/ci/" >> .github/workflows/ci/Dockerfile
+        echo "COPY .github/workflows/entrypoint.sh /home/astro-dev/src/ci/" >> .github/workflows/ci/Dockerfile
         echo "RUN ls /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
         echo "RUN sudo chmod +x /home/astro-dev/src/entrypoint.sh" >> .github/workflows/ci/Dockerfile
         echo "COPY .github/workflows/ci/ /home/astro-dev/src/" >> .github/workflows/ci/Dockerfile
@@ -71,8 +71,8 @@ jobs:
       run: docker build
         --file .github/workflows/ci/Dockerfile
         --tag ${{ env.CUR_DOCKER_TAG }}
-        --cache-to type=inline
-        --cache-from=${{ env.CACHE_DOCKER_TAG }}
+        # --cache-to type=inline
+        # --cache-from=${{ env.CACHE_DOCKER_TAG }}
         .
 
     - name: Push to DockerHub
@@ -102,7 +102,7 @@ jobs:
           -v /home/runner/:/home/runner/
           --env-file <(env)
           ${{ env.CUR_DOCKER_TAG }}
-          sudo bash -c "cd /home/astro-dev/src/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && source entrypoint.sh"
+          sudo bash -c "cd /home/astro-dev/src/ci/ && chmod u+x entrypoint.sh && chmod -R u+r /home/ && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && source entrypoint.sh"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
