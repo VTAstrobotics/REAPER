@@ -13,23 +13,28 @@ jobs:
   build-dev-container:
     name: Build developer container
     runs-on: ubuntu-latest
+    outputs:
+      cur_docker_tag: ${{ steps.docker-tag.outputs.CUR_DOCKER_TAG }}
     steps:
     - name: Checkout
       uses: actions/checkout@v3
 
     - name: Determine branch name
+      id: get-branch
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           echo "Detected pull request event"
           echo "BRANCH_NAME=$(echo ${{ github.head_ref }} | tr / _)" >> $GITHUB_ENV
         else
           echo "Detected push event"
-          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _)
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / _) >> $GITHUB_ENV
         fi
 
     - name: Generate Docker tag
-      run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/$DEV_CONTAINER_NAME:$BRANCH_NAME" >> $GITHUB_ENV
+      id: get-docker
+      run: |
+        echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}/$DEV_CONTAINER_NAME:$BRANCH_NAME" >> $GITHUB_ENV
+        echo "CUR_DOCKER_TAG=/$DEV_CONTAINER_NAME:$BRANCH_NAME" >> $GITHUB_OUTPUT
 
     # - name: Log in to DockerHub
     #   uses: docker/login-action@v2
@@ -85,6 +90,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
+      - name: Get Docker tag
+        run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+
       - name: Run code formatting (clang-format and clang-tidy)
         run: docker run
           --rm
@@ -103,6 +111,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
+
+      - name: Get Docker tag
+        run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
       - name: Build our source code in our developer container
         run: |
