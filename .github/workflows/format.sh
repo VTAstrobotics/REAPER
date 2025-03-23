@@ -26,7 +26,7 @@ SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -
 # for clang-tidy
 echo "## Building source code"
 echo "### build action_interfaces state_messages"
-$(colcon build --packages-select action_interfaces state_messages)
+colcon build --packages-select action_interfaces state_messages
 
 echo "### source reaper"
 source install/setup.bash
@@ -36,6 +36,11 @@ colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-format on C/C++ src code"
 clang-format -style=file -i $SRC
+
+echo "### build again"
+colcon build --packages-select action_interfaces state_messages
+source install/setup.bash
+colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-tidy on C/C++ src code"
 clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p build/ --fix-errors
