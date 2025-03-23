@@ -67,7 +67,11 @@ jobs:
 
     - name: Build the developer container image and push to DockerHub
       run: |
-        docker buildx create --use --driver docker-container
+        docker buildx create --name my-builder --driver docker-container --use
+        docker buildx ls
+        docker buildx inspect my-builder --bootstrap
+        docker buildx ls
+        docker buildx rm default || true
         docker buildx ls
         docker build \
         --file .github/workflows/ci/Dockerfile \
