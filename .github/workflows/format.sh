@@ -25,8 +25,8 @@ SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -
 
 # for clang-tidy
 echo "## Building source code"
-echo "### build action_interfaces"
-$(colcon build --packages-select action_interfaces)
+echo "### build action_interfaces state_messages"
+$(colcon build --packages-select action_interfaces state_messages)
 
 echo "### source reaper"
 source install/setup.bash
@@ -38,7 +38,7 @@ echo "## Running clang-format on C/C++ src code"
 clang-format -style=file -i $SRC
 
 echo "## Running clang-tidy on C/C++ src code"
-clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p /workspaces/REAPER/build/ --fix-errors
+clang-tidy $SRC --config-file=.clang-tidy -p build/ --fix-errors
 
 echo "## Commiting files..."
 git commit -am "applied C/C++ auto formatting" || true
