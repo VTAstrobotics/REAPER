@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "HELLO I AM IN THE ENTRYPOINT SCRIPT OK"
-
 sh -c "git config --global --add safe.directory $PWD"
 
 set -eu
@@ -14,12 +12,14 @@ git init
 echo "### Adding git remote..."
 git remote add origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
 # git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/$REPO_FULLNAME.git
+
 echo "### Getting branch"
 # BRANCH=${GITHUB_REF#*refs/heads/} # this doesnt work on PR, only on push
-
 BRANCH=${GITHUB_HEAD_REF} # this doesnt work on push, only on PR
+
 echo "### git fetch $BRANCH ..."
 git fetch origin $BRANCH
+
 echo "### Branch: $BRANCH (ref: $GITHUB_REF )"
 git checkout $BRANCH
 
@@ -34,7 +34,8 @@ echo "## Setting up clang-format on C/C++ source"
 SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -f 2)
 
 # for clang-tidy
-echo "## Setting up clang-tidy"
+echo "## Building source code"
+cd ..
 echo "### build action_interfaces"
 colcon build --packages-select action_interfaces
 echo "### source reaper"
@@ -44,6 +45,7 @@ colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-format on C/C++ src code"
 clang-format -style=file -i $SRC
+
 echo "## Running clang-tidy on C/C++ src code"
 clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p /workspaces/REAPER/build/ --fix-errors
 
