@@ -85,21 +85,21 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     needs: build-dev-container
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3
+    - name: Check out repository
+      uses: actions/checkout@v3
 
-      - name: Get Docker tag
-        run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+    - name: Get Docker tag
+      run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-      - name: Run code formatting (clang-format and clang-tidy)
-        run: docker run
-          --rm
-          -v /home/runner/:/home/runner/
-          --env-file <(env)
-          ${{ env.CUR_DOCKER_TAG }}
-          sudo bash -c "cd /home/astro-dev/src/ci/ && chmod u+x entrypoint.sh && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Run code formatting (clang-format and clang-tidy)
+      run: docker run
+        --rm
+        -v /home/runner/:/home/runner/
+        --env-file <(env)
+        ${{ env.CUR_DOCKER_TAG }}
+        sudo bash -c "cd /home/astro-dev/src/ci/ && chmod u+x entrypoint.sh && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # build-src-code:
   #   name: Build source code
@@ -107,19 +107,42 @@ jobs:
   #   if: ${{ github.event_name == 'pull_request' }}
   #   needs: build-dev-container
   #   steps:
-  #     - name: Check out repository
-  #       uses: actions/checkout@v3
+#     - name: Check out repository
+#       uses: actions/checkout@v3
 
-  #     - name: Get Docker tag
-  #       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+#     - name: Get Docker tag
+#       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-  #     - name: Build our source code in our developer container
-  #       run: |
-  #         docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
-  #           cd /home/astro-dev/src/;
-  #           source build_scripts/build.sh 2> >(tee err.log >&2);
-  #           if [ -s err.log ]; then
-  #             echo Build failed due to output in stderr. Yes, this fails on warnings. Fix them.;
-  #             exit 1;
-  #           fi
-  #           "
+#     - name: Build our source code in our developer container
+#       run: |
+#         docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "
+#           cd /home/astro-dev/src/;
+#           source build_scripts/build.sh 2> >(tee err.log >&2);
+#           if [ -s err.log ]; then
+#             echo Build failed due to output in stderr. Yes, this fails on warnings. Fix them.;
+#             exit 1;
+#           fi
+#           "
+
+  clean-dockerhub:
+    name: Clean DockerHub (removes dangling images)
+    runs-on: ubuntu-latest
+    needs: build-dev-container
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Log in to DockerHub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Get Docker tag
+      run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
+
+    - name: Remove dangling images
+      run: curl -su "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}/images/" | jq -r '.results[] | select(.tags | length == 0) | .id' | while read IMAGE_ID; do
+            curl -sX DELETE -u "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_TOKEN }}" \
+                "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${{ env.DEV_CONTAINER_NAME }}/images/sha256:$IMAGE_ID/"
+        done
