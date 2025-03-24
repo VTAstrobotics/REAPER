@@ -108,7 +108,8 @@ jobs:
                 \" &&
               source format.sh 2> >(tee err.log >&2);
               if [ -s err.log ]; then
-                echo Formatting failed.;
+                echo Formatting failed. See below stderr output:;
+                echo err.log;
                 exit 1;
               fi
             "

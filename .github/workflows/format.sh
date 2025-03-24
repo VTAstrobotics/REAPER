@@ -40,7 +40,7 @@ clang-format -style=file -i $SRC
 echo "### build again"
 colcon build --symlink-install --packages-select action_interfaces state_messages
 source install/setup.bash
-colcon build --symlink-install--cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-tidy on C/C++ src code"
 clang-tidy --config-file=.clang-tidy -p build/ --fix $SRC
