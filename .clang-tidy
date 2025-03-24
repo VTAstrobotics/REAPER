@@ -2,11 +2,11 @@ Checks: 'readability-identifier-naming'
 CheckOptions:
   - key: readability-identifier-naming.FunctionCase
     value: lower_case
-  - key: readability-identifier-naming.ConstantMemberCase
+  - key: readability-identifier-naming.ConstantCase
     value: UPPER_CASE
-  - key: readability-identifier-naming.MemberCase
+  - key: readability-identifier-naming.VariableCase
     value: lower_case
-  - key: readability-identifier-naming.ConstantMemberSuffix
-    value: '_'
+  # - key: readability-identifier-naming.ConstantMemberSuffix
+  #   value: '_'
   - key: readability-identifier-naming.MemberSuffix
     value: '_'

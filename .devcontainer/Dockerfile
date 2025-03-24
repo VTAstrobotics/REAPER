@@ -43,8 +43,10 @@ ENV PICO_SDK_PATH=$HOME/pico-sdk
 # MicroROS dependencies
 RUN sudo apt install -y \
     gcc-arm-none-eabi \
-    doxygen \
-    && git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
+    doxygen
+
+# Clone MicroROS Pi Pico
+# RUN git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
 
 # Rosdep update
 RUN rosdep update
@@ -86,7 +88,7 @@ RUN sudo wget https://apt.llvm.org/llvm.sh \
 #     && sudo apt-get install -y clang-format-16 \
 #     && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
 
-# install sparkcan
+# install sparkcan for sparkmax over can
 RUN sudo add-apt-repository ppa:graysonarendt/sparkcan
 RUN sudo apt update
 RUN sudo apt install sparkcan

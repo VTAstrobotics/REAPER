@@ -74,9 +74,9 @@ jobs:
         --file .github/workflows/ci/Dockerfile \
         --tag ${{ env.CUR_DOCKER_TAG }} \
         --cache-from type=inline,ref=${{ env.CACHE_DOCKER_TAG }} \
-        --cache-to type=inline,ref=${{ env.CUR_DOCKER_TAG }} \
         --push \
         .
+      # --cache-to type=inline,ref=${{ env.CUR_DOCKER_TAG }} \
 
     - name: Run developer container
       run: docker run --rm ${{ env.CUR_DOCKER_TAG }} bash -c "echo testing that it can run"
@@ -102,7 +102,7 @@ jobs:
           ${{ env.CUR_DOCKER_TAG }} \
           bash -c \
             "
-              cd /home/astro-dev/src/ci/ && sudo chmod -R 777 /home/runner/ && sudo bash -c
+              cd /home/astro-dev/src/ci/ && sudo chmod -R 777 /home/runner/ && sudo bash -c \
                 \"
                   chmod u+x entrypoint.sh && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh
                 \" &&
