@@ -2,7 +2,7 @@ name: astrodev
 
 services:
   dev-container:
-    image: vtastrobotics/astro-dev:$(echo ${GITHUB_REF#refs/heads/} | tr / _)
+    image: vtastrobotics/astro-dev:main
     build:
       dockerfile: "Dockerfile"
     privileged: true

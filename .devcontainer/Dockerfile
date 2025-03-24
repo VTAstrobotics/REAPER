@@ -58,16 +58,22 @@ RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 # Add dependencies below using RUN <command you used to install>              #
 #                                                                             #
 ###############################################################################
-# install clang-format version 16
-RUN \
-    LATEST_VERSION=$(curl -s https://apt.llvm.org/ | grep -oP 'llvm-\K[0-9]+' | sort -nr | head -n 1) && \
-    wget https://apt.llvm.org/llvm.sh && \
-    sudo chmod +x llvm.sh && \
-    sudo ./llvm.sh $LATEST_VERSION && \
-    sudo apt update && \
-    sudo apt install -y clang-format clang-tidy && \
-    clang-format --version && \
-    clang-tidy --version
+# install clang-format dependencies (also add-apt-repository relies on software-properties-common)
+RUN sudo apt install -y \
+    lsb-release \
+    wget \
+    software-properties-common \
+    gnupg
+
+# install clang-format and clang-tidy
+RUN sudo wget https://apt.llvm.org/llvm.sh \
+    && sudo chmod +x llvm.sh \
+    && sudo ./llvm.sh 21 \
+    # NOTICE: i have set the version to 21. over time you may choose to migrate
+    # to newer versions, but this may cause errors with the existing formatter
+    # rules (.clang-format and .clang-tidy).
+    && sudo apt update \
+    && sudo apt install -y clang-format clang-tidy
 
 # RUN sudo apt-get install -y \
 #     lsb-release \
