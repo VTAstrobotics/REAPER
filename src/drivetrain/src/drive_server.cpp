@@ -60,10 +60,10 @@ class DriveActionServer : public rclcpp::Node
   SparkMax right_motor_{"can0", 11};
   // Motor 1
   bool has_goal_{false};
-  int loop_rate_hz{120};
+  int loop_rate_hz_{120};
   double track_width_{1.0};
   double normalization_constant_ = 1; // change this during testing
-  std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
+  std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle_;
 
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID &uuid,
@@ -87,7 +87,7 @@ class DriveActionServer : public rclcpp::Node
   }
 
   rclcpp_action::CancelResponse handle_cancel(
-    const std::shared_ptr<GoalHandleDrive> goal_handle)
+    const std::shared_ptr<GoalHandleDrive> GOAL_HANDLE)
   {
     RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
     // Stop motors immediately
@@ -96,32 +96,32 @@ class DriveActionServer : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
     has_goal_ = false;
-    (void)goal_handle;
+    (void)GOAL_HANDLE;
     return rclcpp_action::CancelResponse::ACCEPT;
   }
 
-  void handle_accepted(const std::shared_ptr<GoalHandleDrive> goal_handle)
+  void handle_accepted(const std::shared_ptr<GoalHandleDrive> GOAL_HANDLE)
   {
     using namespace std::placeholders;
     // this needs to return quickly to avoid blocking the executor, so spin
     // up a new thread
-    std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}
+    std::thread{std::bind(&DriveActionServer::execute, this, _1), GOAL_HANDLE}
       .detach();
   }
 
-  void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
+  void execute(const std::shared_ptr<GoalHandleDrive> GOAL_HANDLE)
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
-      loop_rate_hz); // this should be 20 hz which I can't imagine not
+      loop_rate_hz_); // this should be 20 hz which I can't imagine not
                      // being enough for the dump
 
-    const auto goal = goal_handle->get_goal();
+    const auto GOAL = GOAL_HANDLE->get_goal();
 
     auto feedback = std::make_shared<Drive::Feedback>();
     auto result = std::make_shared<Drive::Result>();
-    double linear = goal->velocity_goal.linear.x;
-    double angular = goal->velocity_goal.angular.z;
+    double linear = GOAL->velocity_goal.linear.x;
+    double angular = GOAL->velocity_goal.angular.z;
 
     double v_left = linear - angular;
     double v_right = linear + angular;
@@ -131,12 +131,12 @@ class DriveActionServer : public rclcpp::Node
 
     while (rclcpp::ok() && this->now() < end_time)
     {
-      if (goal_handle->is_canceling())
+      if (GOAL_HANDLE->is_canceling())
       {
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-        goal_handle->canceled(result);
+        GOAL_HANDLE->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        Drive_Goal_Handle = nullptr;
+        Drive_Goal_Handle_ = nullptr;
         has_goal_ = false;
         return;
       }
@@ -146,7 +146,7 @@ class DriveActionServer : public rclcpp::Node
       right_motor_.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
       feedback->inst_velocity.linear.x = v_left;
       feedback->inst_velocity.angular.z = v_right; // placeholders
-      goal_handle->publish_feedback(feedback);
+      GOAL_HANDLE->publish_feedback(feedback);
 
       loop_rate.sleep();
     }
@@ -158,10 +158,10 @@ class DriveActionServer : public rclcpp::Node
 
     if (rclcpp::ok())
     {
-      result->curr_velocity = goal->velocity_goal;
-      goal_handle->succeed(result);
+      result->curr_velocity = GOAL->velocity_goal;
+      GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-      Drive_Goal_Handle = nullptr;
+      Drive_Goal_Handle_ = nullptr;
       has_goal_ = false;
     }
   }

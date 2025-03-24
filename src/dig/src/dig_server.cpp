@@ -51,18 +51,18 @@ class DigActionServer : public rclcpp::Node
     }
 
     // Linkage motor configuration
-    configs::Slot0Configs linkPIDConfig{};
-    float K_u = 3.9, T_u = 0.04;
-    linkPIDConfig.kP = 0.8 * K_u;
-    linkPIDConfig.kI = 0; // 0; PD controller
-    linkPIDConfig.kD = 0.1 * K_u * T_u;
-    l_link_mtr_.GetConfigurator().Apply(linkPIDConfig);
+    configs::Slot0Configs link_pid_config{};
+    float k_u = 3.9, t_u = 0.04;
+    link_pid_config.kP = 0.8 * k_u;
+    link_pid_config.kI = 0; // 0; PD controller
+    link_pid_config.kD = 0.1 * k_u * t_u;
+    l_link_mtr_.GetConfigurator().Apply(link_pid_config);
 
-    configs::CurrentLimitsConfigs linkLimConfig{};
-    linkLimConfig.SupplyCurrentLimit = 60;
-    linkLimConfig.SupplyCurrentLimitEnable = true;
-    l_link_mtr_.GetConfigurator().Apply(linkLimConfig);
-    r_link_mtr_.GetConfigurator().Apply(linkLimConfig);
+    configs::CurrentLimitsConfigs link_lim_config{};
+    link_lim_config.SupplyCurrentLimit = 60;
+    link_lim_config.SupplyCurrentLimitEnable = true;
+    l_link_mtr_.GetConfigurator().Apply(link_lim_config);
+    r_link_mtr_.GetConfigurator().Apply(link_lim_config);
 
     // enable brake mode
     l_link_pwr_duty_cycle_.OverrideBrakeDurNeutral = true;
@@ -78,18 +78,18 @@ class DigActionServer : public rclcpp::Node
                          true}); // true because they are mounted inverted
 
     // Bucket motor configuration
-    configs::Slot0Configs bcktPIDConfig{};
-    K_u = 3.9, T_u = 0.04; // TODO: tune these values for the bucket.
-    bcktPIDConfig.kP = 0.8 * K_u;
-    bcktPIDConfig.kI = 0; // 0; PD controller
-    bcktPIDConfig.kD = 0.1 * K_u * T_u;
-    l_bckt_mtr_.GetConfigurator().Apply(bcktPIDConfig);
+    configs::Slot0Configs bckt_pid_config{};
+    k_u = 3.9, t_u = 0.04; // TODO: tune these values for the bucket.
+    bckt_pid_config.kP = 0.8 * k_u;
+    bckt_pid_config.kI = 0; // 0; PD controller
+    bckt_pid_config.kD = 0.1 * k_u * t_u;
+    l_bckt_mtr_.GetConfigurator().Apply(bckt_pid_config);
 
-    configs::CurrentLimitsConfigs bcktLimConfig{};
-    bcktLimConfig.SupplyCurrentLimit = 40;
-    bcktLimConfig.SupplyCurrentLimitEnable = true;
-    l_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
-    r_bckt_mtr_.GetConfigurator().Apply(bcktLimConfig);
+    configs::CurrentLimitsConfigs bckt_lim_config{};
+    bckt_lim_config.SupplyCurrentLimit = 40;
+    bckt_lim_config.SupplyCurrentLimitEnable = true;
+    l_bckt_mtr_.GetConfigurator().Apply(bckt_lim_config);
+    r_bckt_mtr_.GetConfigurator().Apply(bckt_lim_config);
 
     // enable brake mode
     // l_bckt_mtr_.SetControl(static_brake);
@@ -164,9 +164,9 @@ class DigActionServer : public rclcpp::Node
   SparkMax r_vib_mtr_{"can0", 25};
 
   bool has_goal_{false};
-  const int LOOP_RATE_HZ_{50};
+  const int LOOP_RATE_HZ{50};
   std::shared_ptr<GoalHandleDig> dig_goal_handle_;
-  const float HSTP_VEL_{2.9}; // in/s. estimate. TODO: remove when sensor
+  const float HSTP_VEL{2.9}; // in/s. estimate. TODO: remove when sensor
 
   // subs to actuator position topics
   // should always be aligned so only 1 per pair of acts
@@ -204,37 +204,38 @@ class DigActionServer : public rclcpp::Node
   float current_hstp_pos_{0}; // TODO this is temporary ok
 
   // position limits
-  const float LINK_MIN_POS_{-1000000}; // TODO replace temp value
-  const float LINK_MAX_POS_{1000000};  // TODO replace temp value
-  const float BCKT_MIN_POS_{-1000000}; // TODO replace temp value
-  const float BCKT_MAX_POS_{1000000};  // TODO replace temp value
-  const float HSTP_MIN_POS_{0};
-  const float HSTP_MAX_POS_{4096};
+  const float LINK_MIN_POS{-1000000}; // TODO replace temp value
+  const float LINK_MAX_POS{1000000}; // TODO replace temp value
+  const float BCKT_MIN_POS{-1000000}; // TODO replace temp value
+  const float BCKT_MAX_POS{1000000}; // TODO replace temp value
+  const float HSTP_MIN_POS{0};
+  const float HSTP_MAX_POS{4096};
 
   // lookup table for auto dig
   // time (s),actuator angle (rots),bucket angle (rots), linact hardstop
   // (encoder [0,4096]),vibration (duty cycle [-1,1])
-  const float LOOKUP_TB_[7][5] = {
-    {0,  0,   0, 0, 0}, {1,  1,   1, 20, 0.2}, {2,   2, 2, 40, 0.4}, {3,   3, 3,
-    60, 0.6}, {4, 4, 4, 80, 0.8}, {5, 5,  5,   100, 1}, {6, 5,  5,   100, 0},
+  const float LOOKUP_TB[7][5] = {
+    {0, 0, 0, 0, 0},    {1, 1, 1, 20, 0.2}, {2, 2, 2, 40, 0.4},
+    {3, 3, 3, 60, 0.6}, {4, 4, 4, 80, 0.8}, {5, 5, 5, 100, 1},
+    {6, 5, 5, 100, 0},
   };
 
   /**
    * this gets us the sensor data for where our linkage actuators are at
    */
-  void dig_link_cb(const std_msgs::msg::Float32 msg)
+  void dig_link_cb(const std_msgs::msg::Float32 MSG)
   {
-    RCLCPP_INFO(this->get_logger(), "/dig/link: %f", msg.data);
+    RCLCPP_INFO(this->get_logger(), "/dig/link: %f", MSG.data);
     if (abs(abs(starting_link_pos_) - 987654) < 2)
     { // first pos
-      starting_link_pos_ = msg.data;
+      starting_link_pos_ = MSG.data;
       RCLCPP_INFO(this->get_logger(),
                   "starting linkage actuator positions are %f",
                   starting_link_pos_);
     }
     else
     {
-      current_link_pos_ = msg.data;
+      current_link_pos_ = MSG.data;
       RCLCPP_INFO(this->get_logger(),
                   "current linkage actuator positions are %f",
                   current_link_pos_);
@@ -244,19 +245,19 @@ class DigActionServer : public rclcpp::Node
   /**
    * this gets us the sensor data for where our rotation motors are at
    */
-  void dig_bckt_cb(const std_msgs::msg::Float32 msg)
+  void dig_bckt_cb(const std_msgs::msg::Float32 MSG)
   {
-    RCLCPP_INFO(this->get_logger(), "/dig/bckt: %f", msg.data);
+    RCLCPP_INFO(this->get_logger(), "/dig/bckt: %f", MSG.data);
     if (abs(abs(starting_bckt_pos_) - 987654) < 2)
     { // first pos
-      starting_bckt_pos_ = msg.data;
+      starting_bckt_pos_ = MSG.data;
       RCLCPP_INFO(this->get_logger(),
                   "starting rotation motor positions are %f",
                   starting_bckt_pos_);
     }
     else
     {
-      current_bckt_pos_ = msg.data;
+      current_bckt_pos_ = MSG.data;
       RCLCPP_INFO(this->get_logger(), "current rotation motor positions are %f",
                   current_bckt_pos_);
     }
@@ -265,18 +266,18 @@ class DigActionServer : public rclcpp::Node
   /**
    * this gets us the sensor data for where our hardstop is at
    */
-  void dig_hstp_cb(const std_msgs::msg::Float32 msg)
+  void dig_hstp_cb(const std_msgs::msg::Float32 MSG)
   {
-    RCLCPP_INFO(this->get_logger(), "/dig/hstp: %f", msg.data);
+    RCLCPP_INFO(this->get_logger(), "/dig/hstp: %f", MSG.data);
     if (abs(abs(starting_hstp_pos_) - 987654) < 2)
     { // first pos
-      starting_hstp_pos_ = msg.data;
+      starting_hstp_pos_ = MSG.data;
       RCLCPP_INFO(this->get_logger(), "starting hardstop position is %f",
                   starting_hstp_pos_);
     }
     else
     {
-      current_hstp_pos_ = msg.data;
+      current_hstp_pos_ = MSG.data;
       RCLCPP_INFO(this->get_logger(), "current hardstop position is %f",
                   current_hstp_pos_);
     }
@@ -318,10 +319,10 @@ class DigActionServer : public rclcpp::Node
    *
    */
   rclcpp_action::CancelResponse handle_cancel(
-    const std::shared_ptr<GoalHandleDig> goal_handle)
+    const std::shared_ptr<GoalHandleDig> GOAL_HANDLE)
   {
     RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-    (void)goal_handle; // for unused warning
+    (void)GOAL_HANDLE; // for unused warning
 
     // stop motion
     link_pwr(0);
@@ -339,36 +340,36 @@ class DigActionServer : public rclcpp::Node
   /**
    *
    */
-  void handle_accepted(const std::shared_ptr<GoalHandleDig> goal_handle)
+  void handle_accepted(const std::shared_ptr<GoalHandleDig> GOAL_HANDLE)
   {
     using namespace std::placeholders;
     // this needs to return quickly to avoid blocking the executor, so spin
     // up a new thread
-    std::thread{std::bind(&DigActionServer::execute, this, _1), goal_handle}
+    std::thread{std::bind(&DigActionServer::execute, this, _1), GOAL_HANDLE}
       .detach();
   }
 
   /**
    * Parses the parameters and calls the appropriate helper function
    */
-  void execute(const std::shared_ptr<GoalHandleDig> goal_handle)
+  void execute(const std::shared_ptr<GoalHandleDig> GOAL_HANDLE)
   {
-    const auto goal = goal_handle->get_goal();
+    const auto GOAL = GOAL_HANDLE->get_goal();
 
-    if (goal->auton)
+    if (GOAL->auton)
     {
       RCLCPP_DEBUG(this->get_logger(), "execute: autonomous control");
-      execute_auton(goal_handle);
+      execute_auton(GOAL_HANDLE);
     }
-    else if (goal->pos)
+    else if (GOAL->pos)
     {
       RCLCPP_DEBUG(this->get_logger(), "execute: position control");
-      execute_pos(goal_handle);
+      execute_pos(GOAL_HANDLE);
     }
     else
     {
       RCLCPP_DEBUG(this->get_logger(), "execute: power control");
-      execute_pwr(goal_handle);
+      execute_pwr(GOAL_HANDLE);
     }
   }
 
@@ -461,15 +462,15 @@ class DigActionServer : public rclcpp::Node
    * runs the dig motors to a duty cycle goal
    * @param goal_handle pointer to the goal
    */
-  void execute_pwr(const std::shared_ptr<GoalHandleDig> goal_handle)
+  void execute_pwr(const std::shared_ptr<GoalHandleDig> GOAL_HANDLE)
   {
     RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
 
-    const auto goal = goal_handle->get_goal();
-    double lnkage_goal = goal->dig_link_pwr_goal;
-    double bucket_goal = goal->dig_bckt_pwr_goal;
-    double hrdstp_goal = goal->dig_hstp_pwr_goal;
-    double vibrtn_goal = goal->dig_vibr_pwr_goal;
+    const auto GOAL = GOAL_HANDLE->get_goal();
+    double lnkage_goal = GOAL->dig_link_pwr_goal;
+    double bucket_goal = GOAL->dig_bckt_pwr_goal;
+    double hrdstp_goal = GOAL->dig_hstp_pwr_goal;
+    double vibrtn_goal = GOAL->dig_vibr_pwr_goal;
     RCLCPP_DEBUG(this->get_logger(), "execute_pwr: hrdstp_goal = %f",
                  hrdstp_goal);
 
@@ -492,38 +493,38 @@ class DigActionServer : public rclcpp::Node
     auto feedback = std::make_shared<Dig::Feedback>();
     auto result = std::make_shared<Dig::Result>();
 
-    if (goal_handle->is_canceling())
+    if (GOAL_HANDLE->is_canceling())
     {
       RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-      goal_handle->canceled(result);
+      GOAL_HANDLE->canceled(result);
       RCLCPP_INFO(this->get_logger(), "Goal canceled");
       dig_goal_handle_ = nullptr; // Reset the active goal
       has_goal_ = false;
       return;
     }
 
-    auto &linkPercentDone = feedback->percent_link_done;
-    auto &bcktPercentDone = feedback->percent_bckt_done;
-    auto &hstpPercentDone = feedback->percent_hstp_done;
-    auto &vibrPercentDone = feedback->percent_vibr_done;
+    auto &link_percent_done = feedback->percent_link_done;
+    auto &bckt_percent_done = feedback->percent_bckt_done;
+    auto &hstp_percent_done = feedback->percent_hstp_done;
+    auto &vibr_percent_done = feedback->percent_vibr_done;
 
     RCLCPP_DEBUG(
       this->get_logger(), "Running for %f ms",
-      1000 * (1.0 / (double)(LOOP_RATE_HZ_))); // this is the correct math
+      1000 * (1.0 / (double)(LOOP_RATE_HZ))); // this is the correct math
                                                // with correct units :)
     ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(LOOP_RATE_HZ_)));
+                                         (1.0 / (double)(LOOP_RATE_HZ)));
 
     link_pwr(lnkage_goal);
     bckt_pwr(bucket_goal);
     vib_pwr(vibrtn_goal);
     hstp_pwr(hrdstp_goal);
 
-    linkPercentDone = 100;
-    bcktPercentDone = 100;
-    hstpPercentDone = 100; // TODO
-    vibrPercentDone = 100;
-    goal_handle->publish_feedback(feedback);
+    link_percent_done = 100;
+    bckt_percent_done = 100;
+    hstp_percent_done = 100; // TODO
+    vibr_percent_done = 100;
+    GOAL_HANDLE->publish_feedback(feedback);
 
     if (rclcpp::ok())
     {
@@ -532,7 +533,7 @@ class DigActionServer : public rclcpp::Node
       result->est_dig_hstp_goal = hrdstp_goal;
       result->est_dig_vibr_goal = vibrtn_goal;
 
-      goal_handle->succeed(result);
+      GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "execute_pwr: Goal succeeded");
     }
     else
@@ -569,7 +570,7 @@ class DigActionServer : public rclcpp::Node
    */
   bool linkage_in_bounds(double pos)
   {
-    if (pos_in_bounds(pos, LINK_MIN_POS_, LINK_MAX_POS_))
+    if (pos_in_bounds(pos, LINK_MIN_POS, LINK_MAX_POS))
     {
       return true;
     }
@@ -578,7 +579,7 @@ class DigActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(),
                    "linkage_in_bounds: Linkage goal was out of bounds. "
                    "Linkage goal was %f but should be in [%f, %f]",
-                   pos, LINK_MIN_POS_, LINK_MAX_POS_);
+                   pos, LINK_MIN_POS, LINK_MAX_POS);
       return false;
     }
   }
@@ -590,7 +591,7 @@ class DigActionServer : public rclcpp::Node
    */
   bool bucket_in_bounds(double pos)
   {
-    if (pos_in_bounds(pos, BCKT_MIN_POS_, BCKT_MAX_POS_))
+    if (pos_in_bounds(pos, BCKT_MIN_POS, BCKT_MAX_POS))
     {
       return true;
     }
@@ -599,7 +600,7 @@ class DigActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(),
                    "bucket_in_bounds: Bucket goal was out of bounds. "
                    "Bucket goal was %f but should be in [%f, %f]",
-                   pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
+                   pos, BCKT_MIN_POS, BCKT_MAX_POS);
       return false;
     }
   }
@@ -611,7 +612,7 @@ class DigActionServer : public rclcpp::Node
    */
   bool hrdstp_in_bounds(double pos)
   {
-    if (pos_in_bounds(pos, HSTP_MIN_POS_, HSTP_MAX_POS_))
+    if (pos_in_bounds(pos, HSTP_MIN_POS, HSTP_MAX_POS))
     {
       return true;
     }
@@ -620,7 +621,7 @@ class DigActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(),
                    "hrdstp_in_bounds: Hardstop goal was out of bounds. "
                    "Hardstop goal was %f but should be in [%f, %f]",
-                   pos, HSTP_MIN_POS_, HSTP_MAX_POS_);
+                   pos, HSTP_MIN_POS, HSTP_MAX_POS);
       return false;
     }
   }
@@ -666,10 +667,10 @@ class DigActionServer : public rclcpp::Node
 
     RCLCPP_DEBUG(
       this->get_logger(), "Running for %f ms",
-      1000 * (1.0 / (double)(LOOP_RATE_HZ_))); // this is the correct math
+      1000 * (1.0 / (double)(LOOP_RATE_HZ))); // this is the correct math
                                                // with correct units :)
     ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(LOOP_RATE_HZ_)));
+                                         (1.0 / (double)(LOOP_RATE_HZ)));
     units::angle::turn_t lnkage_angl{lnkage_goal * 1_tr};
     units::angle::turn_t bucket_angl{bucket_goal * 1_tr};
 
@@ -697,7 +698,7 @@ class DigActionServer : public rclcpp::Node
     // duty cycle drives the direction
     // (duration extending) x (current_power) x (max_speed)
     current_hstp_pos_ +=
-      (this->now().seconds() - start_time) * hstp_duty_cycle * HSTP_VEL_;
+      (this->now().seconds() - start_time) * hstp_duty_cycle * HSTP_VEL;
     RCLCPP_DEBUG(this->get_logger(), "current_hstp_pos_ = %f",
                  current_hstp_pos_);
   }
@@ -707,24 +708,24 @@ class DigActionServer : public rclcpp::Node
    * which are just set to a power)
    * @param goal_handle pointer to the goal
    */
-  void execute_pos(const std::shared_ptr<GoalHandleDig> goal_handle)
+  void execute_pos(const std::shared_ptr<GoalHandleDig> GOAL_HANDLE)
   {
     RCLCPP_DEBUG(this->get_logger(), "execute_pos: executing...");
 
-    rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
-    const auto goal = goal_handle->get_goal();
-    double lnkage_goal = goal->dig_link_pos_goal;
-    double bucket_goal = goal->dig_bckt_pos_goal;
-    double hrdstp_goal = goal->dig_hstp_pos_goal;
-    double vibrtn_goal = goal->dig_vibr_pwr_goal;
+    rclcpp::Rate loop_rate(LOOP_RATE_HZ);
+    const auto GOAL = GOAL_HANDLE->get_goal();
+    double lnkage_goal = GOAL->dig_link_pos_goal;
+    double bucket_goal = GOAL->dig_bckt_pos_goal;
+    double hrdstp_goal = GOAL->dig_hstp_pos_goal;
+    double vibrtn_goal = GOAL->dig_vibr_pwr_goal;
 
     auto feedback = std::make_shared<Dig::Feedback>();
     auto result = std::make_shared<Dig::Result>();
 
-    auto &linkPercentDone = feedback->percent_link_done;
-    auto &bcktPercentDone = feedback->percent_bckt_done;
-    auto &hstpPercentDone = feedback->percent_hstp_done;
-    auto &vibrPercentDone = feedback->percent_vibr_done;
+    auto &link_percent_done = feedback->percent_link_done;
+    auto &bckt_percent_done = feedback->percent_bckt_done;
+    auto &hstp_percent_done = feedback->percent_hstp_done;
+    auto &vibr_percent_done = feedback->percent_vibr_done;
 
     // TODO: need to factor in the absolute encoders (and any other sensor
     // data) from the callback above
@@ -736,10 +737,10 @@ class DigActionServer : public rclcpp::Node
            !APPROX(current_bckt_pos_, bucket_goal) ||
            !APPROX(current_hstp_pos_, hrdstp_goal))
     { // keep sending the request because CTRE's watchdog
-      if (goal_handle->is_canceling())
+      if (GOAL_HANDLE->is_canceling())
       {
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-        goal_handle->canceled(result);
+        GOAL_HANDLE->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
         dig_goal_handle_ = nullptr; // Reset the active goal
         has_goal_ = false;
@@ -754,14 +755,14 @@ class DigActionServer : public rclcpp::Node
       // vibration motors duty cycle
       vib_pwr(vibrtn_goal);
 
-      linkPercentDone =
+      link_percent_done =
         (abs(lnkage_goal) - abs(current_link_pos_)) / abs(lnkage_goal) * 100;
-      bcktPercentDone =
+      bckt_percent_done =
         (abs(bucket_goal) - abs(current_bckt_pos_)) / abs(bucket_goal) * 100;
-      hstpPercentDone =
+      hstp_percent_done =
         (abs(hrdstp_goal) - abs(current_hstp_pos_)) / abs(hrdstp_goal) * 100;
-      vibrPercentDone = 100;
-      goal_handle->publish_feedback(feedback);
+      vibr_percent_done = 100;
+      GOAL_HANDLE->publish_feedback(feedback);
 
       loop_rate.sleep();
     }
@@ -773,7 +774,7 @@ class DigActionServer : public rclcpp::Node
       result->est_dig_hstp_goal = current_hstp_pos_;
       result->est_dig_vibr_goal = vibrtn_goal;
 
-      goal_handle->succeed(result);
+      GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "execute_pos: Goal succeeded");
     }
     else
@@ -795,19 +796,19 @@ class DigActionServer : public rclcpp::Node
    * autonomously moves the dig actuators to scoop
    * @param goal_handle pointer to the goal
    */
-  void execute_auton(const std::shared_ptr<GoalHandleDig> goal_handle)
+  void execute_auton(const std::shared_ptr<GoalHandleDig> GOAL_HANDLE)
   {
     RCLCPP_DEBUG(this->get_logger(), "execute_auton: executing...");
 
-    rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
+    rclcpp::Rate loop_rate(LOOP_RATE_HZ);
 
     auto feedback = std::make_shared<Dig::Feedback>();
     auto result = std::make_shared<Dig::Result>();
 
-    auto &linkPercentDone = feedback->percent_link_done;
-    auto &bcktPercentDone = feedback->percent_bckt_done;
-    auto &hstpPercentDone = feedback->percent_hstp_done;
-    auto &vibrPercentDone = feedback->percent_vibr_done;
+    auto &link_percent_done = feedback->percent_link_done;
+    auto &bckt_percent_done = feedback->percent_bckt_done;
+    auto &hstp_percent_done = feedback->percent_hstp_done;
+    auto &vibr_percent_done = feedback->percent_vibr_done;
 
     // TODO: need to factor in the absolute encoders (and any other sensor
     // data) from the callback above
@@ -816,14 +817,14 @@ class DigActionServer : public rclcpp::Node
 
     // time (s),actuator angle (rots),bucket angle (rots), linact hardstop
     // (encoder [0,4096]),vibration (duty cycle [-1,1])
-    for (size_t i = 0; i < sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0]); i++)
+    for (size_t i = 0; i < sizeof(LOOKUP_TB) / sizeof(LOOKUP_TB[0]); i++)
     {
       RCLCPP_DEBUG(this->get_logger(), "execute_auton: i=%ld", i);
 
       // get the starting time for this iteration of the loop
       double next_goal_time = this->now().seconds();
 
-      if (i == sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0]) - 1)
+      if (i == sizeof(LOOKUP_TB) / sizeof(LOOKUP_TB[0]) - 1)
       {
         // if it's the last iteration, we can't look-ahead, so assume
         // some constant length of time
@@ -831,7 +832,7 @@ class DigActionServer : public rclcpp::Node
       }
       else
       {
-        next_goal_time += (LOOKUP_TB_[i + 1][0] - LOOKUP_TB_[i][0]);
+        next_goal_time += (LOOKUP_TB[i + 1][0] - LOOKUP_TB[i][0]);
       }
 
       RCLCPP_DEBUG(this->get_logger(), "now = %f, nex goal = %f",
@@ -839,10 +840,10 @@ class DigActionServer : public rclcpp::Node
 
       while (this->now().seconds() < next_goal_time)
       {
-        if (goal_handle->is_canceling())
+        if (GOAL_HANDLE->is_canceling())
         {
           RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-          goal_handle->canceled(result);
+          GOAL_HANDLE->canceled(result);
           RCLCPP_INFO(this->get_logger(), "Goal canceled");
           dig_goal_handle_ = nullptr; // Reset the active goal
           has_goal_ = false;
@@ -852,21 +853,21 @@ class DigActionServer : public rclcpp::Node
         // linkage, bucket, and hardstop to a set position
         double start_time =
           this->now().seconds(); // TODO: remove this once hstp sensor
-        goto_pos(LOOKUP_TB_[i][1], LOOKUP_TB_[i][2], LOOKUP_TB_[i][3],
+        goto_pos(LOOKUP_TB[i][1], LOOKUP_TB[i][2], LOOKUP_TB[i][3],
                  start_time);
 
         // vibration motors duty cycle
-        vib_pwr(LOOKUP_TB_[i][4]);
+        vib_pwr(LOOKUP_TB[i][4]);
 
-        linkPercentDone =
-          (i / sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0])) * 100;
-        bcktPercentDone =
-          (i / sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0])) * 100;
-        hstpPercentDone =
-          (i / sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0])) * 100;
-        vibrPercentDone =
-          (i / sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0])) * 100;
-        goal_handle->publish_feedback(feedback);
+        link_percent_done =
+          (i / sizeof(LOOKUP_TB) / sizeof(LOOKUP_TB[0])) * 100;
+        bckt_percent_done =
+          (i / sizeof(LOOKUP_TB) / sizeof(LOOKUP_TB[0])) * 100;
+        hstp_percent_done =
+          (i / sizeof(LOOKUP_TB) / sizeof(LOOKUP_TB[0])) * 100;
+        vibr_percent_done =
+          (i / sizeof(LOOKUP_TB) / sizeof(LOOKUP_TB[0])) * 100;
+        GOAL_HANDLE->publish_feedback(feedback);
 
         loop_rate.sleep();
       }
@@ -879,7 +880,7 @@ class DigActionServer : public rclcpp::Node
       result->est_dig_hstp_goal = current_hstp_pos_;
       result->est_dig_vibr_goal = 0;
 
-      goal_handle->succeed(result);
+      GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "execute_pos: Goal succeeded");
     }
     else

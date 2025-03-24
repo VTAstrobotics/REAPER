@@ -68,16 +68,16 @@ class Distributor : public rclcpp::Node
   rclcpp_action::Client<Dig>::SharedPtr dig_ptr_;
   rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
 
-  bool slow_turn_ = false;                // toggle to slow drive turning
-  const float slow_drive_turn_val_ = 0.5; // what rate to slow turning
-  const float SLOW_BCKT_ROT_VAL_ = 0.125;
+  bool slow_turn_ = false; // toggle to slow drive turning
+  const float SLOW_DRIVE_TURN_VAL = 0.5; // what rate to slow turning
+  const float SLOW_BCKT_ROT_VAL = 0.125;
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
    * array structure is same as the joy message buttons array!
    */
   float last_btn_press_[11];
-  const float button_cooldown_ms_ = 0.050;
+  const float BUTTON_COOLDOWN_MS = 0.050;
   bool teleop_disabled_ = false;
   bool stop_mode_ = false;
 
@@ -92,7 +92,7 @@ class Distributor : public rclcpp::Node
   {
     return (raw.buttons[button] &&
             ((this->now().seconds() - last_btn_press_[button]) >
-             button_cooldown_ms_));
+             BUTTON_COOLDOWN_MS));
   }
 
   /**
@@ -103,10 +103,10 @@ class Distributor : public rclcpp::Node
    * @param raw pointer to the raw joy msg
    * @return true if all buttons were pressed AND none were duplicate presses
    */
-  bool valid_presses(const int buttons[], const int size,
+  bool valid_presses(const int buttons[], const int SIZE,
                      const sensor_msgs::msg::Joy& raw)
   {
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < SIZE; i++)
     {
       if (!valid_press(buttons[i], raw))
       {
@@ -302,8 +302,8 @@ class Distributor : public rclcpp::Node
      **********************************************************************/
 
     // Drive throttle
-    float LT = raw.axes[AXIS_LTRIGGER];
-    float RT = raw.axes[AXIS_RTRIGGER];
+    float lt = raw.axes[AXIS_LTRIGGER];
+    float rt = raw.axes[AXIS_RTRIGGER];
 
     /*
      * Shift triggers from [-1, 1], where
@@ -314,27 +314,27 @@ class Distributor : public rclcpp::Node
      *    0 = not pressed
      *    1 = fully pressed
      */
-    LT = ((-1 * LT) + 1) * 0.5;
-    RT = ((-1 * RT) + 1) * 0.5;
+    lt = ((-1 * lt) + 1) * 0.5;
+    rt = ((-1 * rt) + 1) * 0.5;
 
     // Apply cubic function for better control
-    LT = std::pow(LT, 3);
-    RT = std::pow(RT, 3);
+    lt = std::pow(lt, 3);
+    rt = std::pow(rt, 3);
 
-    drive_vel.linear.x = RT - LT; // [-1, 1]
+    drive_vel.linear.x = rt - lt; // [-1, 1]
     drive_vel.linear.x *= 1.5;
 
     // Drive turning
-    float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+    float lsx = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
 
     // Apply cubic function for better control
-    LSX = std::pow(LSX, 3);
+    lsx = std::pow(lsx, 3);
 
-    drive_vel.angular.z = LSX; // [-1, 1]
+    drive_vel.angular.z = lsx; // [-1, 1]
 
     if (slow_turn_)
     {
-      drive_vel.angular.z *= slow_drive_turn_val_;
+      drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL;
     }
 
     /**********************************************************************
@@ -343,12 +343,12 @@ class Distributor : public rclcpp::Node
      *                                                                    *
      **********************************************************************/
     // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-    float RSY = raw.axes[AXIS_RIGHTY];
+    float rsy = raw.axes[AXIS_RIGHTY];
 
     // Apply cubic function for better control
-    RSY = std::pow(RSY, 3);
-    dig_goal.dig_bckt_pwr_goal = RSY;
-    dig_goal.dig_bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+    rsy = std::pow(rsy, 3);
+    dig_goal.dig_bckt_pwr_goal = rsy;
+    dig_goal.dig_bckt_pwr_goal *= SLOW_BCKT_ROT_VAL;
 
     /**********************************************************************
      *                                                                    *
@@ -371,11 +371,11 @@ class Distributor : public rclcpp::Node
     }
 
     // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-    float LSY = raw.axes[AXIS_LEFTY];
+    float lsy = raw.axes[AXIS_LEFTY];
 
     // Apply cubic function for better control
-    LSY = std::pow(LSY, 3);
-    dump_goal.pwr_goal = LSY;
+    lsy = std::pow(lsy, 3);
+    dump_goal.pwr_goal = lsy;
 
     /**********************************************************************
      *                                                                    *
@@ -397,9 +397,9 @@ class Distributor : public rclcpp::Node
    */
   void goal_msgs()
   {
-    auto dumpSend_goal = rclcpp_action::Client<Dump>::SendGoalOptions();
-    auto digSend_goal = rclcpp_action::Client<Dig>::SendGoalOptions();
-    auto driveSend_goal = rclcpp_action::Client<Drive>::SendGoalOptions();
+    auto dump_send_goal = rclcpp_action::Client<Dump>::SendGoalOptions();
+    auto dig_send_goal = rclcpp_action::Client<Dig>::SendGoalOptions();
+    auto drive_send_goal = rclcpp_action::Client<Drive>::SendGoalOptions();
   }
 
   /**
@@ -422,15 +422,15 @@ class Distributor : public rclcpp::Node
    * @param goal_handle
    */
   void drive_fb_cb(DriveGoalHandle::SharedPtr,
-                   const std::shared_ptr<const Drive::Feedback> feedback)
+                   const std::shared_ptr<const Drive::Feedback> FEEDBACK)
   {
     RCLCPP_INFO(
       this->get_logger(),
       "Drive instantaneous velocity:\nlinear\n\tx = %f\n\ty = %f\n\tz = "
       "%f\nangular\n\tx = %f\n\ty = %f\n\tz = %f",
-      feedback->inst_velocity.linear.x, feedback->inst_velocity.linear.y,
-      feedback->inst_velocity.linear.z, feedback->inst_velocity.angular.x,
-      feedback->inst_velocity.angular.y, feedback->inst_velocity.angular.z);
+      FEEDBACK->inst_velocity.linear.x, FEEDBACK->inst_velocity.linear.y,
+      FEEDBACK->inst_velocity.linear.z, FEEDBACK->inst_velocity.angular.x,
+      FEEDBACK->inst_velocity.angular.y, FEEDBACK->inst_velocity.angular.z);
   }
 
   /**
@@ -484,11 +484,11 @@ class Distributor : public rclcpp::Node
    * @param goal_handle
    */
   void dig_fb_cb(DigGoalHandle::SharedPtr,
-                 const std::shared_ptr<const Dig::Feedback> feedback)
+                 const std::shared_ptr<const Dig::Feedback> FEEDBACK)
   {
     RCLCPP_INFO(this->get_logger(),
                 "Dig linkage %f%% completed and bucket %f%% completed",
-                feedback->percent_link_done, feedback->percent_bckt_done);
+                FEEDBACK->percent_link_done, FEEDBACK->percent_bckt_done);
   }
 
   /**
@@ -536,10 +536,10 @@ class Distributor : public rclcpp::Node
    * @param goal_handle
    */
   void dump_fb_cb(DumpGoalHandle::SharedPtr,
-                  const std::shared_ptr<const Dump::Feedback> feedback)
+                  const std::shared_ptr<const Dump::Feedback> FEEDBACK)
   {
     RCLCPP_INFO(this->get_logger(), "Dump action %f%% completed",
-                feedback->percent_done);
+                FEEDBACK->percent_done);
   }
 
   /**
