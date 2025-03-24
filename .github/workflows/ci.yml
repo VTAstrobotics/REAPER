@@ -106,7 +106,8 @@ jobs:
                 \"
                   chmod u+x entrypoint.sh && export GITHUB_EVENT_PATH=$GITHUB_EVENT_PATH && export GITHUB_TOKEN=$GITHUB_TOKEN && export GITHUB_HEAD_REF=$GITHUB_HEAD_REF && export GITHUB_REF=$GITHUB_REF && source entrypoint.sh
                 \" &&
-              if [ source format.sh ]; then
+              source format.sh;
+              if [ $? -ne 0 ]; then
                 echo Formatting failed. See below stderr output:;
                 echo err.log;
                 exit 1;
