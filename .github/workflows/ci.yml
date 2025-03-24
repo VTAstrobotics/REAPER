@@ -95,12 +95,12 @@ jobs:
 
     - name: Run code formatting (clang-format and clang-tidy)
       run: |
-        docker run
-          --rm
-          -v /home/runner/:/home/runner/
-          --env-file <(env)
-          ${{ env.CUR_DOCKER_TAG }}
-          bash -c
+        docker run \
+          --rm \
+          -v /home/runner/:/home/runner/ \
+          --env-file <(env) \
+          ${{ env.CUR_DOCKER_TAG }} \
+          bash -c \
             "
               cd /home/astro-dev/src/ci/ && sudo chmod -R 777 /home/runner/ && sudo bash -c
                 \"
