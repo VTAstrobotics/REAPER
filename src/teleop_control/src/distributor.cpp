@@ -90,9 +90,9 @@ class Distributor : public rclcpp::Node
    */
   bool valid_press(int button, const sensor_msgs::msg::Joy& raw)
   {
-    return (raw.buttons[button] &&
-            ((this->now().seconds() - last_btn_press_[button]) >
-             BUTTON_COOLDOWN_MS));
+    return (
+      raw.buttons[button] &&
+      ((this->now().seconds() - last_btn_press_[button]) > BUTTON_COOLDOWN_MS));
   }
 
   /**

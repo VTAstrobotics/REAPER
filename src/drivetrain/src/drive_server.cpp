@@ -114,7 +114,7 @@ class DriveActionServer : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
       loop_rate_hz_); // this should be 20 hz which I can't imagine not
-                     // being enough for the dump
+                      // being enough for the dump
 
     const auto GOAL = GOAL_HANDLE->get_goal();
 

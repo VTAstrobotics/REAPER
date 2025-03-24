@@ -511,9 +511,8 @@ class DigActionServer : public rclcpp::Node
     RCLCPP_DEBUG(
       this->get_logger(), "Running for %f ms",
       1000 * (1.0 / (double)(LOOP_RATE_HZ))); // this is the correct math
-                                               // with correct units :)
-    ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(LOOP_RATE_HZ)));
+                                              // with correct units :)
+    ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0 / (double)(LOOP_RATE_HZ)));
 
     link_pwr(lnkage_goal);
     bckt_pwr(bucket_goal);
@@ -668,9 +667,8 @@ class DigActionServer : public rclcpp::Node
     RCLCPP_DEBUG(
       this->get_logger(), "Running for %f ms",
       1000 * (1.0 / (double)(LOOP_RATE_HZ))); // this is the correct math
-                                               // with correct units :)
-    ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(LOOP_RATE_HZ)));
+                                              // with correct units :)
+    ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0 / (double)(LOOP_RATE_HZ)));
     units::angle::turn_t lnkage_angl{lnkage_goal * 1_tr};
     units::angle::turn_t bucket_angl{bucket_goal * 1_tr};
 
@@ -853,8 +851,7 @@ class DigActionServer : public rclcpp::Node
         // linkage, bucket, and hardstop to a set position
         double start_time =
           this->now().seconds(); // TODO: remove this once hstp sensor
-        goto_pos(LOOKUP_TB[i][1], LOOKUP_TB[i][2], LOOKUP_TB[i][3],
-                 start_time);
+        goto_pos(LOOKUP_TB[i][1], LOOKUP_TB[i][2], LOOKUP_TB[i][3], start_time);
 
         // vibration motors duty cycle
         vib_pwr(LOOKUP_TB[i][4]);
