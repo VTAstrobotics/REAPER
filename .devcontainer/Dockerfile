@@ -59,15 +59,26 @@ RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 #                                                                             #
 ###############################################################################
 # install clang-format version 16
-RUN sudo apt-get install -y lsb-release \
-    wget \
-    software-properties-common \
-    gnupg \
-    && sudo wget https://apt.llvm.org/llvm.sh \
-    && sudo chmod +x llvm.sh \
-    && sudo ./llvm.sh 16 \
-    && sudo apt-get install -y clang-format-16 \
-    && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
+RUN \
+    LATEST_VERSION=$(curl -s https://apt.llvm.org/ | grep -oP 'llvm-\K[0-9]+' | sort -nr | head -n 1) && \
+    wget https://apt.llvm.org/llvm.sh && \
+    sudo chmod +x llvm.sh && \
+    sudo ./llvm.sh $LATEST_VERSION && \
+    sudo apt update && \
+    sudo apt install -y clang-format clang-tidy && \
+    clang-format --version && \
+    clang-tidy --version
+
+# RUN sudo apt-get install -y \
+#     lsb-release \
+#     wget \
+#     software-properties-common \
+#     gnupg \
+#     && sudo wget https://apt.llvm.org/llvm.sh \
+#     && sudo chmod +x llvm.sh \
+#     && sudo ./llvm.sh 16 \
+#     && sudo apt-get install -y clang-format-16 \
+#     && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
 
 # install sparkcan
 RUN sudo add-apt-repository ppa:graysonarendt/sparkcan

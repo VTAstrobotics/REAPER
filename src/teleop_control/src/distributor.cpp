@@ -70,7 +70,7 @@ class Distributor : public rclcpp::Node
 
   bool slow_turn_ = false;                // toggle to slow drive turning
   const float slow_drive_turn_val_ = 0.5; // what rate to slow turning
-  const float slow_bckt_rot_val_ = 0.125;
+  const float SLOW_BCKT_ROT_VAL_ = 0.125;
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses

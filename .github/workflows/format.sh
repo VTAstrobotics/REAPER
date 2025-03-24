@@ -26,27 +26,32 @@ SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -
 # for clang-tidy
 echo "## Building source code"
 echo "### build action_interfaces state_messages"
-colcon build --packages-select action_interfaces state_messages
+colcon build --symlink-install --packages-select action_interfaces state_messages
 
 echo "### source reaper"
 source install/setup.bash
 
 echo "### build reaper"
-colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --symlink-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-format on C/C++ src code"
 clang-format -style=file -i $SRC
 
 echo "### build again"
-colcon build --packages-select action_interfaces state_messages
+colcon build --symlink-install --packages-select action_interfaces state_messages
 source install/setup.bash
-colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+colcon build --symlink-install--cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "## Running clang-tidy on C/C++ src code"
-clang-tidy src/dump/src/dump_server.cpp --config-file=.clang-tidy -p build/ --fix-errors
+clang-tidy --config-file=.clang-tidy -p build/ --fix $SRC
 
-echo "## Commiting files..."
-git commit -am "applied C/C++ auto formatting" || true
-
-echo "## Pushing to $BRANCH"
-git push -u origin $BRANCH
+echo "## Commiting files if it builds"
+source build_scripts/build.sh 2> >(tee err.log >&2);
+    if [ -s err.log ]; then
+        echo Build failed due to output in stderr. Yes, this fails on warnings. Fix them.;
+        exit 1;
+    else
+        git commit -am "applied C/C++ auto formatting" || true
+        echo "## Pushing to $BRANCH"
+        git push -u origin $BRANCH
+    fi

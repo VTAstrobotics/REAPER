@@ -164,9 +164,9 @@ class DigActionServer : public rclcpp::Node
   SparkMax r_vib_mtr_{"can0", 25};
 
   bool has_goal_{false};
-  const int loop_rate_hz_{50};
+  const int LOOP_RATE_HZ_{50};
   std::shared_ptr<GoalHandleDig> dig_goal_handle_;
-  const float hstp_vel_{2.9}; // in/s. estimate. TODO: remove when sensor
+  const float HSTP_VEL_{2.9}; // in/s. estimate. TODO: remove when sensor
 
   // subs to actuator position topics
   // should always be aligned so only 1 per pair of acts
@@ -204,19 +204,19 @@ class DigActionServer : public rclcpp::Node
   float current_hstp_pos_{0}; // TODO this is temporary ok
 
   // position limits
-  const float link_min_pos_{-1000000}; // TODO replace temp value
-  const float link_max_pos_{1000000};  // TODO replace temp value
-  const float bckt_min_pos_{-1000000}; // TODO replace temp value
-  const float bckt_max_pos_{1000000};  // TODO replace temp value
-  const float hstp_min_pos_{0};
-  const float hstp_max_pos_{4096};
+  const float LINK_MIN_POS_{-1000000}; // TODO replace temp value
+  const float LINK_MAX_POS_{1000000};  // TODO replace temp value
+  const float BCKT_MIN_POS_{-1000000}; // TODO replace temp value
+  const float BCKT_MAX_POS_{1000000};  // TODO replace temp value
+  const float HSTP_MIN_POS_{0};
+  const float HSTP_MAX_POS_{4096};
 
   // lookup table for auto dig
   // time (s),actuator angle (rots),bucket angle (rots), linact hardstop
   // (encoder [0,4096]),vibration (duty cycle [-1,1])
-  float lookup_tb_[7][5] = {
-    0,  0,   0, 0, 0, 1,  1,   1, 20, 0.2, 2,   2, 2, 40, 0.4, 3,   3, 3,
-    60, 0.6, 4, 4, 4, 80, 0.8, 5, 5,  5,   100, 1, 6, 5,  5,   100, 0,
+  const float LOOKUP_TB_[7][5] = {
+    {0,  0,   0, 0, 0}, {1,  1,   1, 20, 0.2}, {2,   2, 2, 40, 0.4}, {3,   3, 3,
+    60, 0.6}, {4, 4, 4, 80, 0.8}, {5, 5,  5,   100, 1}, {6, 5,  5,   100, 0},
   };
 
   /**
@@ -509,10 +509,10 @@ class DigActionServer : public rclcpp::Node
 
     RCLCPP_DEBUG(
       this->get_logger(), "Running for %f ms",
-      1000 * (1.0 / (double)(loop_rate_hz_))); // this is the correct math
+      1000 * (1.0 / (double)(LOOP_RATE_HZ_))); // this is the correct math
                                                // with correct units :)
     ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(loop_rate_hz_)));
+                                         (1.0 / (double)(LOOP_RATE_HZ_)));
 
     link_pwr(lnkage_goal);
     bckt_pwr(bucket_goal);
@@ -569,7 +569,7 @@ class DigActionServer : public rclcpp::Node
    */
   bool linkage_in_bounds(double pos)
   {
-    if (pos_in_bounds(pos, link_min_pos_, link_max_pos_))
+    if (pos_in_bounds(pos, LINK_MIN_POS_, LINK_MAX_POS_))
     {
       return true;
     }
@@ -578,7 +578,7 @@ class DigActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(),
                    "linkage_in_bounds: Linkage goal was out of bounds. "
                    "Linkage goal was %f but should be in [%f, %f]",
-                   pos, link_min_pos_, link_max_pos_);
+                   pos, LINK_MIN_POS_, LINK_MAX_POS_);
       return false;
     }
   }
@@ -590,7 +590,7 @@ class DigActionServer : public rclcpp::Node
    */
   bool bucket_in_bounds(double pos)
   {
-    if (pos_in_bounds(pos, bckt_min_pos_, bckt_max_pos_))
+    if (pos_in_bounds(pos, BCKT_MIN_POS_, BCKT_MAX_POS_))
     {
       return true;
     }
@@ -599,7 +599,7 @@ class DigActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(),
                    "bucket_in_bounds: Bucket goal was out of bounds. "
                    "Bucket goal was %f but should be in [%f, %f]",
-                   pos, bckt_min_pos_, bckt_max_pos_);
+                   pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
       return false;
     }
   }
@@ -611,7 +611,7 @@ class DigActionServer : public rclcpp::Node
    */
   bool hrdstp_in_bounds(double pos)
   {
-    if (pos_in_bounds(pos, hstp_min_pos_, hstp_max_pos_))
+    if (pos_in_bounds(pos, HSTP_MIN_POS_, HSTP_MAX_POS_))
     {
       return true;
     }
@@ -620,7 +620,7 @@ class DigActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(),
                    "hrdstp_in_bounds: Hardstop goal was out of bounds. "
                    "Hardstop goal was %f but should be in [%f, %f]",
-                   pos, hstp_min_pos_, hstp_max_pos_);
+                   pos, HSTP_MIN_POS_, HSTP_MAX_POS_);
       return false;
     }
   }
@@ -666,10 +666,10 @@ class DigActionServer : public rclcpp::Node
 
     RCLCPP_DEBUG(
       this->get_logger(), "Running for %f ms",
-      1000 * (1.0 / (double)(loop_rate_hz_))); // this is the correct math
+      1000 * (1.0 / (double)(LOOP_RATE_HZ_))); // this is the correct math
                                                // with correct units :)
     ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(loop_rate_hz_)));
+                                         (1.0 / (double)(LOOP_RATE_HZ_)));
     units::angle::turn_t lnkage_angl{lnkage_goal * 1_tr};
     units::angle::turn_t bucket_angl{bucket_goal * 1_tr};
 
@@ -697,7 +697,7 @@ class DigActionServer : public rclcpp::Node
     // duty cycle drives the direction
     // (duration extending) x (current_power) x (max_speed)
     current_hstp_pos_ +=
-      (this->now().seconds() - start_time) * hstp_duty_cycle * hstp_vel_;
+      (this->now().seconds() - start_time) * hstp_duty_cycle * HSTP_VEL_;
     RCLCPP_DEBUG(this->get_logger(), "current_hstp_pos_ = %f",
                  current_hstp_pos_);
   }
@@ -816,14 +816,14 @@ class DigActionServer : public rclcpp::Node
 
     // time (s),actuator angle (rots),bucket angle (rots), linact hardstop
     // (encoder [0,4096]),vibration (duty cycle [-1,1])
-    for (size_t i = 0; i < sizeof(lookup_tb_) / sizeof(lookup_tb_[0]); i++)
+    for (size_t i = 0; i < sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0]); i++)
     {
       RCLCPP_DEBUG(this->get_logger(), "execute_auton: i=%ld", i);
 
       // get the starting time for this iteration of the loop
       double next_goal_time = this->now().seconds();
 
-      if (i == sizeof(lookup_tb_) / sizeof(lookup_tb_[0]) - 1)
+      if (i == sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0]) - 1)
       {
         // if it's the last iteration, we can't look-ahead, so assume
         // some constant length of time
@@ -831,7 +831,7 @@ class DigActionServer : public rclcpp::Node
       }
       else
       {
-        next_goal_time += (lookup_tb_[i + 1][0] - lookup_tb_[i][0]);
+        next_goal_time += (LOOKUP_TB_[i + 1][0] - LOOKUP_TB_[i][0]);
       }
 
       RCLCPP_DEBUG(this->get_logger(), "now = %f, nex goal = %f",
@@ -852,11 +852,11 @@ class DigActionServer : public rclcpp::Node
         // linkage, bucket, and hardstop to a set position
         double start_time =
           this->now().seconds(); // TODO: remove this once hstp sensor
-        goto_pos(lookup_tb_[i][1], lookup_tb_[i][2], lookup_tb_[i][3],
+        goto_pos(LOOKUP_TB_[i][1], LOOKUP_TB_[i][2], LOOKUP_TB_[i][3],
                  start_time);
 
         // vibration motors duty cycle
-        vib_pwr(lookup_tb_[i][4]);
+        vib_pwr(LOOKUP_TB_[i][4]);
 
         linkPercentDone =
           (i / sizeof(LOOKUP_TB_) / sizeof(LOOKUP_TB_[0])) * 100;

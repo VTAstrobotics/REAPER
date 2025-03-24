@@ -1,4 +1,3 @@
-
 #include <cmath>
 #include <functional>
 #include <memory>
@@ -61,10 +60,10 @@ class DriveActionServer : public rclcpp::Node
   SparkMax right_motor_{"can0", 11};
   // Motor 1
   bool has_goal_{false};
-  int loop_rate_hz_{120};
+  int loop_rate_hz{120};
   double track_width_{1.0};
   double normalization_constant_ = 1; // change this during testing
-  std::shared_ptr<GoalHandleDrive> drive_goal_handle_;
+  std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
 
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID &uuid,

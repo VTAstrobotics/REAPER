@@ -64,12 +64,12 @@ class DumpActionServer : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
     if (abs(abs(starting_volume_) - 802000) < 2)
     {
-      starting_volume = msg.data;
+      starting_volume_ = msg.data;
       RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
     }
     else
     {
-      volume_deposited = starting_volume - msg.data;
+      volume_deposited_ = starting_volume_ - msg.data;
       RCLCPP_INFO(this->get_logger(), "I have deposited %f", volume_deposited_);
     }
   }
@@ -101,8 +101,8 @@ class DumpActionServer : public rclcpp::Node
     (void)goal_handle; // for unused warning
     RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
 
-    conveyorDutyCycle.Output = 0;
-    Dump_Goal_Handle = nullptr;
+    conveyor_duty_cycle_.Output = 0;
+    dump_goal_handle_ = nullptr;
     has_goal_ = false;
     return rclcpp_action::CancelResponse::ACCEPT;
   }
@@ -123,7 +123,7 @@ class DumpActionServer : public rclcpp::Node
     if (goal->auton)
     {
       RCLCPP_DEBUG(this->get_logger(), "execute: control using force sensor");
-      execute_withForce(goal_handle);
+      execute_with_force(goal_handle);
     }
 
     else
@@ -136,20 +136,20 @@ class DumpActionServer : public rclcpp::Node
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
-      loop_rate_hz); // this should be 20 hz which I can't imagine not
+      loop_rate_hz_); // this should be 20 hz which I can't imagine not
                      // being enough for the dump
     const auto goal = goal_handle->get_goal();
     auto feedback = std::make_shared<Dump::Feedback>();
     auto result = std::make_shared<Dump::Result>();
     auto &amountDone = feedback->percent_done;
-    while (volume_deposited <= goal->deposition_goal)
+    while (volume_deposited_ <= goal->deposition_goal)
     {
       if (goal_handle->is_canceling())
       {
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
         goal_handle->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        Dump_Goal_Handle = nullptr; // Reset the active goal
+        dump_goal_handle_ = nullptr; // Reset the active goal
         has_goal_ = false;
         return;
       }
@@ -158,10 +158,10 @@ class DumpActionServer : public rclcpp::Node
       auto result = std::make_shared<Dump::Result>();
       ctre::phoenix::unmanaged::FeedEnable(
         pow(static_cast<float>(loop_rate_hz_), -1));
-      conveyorDutyCycle.Output = speed;
-      conveyorMotor.SetControl(conveyorDutyCycle);
+      conveyor_duty_cycle_.Output = speed;
+      conveyor_motor_.SetControl(conveyor_duty_cycle_);
       RCLCPP_INFO(this->get_logger(), "The motor should be running");
-      amountDone = volume_deposited / goal->deposition_goal * 100;
+      amountDone = volume_deposited_ / goal->deposition_goal * 100;
 
       goal_handle->publish_feedback(feedback);
       loop_rate.sleep();
@@ -169,11 +169,11 @@ class DumpActionServer : public rclcpp::Node
     has_goal_ = false;
     if (rclcpp::ok())
     {
-      result->est_deposit_goal = volume_deposited;
+      result->est_deposit_goal = volume_deposited_;
       goal_handle->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
       volume_deposited_ = 0;
-      Dump_Goal_Handle = nullptr;
+      dump_goal_handle_ = nullptr;
       has_goal_ = false;
     }
   }
@@ -202,16 +202,15 @@ class DumpActionServer : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "Goal is canceling");
       goal_handle->canceled(result);
       RCLCPP_INFO(this->get_logger(), "Goal canceled");
-      Dump_Goal_Handle = nullptr; // Reset the active goal
+      dump_goal_handle_ = nullptr; // Reset the active goal
       has_goal_ = false;
       return;
     }
 
-    ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(loop_rate_hz_)));
+    ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0 / (double)(loop_rate_hz_)));
 
-    conveyorDutyCycle.Output = power_goal;
-    conveyorMotor.SetControl(conveyorDutyCycle);
+    conveyor_duty_cycle_.Output = power_goal;
+    conveyor_motor_.SetControl(conveyor_duty_cycle_);
     amountDone = 100;
 
     goal_handle->publish_feedback(feedback);
@@ -228,7 +227,7 @@ class DumpActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(), "execute_pwr: Goal failed");
     }
 
-    Dump_Goal_Handle = nullptr;
+    dump_goal_handle_ = nullptr;
     has_goal_ = false;
   }
 }; // class DumpActionServer
