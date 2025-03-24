@@ -6,7 +6,7 @@ CheckOptions:
     value: UPPER_CASE
   - key: readability-identifier-naming.VariableCase
     value: lower_case
-  # - key: readability-identifier-naming.ConstantMemberSuffix
-  #   value: '_'
+  - key: readability-identifier-naming.ConstantMemberSuffix # idk why i need this when i have MemberSuffix but oh well
+    value: '_'
   - key: readability-identifier-naming.MemberSuffix
     value: '_'

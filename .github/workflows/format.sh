@@ -55,3 +55,7 @@ else
     echo "## Pushing to $BRANCH"
     git push -u origin $BRANCH
 fi
+
+echo "okay sorry i have to test failing this..."
+exit 1
+# TODO rm
