@@ -650,7 +650,8 @@ class DigActionServer : public rclcpp::Node
     // temporarily use power/time
     // 3 in/s unloaded, 2.5 full load. maybe we can assume like 2.9 and
     // tune?
-    float const HSTP_DUTY_CYCLE = (hrdstp_goal - current_hstp_pos_) > 0 ? 1 : -1;
+    float const HSTP_DUTY_CYCLE =
+      (hrdstp_goal - current_hstp_pos_) > 0 ? 1 : -1;
     hstp_pwr(HSTP_DUTY_CYCLE);
     // TODO remove this when we get hstop sensor !
     // update estimate pos temporary power time estimate
@@ -809,7 +810,8 @@ class DigActionServer : public rclcpp::Node
         // vibration motors duty cycle
         vib_pwr(LOOKUP_TB_.at(i).at(4));
 
-        float const PERCENT_DONE = (static_cast<float>(i) / static_cast<float>(LOOKUP_TB_.size())) * 100;
+        float const PERCENT_DONE =
+          (static_cast<float>(i) / static_cast<float>(LOOKUP_TB_.size())) * 100;
         link_percent_done = PERCENT_DONE;
         bckt_percent_done = PERCENT_DONE;
         hstp_percent_done = PERCENT_DONE;
