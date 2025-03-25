@@ -8,9 +8,7 @@
 #include "ctre/phoenix6/TalonFX.hpp"
 #include "ctre/phoenix6/unmanaged/Unmanaged.hpp"
 #include "std_msgs/msg/float32.hpp"
-
 #include "SparkMax.hpp"
-
 #include "../include/utils.h"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -45,7 +43,7 @@ class DigActionServer : public rclcpp::Node
 
     if ( ret != RCUTILS_RET_OK ) {
       RCLCPP_ERROR( get_logger(), "Error setting severity: %s",
-                    rcutils_get_error_string().str );
+                    static_cast<const char*>(rcutils_get_error_string().str) );
       rcutils_reset_error();
     }
 
@@ -213,11 +211,12 @@ class DigActionServer : public rclcpp::Node
   // lookup table for auto dig
   // time (s),actuator angle (rots),bucket angle (rots), linact hardstop
   // (encoder [0,4096]),vibration (duty cycle [-1,1])
-  const float LOOKUP_TB_[ 7 ][ 5 ] = {
+  // const float LOOKUP_TB_[ 7 ][ 5 ] = {
+  std::array<std::array<float, 5>, 7> LOOKUP_TB_ = {{
     { 0, 0, 0, 0, 0 },    { 1, 1, 1, 20, 0.2 }, { 2, 2, 2, 40, 0.4 },
     { 3, 3, 3, 60, 0.6 }, { 4, 4, 4, 80, 0.8 }, { 5, 5, 5, 100, 1 },
     { 6, 5, 5, 100, 0 },
-  };
+  }};
 
   /**
    * this gets us the sensor data for where our linkage actuators are at
@@ -284,7 +283,7 @@ class DigActionServer : public rclcpp::Node
    *
    */
   rclcpp_action::GoalResponse handle_goal(
-    const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const Dig::Goal> goal )
+    const rclcpp_action::GoalUUID &uuid, const std::shared_ptr<const Dig::Goal> &goal )
   {
     // RCLCPP_INFO(this->get_logger(), "Received goal request with order
     // %f", goal->dig_goal); // TODO decide what to do with this
@@ -307,7 +306,7 @@ class DigActionServer : public rclcpp::Node
    *
    */
   rclcpp_action::CancelResponse handle_cancel(
-    const std::shared_ptr<GoalHandleDig> GOAL_HANDLE )
+    const std::shared_ptr<GoalHandleDig> &GOAL_HANDLE )
   {
     RCLCPP_INFO( this->get_logger(), "Received request to cancel goal" );
     (void)GOAL_HANDLE; // for unused warning
@@ -328,7 +327,7 @@ class DigActionServer : public rclcpp::Node
   /**
    *
    */
-  void handle_accepted( const std::shared_ptr<GoalHandleDig> GOAL_HANDLE )
+  void handle_accepted( const std::shared_ptr<GoalHandleDig> &GOAL_HANDLE )
   {
     using namespace std::placeholders;
     // this needs to return quickly to avoid blocking the executor, so spin
@@ -340,7 +339,7 @@ class DigActionServer : public rclcpp::Node
   /**
    * Parses the parameters and calls the appropriate helper function
    */
-  void execute( const std::shared_ptr<GoalHandleDig> GOAL_HANDLE )
+  void execute( const std::shared_ptr<GoalHandleDig> &GOAL_HANDLE )
   {
     const auto GOAL = GOAL_HANDLE->get_goal();
 
@@ -441,7 +440,7 @@ class DigActionServer : public rclcpp::Node
    * runs the dig motors to a duty cycle goal
    * @param goal_handle pointer to the goal
    */
-  void execute_pwr( const std::shared_ptr<GoalHandleDig> GOAL_HANDLE )
+  void execute_pwr( const std::shared_ptr<GoalHandleDig> &GOAL_HANDLE )
   {
     RCLCPP_DEBUG( this->get_logger(), "execute_pwr: executing..." );
 
@@ -655,7 +654,7 @@ class DigActionServer : public rclcpp::Node
     // temporarily use power/time
     // 3 in/s unloaded, 2.5 full load. maybe we can assume like 2.9 and
     // tune?
-    float hstp_duty_cycle = 1 ? ( hrdstp_goal - current_hstp_pos_ ) : -1;
+    float hstp_duty_cycle =  ( hrdstp_goal - current_hstp_pos_ ) > 0 ? 1 : -1;
     hstp_pwr( hstp_duty_cycle );
     // TODO remove this when we get hstop sensor !
     // update estimate pos temporary power time estimate
@@ -672,7 +671,7 @@ class DigActionServer : public rclcpp::Node
    * which are just set to a power)
    * @param goal_handle pointer to the goal
    */
-  void execute_pos( const std::shared_ptr<GoalHandleDig> GOAL_HANDLE )
+  void execute_pos( const std::shared_ptr<GoalHandleDig> &GOAL_HANDLE )
   {
     RCLCPP_DEBUG( this->get_logger(), "execute_pos: executing..." );
 
@@ -758,7 +757,7 @@ class DigActionServer : public rclcpp::Node
    * autonomously moves the dig actuators to scoop
    * @param goal_handle pointer to the goal
    */
-  void execute_auton( const std::shared_ptr<GoalHandleDig> GOAL_HANDLE )
+  void execute_auton( const std::shared_ptr<GoalHandleDig> &GOAL_HANDLE )
   {
     RCLCPP_DEBUG( this->get_logger(), "execute_auton: executing..." );
 
@@ -779,19 +778,18 @@ class DigActionServer : public rclcpp::Node
 
     // time (s),actuator angle (rots),bucket angle (rots), linact hardstop
     // (encoder [0,4096]),vibration (duty cycle [-1,1])
-    for ( size_t i = 0; i < sizeof( LOOKUP_TB_ ) / sizeof( LOOKUP_TB_[ 0 ] );
-          i++ ) {
+    for ( size_t i = 0; i < LOOKUP_TB_.size(); i++ ) {
       RCLCPP_DEBUG( this->get_logger(), "execute_auton: i=%ld", i );
 
       // get the starting time for this iteration of the loop
       double next_goal_time = this->now().seconds();
 
-      if ( i == sizeof( LOOKUP_TB_ ) / sizeof( LOOKUP_TB_[ 0 ] ) - 1 ) {
+      if ( i == LOOKUP_TB_.size() - 1 ) {
         // if it's the last iteration, we can't look-ahead, so assume
         // some constant length of time
         next_goal_time += 1; // TODO change this??
       } else {
-        next_goal_time += ( LOOKUP_TB_[ i + 1 ][ 0 ] - LOOKUP_TB_[ i ][ 0 ] );
+        next_goal_time += ( LOOKUP_TB_.at(i + 1).at(0) - LOOKUP_TB_.at(i).at(0) );
       }
 
       RCLCPP_DEBUG( this->get_logger(), "now = %f, nex goal = %f",
@@ -810,20 +808,20 @@ class DigActionServer : public rclcpp::Node
         // linkage, bucket, and hardstop to a set position
         double start_time =
           this->now().seconds(); // TODO: remove this once hstp sensor
-        goto_pos( LOOKUP_TB_[ i ][ 1 ], LOOKUP_TB_[ i ][ 2 ], LOOKUP_TB_[ i ][ 3 ],
+        goto_pos( LOOKUP_TB_.at(i).at(1) , LOOKUP_TB_.at(i).at(2), LOOKUP_TB_.at(i).at(3),
                   start_time );
 
         // vibration motors duty cycle
-        vib_pwr( LOOKUP_TB_[ i ][ 4 ] );
+        vib_pwr( LOOKUP_TB_.at(i).at(4));
 
         link_percent_done =
-          ( i / sizeof( LOOKUP_TB_ ) / sizeof( LOOKUP_TB_[ 0 ] ) ) * 100;
+          ( i / LOOKUP_TB_.size() ) * 100;
         bckt_percent_done =
-          ( i / sizeof( LOOKUP_TB_ ) / sizeof( LOOKUP_TB_[ 0 ] ) ) * 100;
+          ( i / LOOKUP_TB_.size() ) * 100;
         hstp_percent_done =
-          ( i / sizeof( LOOKUP_TB_ ) / sizeof( LOOKUP_TB_[ 0 ] ) ) * 100;
+          ( i / LOOKUP_TB_.size() ) * 100;
         vibr_percent_done =
-          ( i / sizeof( LOOKUP_TB_ ) / sizeof( LOOKUP_TB_[ 0 ] ) ) * 100;
+          ( i / LOOKUP_TB_.size() ) * 100;
         GOAL_HANDLE->publish_feedback( feedback );
 
         loop_rate.sleep();

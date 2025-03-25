@@ -1,4 +1,19 @@
-Checks: 'readability-identifier-naming'
+  # misc-const-correctness,
+
+Checks: |
+  bugprone-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  -modernize-avoid-bind,
+  -modernize-use-auto,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity,
+
+
 CheckOptions:
   - key: readability-identifier-naming.FunctionCase
     value: lower_case
@@ -7,6 +22,8 @@ CheckOptions:
   - key: readability-identifier-naming.VariableCase
     value: lower_case
   - key: readability-identifier-naming.ConstantMemberSuffix # idk why i need this when i have MemberSuffix but oh well
-    value: '_'
+    value: _
   - key: readability-identifier-naming.MemberSuffix
-    value: '_'
+    value: _
+
+WarningsAsErrors: '*'

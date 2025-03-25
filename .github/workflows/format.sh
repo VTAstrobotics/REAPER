@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 echo "### Getting branch"
 # BRANCH=${GITHUB_REF#*refs/heads/} # this doesnt work on PR, only on push
 BRANCH=${GITHUB_HEAD_REF} # this doesnt work on push, only on PR
@@ -55,7 +57,3 @@ else
     echo "## Pushing to $BRANCH"
     git push -u origin $BRANCH
 fi
-
-echo "okay sorry i have to test failing this..."
-exit 1
-# TODO rm
