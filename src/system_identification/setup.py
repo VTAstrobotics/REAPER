@@ -17,7 +17,7 @@ setup(
     maintainer_email='cameronw23@vt.edu',
     description='TODO: Package description',
     license='TODO: License declaration',
-    tests_require=['pytest'],
+    # tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'system_logger = system_identification.system_logger:main'
