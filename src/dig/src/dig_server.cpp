@@ -4,7 +4,7 @@
 #include <functional>
 #include <memory>
 #include <thread>
-#include "../include/utils.h"
+#include "utils.h"
 #include "SparkMax.hpp"
 #include "ctre/phoenix6/CANBus.hpp"
 #include "ctre/phoenix6/TalonFX.hpp"
@@ -16,6 +16,7 @@
 
 using namespace action_interfaces::action;
 using namespace ctre::phoenix6;
+
 namespace dig_server
 {
 class DigActionServer : public rclcpp::Node

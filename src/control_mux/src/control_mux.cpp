@@ -30,11 +30,12 @@ class MinimalSubscriber : public rclcpp::Node
   }
 
  private:
-  void topic_callback(const sensor_msgs::msg::Joy MSG) const
+  void topic_callback(const sensor_msgs::msg::Joy& MSG) const
   {
     (void)MSG; // for unused warning
                // handle all the buttons actually doing things
   }
+
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_;
 };
 

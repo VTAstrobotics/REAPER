@@ -73,6 +73,7 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
 ReflowComments: true
+SeparateDefinitionBlocks: Always
 SortIncludes: true
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
@@ -82,7 +83,7 @@ SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
 SpacesInContainerLiterals: true
 SpacesInParens: Never
-SpacesInSquareBrackets: true
+SpacesInSquareBrackets: false
 Standard: Auto
 TabWidth: 2
 UseTab: Never
