@@ -4,7 +4,6 @@
 #include <functional>
 #include <memory>
 #include <thread>
-#include "utils.h"
 #include "SparkMax.hpp"
 #include "ctre/phoenix6/CANBus.hpp"
 #include "ctre/phoenix6/TalonFX.hpp"
@@ -13,6 +12,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "utils.h"
 
 using namespace action_interfaces::action;
 using namespace ctre::phoenix6;
