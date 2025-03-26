@@ -5,3 +5,6 @@ log/
 
 # git will ignore build.log
 build.log
+
+# ignore by default so people don't accidentally overwrite
+.vscode
