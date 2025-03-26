@@ -46,7 +46,7 @@ RUN sudo apt install -y \
     doxygen
 
 # Clone MicroROS Pi Pico
-# RUN git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
+RUN git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
 
 # Rosdep update
 RUN rosdep update
@@ -76,17 +76,6 @@ RUN sudo wget https://apt.llvm.org/llvm.sh \
     # rules (.clang-format and .clang-tidy).
     && sudo apt update \
     && sudo apt install -y clang-format clang-tidy
-
-# RUN sudo apt-get install -y \
-#     lsb-release \
-#     wget \
-#     software-properties-common \
-#     gnupg \
-#     && sudo wget https://apt.llvm.org/llvm.sh \
-#     && sudo chmod +x llvm.sh \
-#     && sudo ./llvm.sh 16 \
-#     && sudo apt-get install -y clang-format-16 \
-#     && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
 
 # install sparkcan for sparkmax over can
 RUN sudo add-apt-repository ppa:graysonarendt/sparkcan
