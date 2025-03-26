@@ -9,6 +9,11 @@ from sensor_msgs.msg import Image as RosImage
 import cv2
 from cv_bridge import CvBridge
 
+INIT_TOPICS = [
+    {"name": "/chatter", "type": "string", "x": 50, "y": 50},
+    {"name": "/example_camera", "type": "camera", "x": 200, "y": 50}
+]
+
 class MultiTopicSubscriber(Node):
 
     def __init__(self):
@@ -18,6 +23,19 @@ class MultiTopicSubscriber(Node):
         self.messages = {}
         self.bridge = CvBridge()
         self.camera_frames = {}
+        self.load_preset_topics()
+
+    def load_preset_topics(self):
+        
+        for preset in INIT_TOPICS:
+            
+            if preset["type"] == "string":
+                self.ros_node.subscribe_to_topic(preset["name"])
+                self.add_topic_label(preset["name"], preset["x"], preset["y"])
+                
+            elif preset["type"] == "camera":
+                self.ros_node.subscribe_to_camera(preset["name"])
+                self.add_camera_label(preset["name"], preset["x"], preset["y"])
 
     def subscribe_to_topic(self, topic_name):
 
@@ -161,10 +179,10 @@ class TkMultiTopicApp:
             messagebox.showerror("Invalid Input", "Please enter a valid camera topic name.")
 
     # Labeling logic
-    def add_topic_label(self, topic_name):
+    def add_topic_label(self, topic_name, x, y):
         
         label_frame = tk.Frame(self.messages_frame, bg="white", bd=1, relief="solid")
-        label_frame.place(x=10, y=10)  
+        label_frame.place(x=x, y=y) 
         label_topic = tk.Label(label_frame, text=f"Topic: {topic_name}", font=("Arial", 10, "bold"))
         label_topic.pack(side="top", padx=5, pady=2)
         label_message = tk.Label(label_frame, text="No data received yet", font=("Arial", 12))
@@ -183,10 +201,10 @@ class TkMultiTopicApp:
             "timeout_timer": None
         }
 
-    def add_camera_label(self, camera_topic_name):
+    def add_camera_label(self, camera_topic_name, x, y):
  
         label_frame = tk.Frame(self.messages_frame, bg="lightblue", bd=1, relief="solid")
-        label_frame.place(x=10, y=10)  # Default position
+        label_frame.place(x=x, y=y)
         label_camera = tk.Label(label_frame, text=f"Camera: {camera_topic_name}", font=("Arial", 10, "bold"))
         label_camera.pack(side="top", padx=5, pady=2)
         label_message = tk.Label(label_frame, text="No data received yet", font=("Arial", 12))
