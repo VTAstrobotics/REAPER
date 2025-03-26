@@ -44,7 +44,6 @@ namespace dig_server
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
-      // TODO: change to logging severity to INFO
       // RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
       // auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
@@ -66,47 +65,35 @@ namespace dig_server
       link_configs.Slot0.kP = 0;//0.8 * K_u;
       link_configs.Slot0.kI = 0; // 0; PD controller
       link_configs.Slot0.kD = 0;//0.1 * K_u * T_u;
-      l_link_mtr_.GetConfigurator().Apply(link_configs.Slot0);
-      r_link_mtr_.GetConfigurator().Apply(link_configs.Slot0);
 
       // Slot 1 gains
       link_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
       // link_configs.Slot1.kS = 0;
       // link_configs.Slot1.kV = 0;
       // link_configs.Slot1.kA = 0;
-      link_configs.Slot1.kG = 0;
+      // link_configs.Slot1.kG = 0;
       // link_configs.Slot1.kP = .03; // 0.8 * K_u;
       // link_configs.Slot1.kI = 0; // 0; PD controller
       // link_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
-      // l_link_mtr_.GetConfigurator().Apply(link_configs.Slot1);
-      // r_link_mtr_.GetConfigurator().Apply(link_configs.Slot1);
 
       // Set linkage current limits
       link_configs.CurrentLimits.SupplyCurrentLimit = 30;
       link_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-      //link cancoder configs
+      // Set duty cycle limits
+      link_configs.MotorOutput.PeakForwardDutyCycle = 0.1;
+      link_configs.MotorOutput.PeakReverseDutyCycle = -0.1;
 
-      configs::CANcoderConfiguration l_link_cancoder_config_;
-      l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      l_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
-      configs::CANcoderConfiguration r_link_cancoder_config_;
-      r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
-      r_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.341309 ;
-
-      l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
-      r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
-
-      // TODO: motion magic!!
-       link_configs.MotionMagic.MotionMagicCruiseVelocity = .1 ;
-       link_configs.MotionMagic.MotionMagicAcceleration = .2;
+      // Motion Magic!!
+       link_configs.MotionMagic.MotionMagicCruiseVelocity = 0.1 ;
+       link_configs.MotionMagic.MotionMagicAcceleration = 0.2;
       // link_configs.MotionMagic.MotionMagicJerk = 0; // optional value, skipping now
 
       // Enable brake mode on the linkage
       link_configs.MotorOutput.NeutralMode = signals::NeutralModeValue::Brake;
-      link_configs.MotorOutput.Inverted= signals::InvertedValue::Clockwise_Positive;
-      link_configs.MotorOutput.PeakForwardDutyCycle = 0.1;
-      link_configs.MotorOutput.PeakReverseDutyCycle = -0.1;
+
+      // Set leader (left) linkage motor to clockwise positive
+      link_configs.MotorOutput.Inverted = signals::InvertedValue::Clockwise_Positive;
 
       // Soft limits
       link_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
@@ -115,7 +102,14 @@ namespace dig_server
       link_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = LINK_MIN_POS_;
 
       // Individual configs for the left linkage motor
-      // Use absolute cancoder on the linkage!
+      // Left link cancoder configs
+      configs::CANcoderConfiguration l_link_cancoder_config_;
+      l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
+      l_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
+
+      l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
+
+      // Use absolute cancoder on the left linkage motor
       link_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
       link_configs.Feedback.FeedbackRemoteSensorID = l_link_cancoder_.GetDeviceID();
       link_configs.Feedback.RotorToSensorRatio = 100;
@@ -127,20 +121,25 @@ namespace dig_server
 
       // Apply left linkage configs
       l_link_mtr_.GetConfigurator().Apply(link_configs);
-      // link_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-      // link_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = LINK_MIN_POS_;
-      // link_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-      // link_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = LINK_MAX_POS_;
 
       // Individual configs for the right linkage motor
-      // Use absolute cancoder on the linkage!
+      // Right linkage cancoder configs
+      configs::CANcoderConfiguration r_link_cancoder_config_;
+      r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
+      r_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.341309 ;
+
+      r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
+
+      // Use absolute cancoder on the right linkage motor
       link_configs.Feedback.FeedbackRemoteSensorID = r_link_cancoder_.GetDeviceID();
 
       // Differential sensor (for right, we compare to the left encoder!)
       link_configs.DifferentialSensors.DifferentialRemoteSensorID =  l_link_cancoder_.GetDeviceID();
       link_configs.DifferentialSensors.DifferentialTalonFXSensorID = l_link_mtr_.GetDeviceID();
 
+      // Invert because right motor is mounted inverted to the left (leader)
       link_configs.MotorOutput.Inverted= signals::InvertedValue::CounterClockwise_Positive;
+
       // Apply right linkage configs
       r_link_mtr_.GetConfigurator().Apply(link_configs);
 
@@ -148,40 +147,64 @@ namespace dig_server
       configs::TalonFXConfiguration bckt_configs{};
 
       // Slot 0 gains
-      K_u = 3.5, T_u = 0.04; // TODO: tune these values for the bucket.
+      K_u = 0.5, T_u = 0.04; // TODO: tune these values for the bucket.
+      // not an arm but the gravity changes based on the angle
+      bckt_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       // bckt_configs.Slot0.kS = 0;
       // bckt_configs.Slot0.kV = 0;
       // bckt_configs.Slot0.kA = 0;
-      bckt_configs.Slot0.kP = 0.8 * K_u;
-      bckt_configs.Slot0.kI = 0; // 0; PD controller
-      bckt_configs.Slot0.kD = 0.1 * K_u * T_u;
+      // bckt_configs.Slot0.kG = 0;
+      // bckt_configs.Slot0.kP = 0.8 * K_u;
+      // bckt_configs.Slot0.kI = 0; // 0; PD controller
+      // bckt_configs.Slot0.kD = 0.1 * K_u * T_u;
 
       // Slot 1 gains
+      bckt_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
       // bckt_configs.Slot1.kS = 0;
       // bckt_configs.Slot1.kV = 0;
       // bckt_configs.Slot1.kA = 0;
+      // bckt_configs.Slot1.kG = 0;
       // bckt_configs.Slot1.kP = .03; // 0.8 * K_u;
       // bckt_configs.Slot1.kI = 0; // 0; PD controller
       // bckt_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
 
       // Set bucket current limits
-      bckt_configs.CurrentLimits.SupplyCurrentLimit = 20;
+      bckt_configs.CurrentLimits.SupplyCurrentLimit = 30;
       bckt_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-      // TODO: motion magic!!
-      // link_configs.MotionMagic.MotionMagicCruiseVelocity = 3;
-      // link_configs.MotionMagic.MotionMagicAcceleration = 20;
-      // link_configs.MotionMagic.MotionMagicJerk = 0; // optional value, skipping now
-
-      // Enable brake mode on the bucket
-      bckt_configs.MotorOutput.NeutralMode = signals::NeutralModeValue::Brake;
+      // Set duty cycle limits
       bckt_configs.MotorOutput.PeakForwardDutyCycle = 0.25;
       bckt_configs.MotorOutput.PeakReverseDutyCycle = -0.2;
 
+      // Motion Magic
+      bckt_configs.MotionMagic.MotionMagicCruiseVelocity = 0.1;
+      bckt_configs.MotionMagic.MotionMagicAcceleration = 0.2;
+      // bckt_configs.MotionMagic.MotionMagicJerk = 0; // optional value, skipping now
+
+      // Enable brake mode on the bucket
+      bckt_configs.MotorOutput.NeutralMode = signals::NeutralModeValue::Brake;
+
+      // Set leader (left) bucket motor to clockwise positive
+      bckt_configs.MotorOutput.Inverted = signals::InvertedValue::Clockwise_Positive;
+
+      // Soft limits
+      bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+      bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = BCKT_MAX_POS_;
+      bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+      bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = BCKT_MIN_POS_;
+
       // Individual configs for the left bucket motor
-      // Use absolute cancoder on the bucket!
+      // Left bckt cancoder configs
+      configs::CANcoderConfiguration l_bckt_cancoder_config_;
+      l_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
+      // TODO l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
+
+      l_bckt_cancoder_.GetConfigurator().Apply(l_bckt_cancoder_config_);
+
+      // Use absolute cancoder on the left bucket motor
       bckt_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
       bckt_configs.Feedback.FeedbackRemoteSensorID = l_bckt_cancoder_.GetDeviceID();
+      bckt_configs.Feedback.RotorToSensorRatio = 75;
 
       // Differential sensor (for left, we compare to the right encoder!)
       bckt_configs.DifferentialSensors.DifferentialSensorSource = signals::DifferentialSensorSourceValue::RemoteCANcoder;
@@ -192,7 +215,14 @@ namespace dig_server
       l_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
 
       // Individual configs for the right bucket motor
-      // Use absolute cancoder on the bucket!
+      // Right bckt cancoder configs
+      configs::CANcoderConfiguration r_bckt_cancoder_config_;
+      r_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
+      // TODO r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
+
+      r_bckt_cancoder_.GetConfigurator().Apply(r_bckt_cancoder_config_);
+
+      // Use absolute cancoder on the right bucket motor
       bckt_configs.Feedback.FeedbackRemoteSensorID = r_bckt_cancoder_.GetDeviceID();
 
       // Differential sensor (for right, we compare to the left encoder!)
@@ -457,7 +487,7 @@ namespace dig_server
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
-      // bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+      bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
     }
 
     /**
