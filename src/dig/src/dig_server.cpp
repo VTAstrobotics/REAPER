@@ -455,12 +455,7 @@ namespace dig_server
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
-        // pwr = 0;
-        RCLCPP_INFO(this->get_logger(), "link_pwr: going to stay at %lf", l_link_cancoder_.GetAbsolutePosition().GetValueAsDouble());
-        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
-        link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
-        return;
-      } else {
+        pwr = 0;
       }
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
@@ -469,8 +464,13 @@ namespace dig_server
 
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
-      controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0_tr};
-      link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+      if (pwr == 0) { // hold position
+        controls::MotionMagicVelocityVoltage velocity_command{0_tps}; // velocity turns per second
+        link_mech.SetControl(velocity_command);
+      } else {
+        controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
+        link_mech.SetControl(power_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+      }
     }
 
     /**
@@ -488,8 +488,13 @@ namespace dig_server
         "bckt_pwr: bckt_pos L:%lf | R:%lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
-      controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
-      bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+      if (pwr == 0) { // hold position
+        controls::MotionMagicVelocityVoltage velocity_command{0_tps}; // velocity turns per second
+        bckt_mech.SetControl(velocity_command);
+      } else {
+        controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
+        bckt_mech.SetControl(power_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+      }
     }
 
     /**
@@ -670,9 +675,8 @@ namespace dig_server
       // l_link_mtr_.SetControl(link_req);
       // l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
 
-      // controls::DifferentialPositionDutyCycle position_command{angle, 0_tr};
       controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
-      link_mech.SetControl(position_command);
+      link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
     }
 
     /**
