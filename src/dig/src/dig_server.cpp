@@ -59,7 +59,7 @@ namespace dig_server
       float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       link_configs.Slot0.kS = 0.003;
-      link_configs.Slot0.kV = 0.70;
+      link_configs.Slot0.kV = 0.80;
       //link_configs.Slot0.kA = 0.05;
       link_configs.Slot0.kG = 0.015;
       link_configs.Slot0.kP = 0.00;//0.8 * K_u;
@@ -147,13 +147,13 @@ namespace dig_server
       configs::TalonFXConfiguration bckt_configs{};
 
       // Slot 0 gains
-      K_u = 0.5, T_u = 0.04; // TODO: tune these values for the bucket.
+      K_u = 0.5, T_u = 0.04;
       // not an arm but the gravity changes based on the angle
       bckt_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      // bckt_configs.Slot0.kS = 0;
-      // bckt_configs.Slot0.kV = 0;
+      bckt_configs.Slot0.kS = 0.008;
+      bckt_configs.Slot0.kV = 0.73;
       // bckt_configs.Slot0.kA = 0;
-      // bckt_configs.Slot0.kG = 0;
+      bckt_configs.Slot0.kG = 0.01;
       // bckt_configs.Slot0.kP = 0.8 * K_u;
       // bckt_configs.Slot0.kI = 0; // 0; PD controller
       // bckt_configs.Slot0.kD = 0.1 * K_u * T_u;
@@ -308,13 +308,13 @@ namespace dig_server
     // lookup table for auto dig
     // time (s),actuator angle (external rotation [0, 1]),bucket angle (rotations [0, 1]), vibration (duty cycle [-1,1])
     float LOOKUP_TB_[7][4] = {
-      0,0,0,0,
-      1,0.1,1,0.2,
-      2,0.2,2,0.4,
-      3,0.3,3,0.6,
-      4,0.4,4,0.8,
-      5,0.5,5,0.6,
-      6,0.5,5,0,
+      0,0.1,-0.3,0,
+      1,-0.5,0.5,0,
+      2,-0.1,0.16,0,
+      3,-0.1,0.16,0,
+      4,-0.1,0.16,0,
+      5,-0.1,0.16,0,
+      6,-0.1,0.16,0,
     };
 
 
@@ -485,7 +485,7 @@ namespace dig_server
       }
 
       RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-        "bckt_pwr: link_ptr %lf | %lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
+        "bckt_pwr: bckt_pos L:%lf | R:%lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
       controls::DifferentialDutyCycle position_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
@@ -643,7 +643,7 @@ namespace dig_server
       if (pos_in_bounds(pos, BCKT_MIN_POS_, BCKT_MAX_POS_)) {
         return true;
       } else {
-        RCLCPP_ERROR(this->get_logger(), "bucket_in_bounds: B120ggucket goal was out of bounds. Bucket goal was %f but should be in [%f, %f]", pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
+        RCLCPP_ERROR(this->get_logger(), "bucket_in_bounds: Bucket goal was out of bounds. Bucket goal was %f but should be in [%f, %f]", pos, BCKT_MIN_POS_, BCKT_MAX_POS_);
         return false;
       }
     }
@@ -692,7 +692,7 @@ namespace dig_server
       // l_bckt_pos_duty_cycle_.Position = angle;
       // l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
 
-      controls::DifferentialPositionDutyCycle position_command{angle, 0 * 0_tr};
+      controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
       bckt_mech.SetControl(position_command);
     }
 
@@ -712,12 +712,13 @@ namespace dig_server
     void execute_pos(const std::shared_ptr<GoalHandleDig> goal_handle,
       std::shared_ptr<Dig::Feedback> feedback,
       std::shared_ptr<Dig::Result> result, double goal_val, double vel,
-      float current_pos, const double MIN_POS, const double MAX_POS,
+      hardware::TalonFX* motor, const double MIN_POS, const double MAX_POS,
       float& percent_done, std::function<void(double, double)> pos_func,
       float& est_goal, const char* print_prefix)
     {
       (void) result; // for unused warning
       rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
+      float current_pos = (float)motor->GetPosition().GetValue();
 
       while (!reached_pos(current_pos, goal_val, MIN_POS, MAX_POS))
       {
@@ -729,7 +730,7 @@ namespace dig_server
         ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
 
         pos_func(goal_val, vel);
-        current_pos = (float)l_link_mtr_.GetPosition().GetValue();
+        current_pos = (float)motor->GetPosition().GetValue();
 
         percent_done = (abs(goal_val) - abs(current_pos))/abs(goal_val) * 100;
         goal_handle->publish_feedback(feedback);
@@ -756,7 +757,7 @@ namespace dig_server
         result,
         linkage_goal,
         1, // vel
-        (float)l_link_mtr_.GetPosition().GetValue(),
+        &l_link_mtr_,
         LINK_MIN_POS_,
         LINK_MAX_POS_,
         link_percent_done,
@@ -782,7 +783,7 @@ namespace dig_server
         result,
         bucket_goal,
         1, // vel
-        (float)l_bckt_mtr_.GetPosition().GetValue(),
+        &l_bckt_mtr_,
         BCKT_MIN_POS_,
         BCKT_MAX_POS_,
         bckt_percent_done,
@@ -838,11 +839,42 @@ namespace dig_server
           if (goal_handle->is_canceling()) { return; }
 
           // linkage and bucket to a set position
-          link_pos(LOOKUP_TB_[i][1]);
-          bckt_pos(LOOKUP_TB_[i][2]);
+          //link_pos(LOOKUP_TB_[i][1]);
+          //bckt_pos(LOOKUP_TB_[i][2]);
+
+
+      execute_pos(
+        goal_handle,
+        feedback,
+        result,
+        LOOKUP_TB_[i][1],
+        1, // vel
+        &l_link_mtr_,
+        LINK_MIN_POS_,
+        LINK_MAX_POS_,
+        link_percent_done,
+        std::bind(&DigActionServer::link_pos, this, _1, _2),
+        result->est_link_goal,
+        __func__
+      );
+
+      execute_pos(
+        goal_handle,
+        feedback,
+        result,
+        LOOKUP_TB_[i][2],
+        1, // vel
+        &l_bckt_mtr_,
+        BCKT_MIN_POS_,
+        BCKT_MAX_POS_,
+        bckt_percent_done,
+        std::bind(&DigActionServer::bckt_pos, this, _1, _2),
+        result->est_bckt_goal,
+        __func__
+      );
 
           // vibration motors duty cycle
-          vibr_pwr(LOOKUP_TB_[i][3]);
+//          vibr_pwr(LOOKUP_TB_[i][3]);
 
           link_percent_done = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
           bckt_percent_done = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;

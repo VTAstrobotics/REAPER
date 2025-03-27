@@ -116,6 +116,9 @@ private:
     {
         const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
         if (valid_toggle_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw)) {
+            this->drive_ptr_->async_cancel_all_goals();
+            this->dump_ptr_->async_cancel_all_goals();
+            this->dig_ptr_->async_cancel_all_goals();
             teleop_disabled_ = !teleop_disabled_;
             RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. TOGGLING TO %s", teleop_disabled_ ? "DISABLED" : "ENABLED");
             last_btns_ = raw.buttons;
@@ -176,7 +179,7 @@ private:
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
 		dig_goal.link_pos_goal = -0.1;
-		//dig_goal.bckt_pos_goal = 0; //TODO: set
+		dig_goal.bckt_pos_goal = 0.1;
         }
 
        if (valid_toggle_press(BUTTON_B, raw)) {
@@ -190,6 +193,8 @@ private:
         }
 
         if (valid_toggle_press(BUTTON_X, raw)) {
+dig_goal.link_pos_goal = 0;
+dig_goal.bckt_pos_goal = 0;
             slow_turn_ = !slow_turn_;
             if (slow_turn_) {
                 RCLCPP_INFO(this->get_logger(), "Y: Decreasing the max turning rate");
@@ -202,8 +207,8 @@ private:
         if (valid_toggle_press(BUTTON_Y, raw)) {
             RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
-            dig_goal.link_pos_goal = 0.30;
-            dig_goal.bckt_pos_goal = 0.313;
+            dig_goal.link_pos_goal = 0.35;
+            dig_goal.bckt_pos_goal = 0.22;
         }
 
         if (raw.buttons[BUTTON_LBUMPER]) {
@@ -226,8 +231,8 @@ private:
         if (valid_toggle_press(BUTTON_MANUFACTURER, raw)) {
             RCLCPP_INFO(this->get_logger(), "Xbox: Not yet implemented. Doing nothing...");
 
-            // dig_goal.auton = true;
-            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+            dig_goal.auton = true;
+            this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         }
 
         if (valid_toggle_press(BUTTON_LSTICK, raw)) {
