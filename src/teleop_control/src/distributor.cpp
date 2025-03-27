@@ -175,19 +175,19 @@ private:
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		dig_goal.link_pos_goal = 0; //TODO: set
-            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+		dig_goal.link_pos_goal = -0.1;
+		//dig_goal.bckt_pos_goal = 0; //TODO: set
         }
 
-//        if (valid_toggle_press(BUTTON_B, raw)) {
-//            RCLCPP_INFO(this->get_logger(), "B: Canceling all goals. Robot should stop. To re-enable robot, press stop sequence (BACK, START, AND XBOX).");
+       if (valid_toggle_press(BUTTON_B, raw)) {
+            RCLCPP_INFO(this->get_logger(), "B: Canceling all goals. Robot should stop. To re-enable robot, press stop sequence (BACK, START, AND XBOX).");
 
- //           this->drive_ptr_->async_cancel_all_goals();
-  //          this->dump_ptr_->async_cancel_all_goals();
-   //         this->dig_ptr_->async_cancel_all_goals();
-    //        teleop_disabled_ = true;
-     //       return;
-      //  }
+            this->drive_ptr_->async_cancel_all_goals();
+            this->dump_ptr_->async_cancel_all_goals();
+            this->dig_ptr_->async_cancel_all_goals();
+            teleop_disabled_ = true;
+            return;
+        }
 
         if (valid_toggle_press(BUTTON_X, raw)) {
             slow_turn_ = !slow_turn_;
@@ -202,9 +202,8 @@ private:
         if (valid_toggle_press(BUTTON_Y, raw)) {
             RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
-            // dig_goal.link_pos_goal = 0;
-            // dig_goal.bckt_pos_goal = 0;
-            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+            dig_goal.link_pos_goal = 0.30;
+            dig_goal.bckt_pos_goal = 0.313;
         }
 
         if (raw.buttons[BUTTON_LBUMPER]) {

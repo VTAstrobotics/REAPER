@@ -58,11 +58,11 @@ namespace dig_server
       // Slot 0 gains
       float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      //link_configs.Slot0.kS = 0.01;//0.3;
-      //link_configs.Slot0.kV = 0.5;
-      //link_configs.Slot0.kA = 0;
-      link_configs.Slot0.kG = 0.03;
-      link_configs.Slot0.kP = 0;//0.8 * K_u;
+      link_configs.Slot0.kS = 0.003;
+      link_configs.Slot0.kV = 0.70;
+      //link_configs.Slot0.kA = 0.05;
+      link_configs.Slot0.kG = 0.015;
+      link_configs.Slot0.kP = 0.00;//0.8 * K_u;
       link_configs.Slot0.kI = 0; // 0; PD controller
       link_configs.Slot0.kD = 0;//0.1 * K_u * T_u;
 
@@ -85,8 +85,8 @@ namespace dig_server
       link_configs.MotorOutput.PeakReverseDutyCycle = -0.1;
 
       // Motion Magic!!
-       link_configs.MotionMagic.MotionMagicCruiseVelocity = 0.1 ;
-       link_configs.MotionMagic.MotionMagicAcceleration = 0.2;
+      link_configs.MotionMagic.MotionMagicCruiseVelocity = 0.1 ;
+      link_configs.MotionMagic.MotionMagicAcceleration = 0.2;
       // link_configs.MotionMagic.MotionMagicJerk = 0; // optional value, skipping now
 
       // Enable brake mode on the linkage
@@ -105,7 +105,7 @@ namespace dig_server
       // Left link cancoder configs
       configs::CANcoderConfiguration l_link_cancoder_config_;
       l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      l_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
+      l_link_cancoder_config_.MagnetSensor.MagnetOffset = L_LINK_ENCODER_MAGIC_NUMBER_;
 
       l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
 
@@ -126,7 +126,7 @@ namespace dig_server
       // Right linkage cancoder configs
       configs::CANcoderConfiguration r_link_cancoder_config_;
       r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
-      r_link_cancoder_config_.MagnetSensor.MagnetOffset = -0.341309 ;
+      r_link_cancoder_config_.MagnetSensor.MagnetOffset = R_LINK_ENCODER_MAGIC_NUMBER_;
 
       r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
 
@@ -138,7 +138,7 @@ namespace dig_server
       link_configs.DifferentialSensors.DifferentialTalonFXSensorID = l_link_mtr_.GetDeviceID();
 
       // Invert because right motor is mounted inverted to the left (leader)
-      link_configs.MotorOutput.Inverted= signals::InvertedValue::CounterClockwise_Positive;
+      link_configs.MotorOutput.Inverted = signals::InvertedValue::CounterClockwise_Positive;
 
       // Apply right linkage configs
       r_link_mtr_.GetConfigurator().Apply(link_configs);
@@ -197,7 +197,7 @@ namespace dig_server
       // Left bckt cancoder configs
       configs::CANcoderConfiguration l_bckt_cancoder_config_;
       l_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      // TODO l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
+      l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = L_BCKT_ENCODER_MAGIC_NUMBER_;
 
       l_bckt_cancoder_.GetConfigurator().Apply(l_bckt_cancoder_config_);
 
@@ -217,8 +217,8 @@ namespace dig_server
       // Individual configs for the right bucket motor
       // Right bckt cancoder configs
       configs::CANcoderConfiguration r_bckt_cancoder_config_;
-      r_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      // TODO r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = -0.443848 ;
+      r_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive; // INVERTED BECAUSE THE CANCODER IS MOUNTED INVERTED, EVEN THOUGH THE MOTOR IS NOT!
+      r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = R_BCKT_ENCODER_MAGIC_NUMBER_;
 
       r_bckt_cancoder_.GetConfigurator().Apply(r_bckt_cancoder_config_);
 
@@ -294,14 +294,16 @@ namespace dig_server
     const float DEFAULT_VAL_{-987654.321};
 
     // whatever values aligns 0.25 as straight up and -0.25 as straight down
-    const float LINK_ABS_ENCODER_MAGIC_NUMBER_{0.}; // TODO
-    const float BCKT_ABS_ENCODER_MAGIC_NUMBER_{0.}; // TODO
+    const float L_LINK_ENCODER_MAGIC_NUMBER_{-0.443848};
+    const float R_LINK_ENCODER_MAGIC_NUMBER_{-0.341309};
+    const float L_BCKT_ENCODER_MAGIC_NUMBER_{0.067383};
+    const float R_BCKT_ENCODER_MAGIC_NUMBER_{0.315918};
 
     // position limits
     const float LINK_MIN_POS_{-.15};
     const float LINK_MAX_POS_{0.35};
-    const float BCKT_MIN_POS_{-1}; // TODO replace temp value
-    const float BCKT_MAX_POS_{1}; // TODO replace temp value
+    const float BCKT_MIN_POS_{-0.35};
+    const float BCKT_MAX_POS_{0.35};
 
     // lookup table for auto dig
     // time (s),actuator angle (external rotation [0, 1]),bucket angle (rotations [0, 1]), vibration (duty cycle [-1,1])
@@ -727,6 +729,7 @@ namespace dig_server
         ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
 
         pos_func(goal_val, vel);
+        current_pos = (float)l_link_mtr_.GetPosition().GetValue();
 
         percent_done = (abs(goal_val) - abs(current_pos))/abs(goal_val) * 100;
         goal_handle->publish_feedback(feedback);
