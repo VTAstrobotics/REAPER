@@ -9,11 +9,9 @@ from sensor_msgs.msg import Image as RosImage
 import cv2
 from cv_bridge import CvBridge
 
-INIT_TOPICS = [
-    {"name": "/chatter", "type": "string", "x": 50, "y": 50},
-    {"name": "/example_camera", "type": "camera", "x": 200, "y": 50}
-]
-
+# Test Talker Node
+# ros2 run demo_nodes_cpp talker
+ 
 class MultiTopicSubscriber(Node):
 
     def __init__(self):
@@ -23,19 +21,6 @@ class MultiTopicSubscriber(Node):
         self.messages = {}
         self.bridge = CvBridge()
         self.camera_frames = {}
-        self.load_preset_topics()
-
-    def load_preset_topics(self):
-        
-        for preset in INIT_TOPICS:
-            
-            if preset["type"] == "string":
-                self.ros_node.subscribe_to_topic(preset["name"])
-                self.add_topic_label(preset["name"], preset["x"], preset["y"])
-                
-            elif preset["type"] == "camera":
-                self.ros_node.subscribe_to_camera(preset["name"])
-                self.add_camera_label(preset["name"], preset["x"], preset["y"])
 
     def subscribe_to_topic(self, topic_name):
 
@@ -66,6 +51,11 @@ class MultiTopicSubscriber(Node):
         self.custom_subscriptions[camera_topic] = subscription
         self.camera_frames[camera_topic] = None
         self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
+
+    def subscribe_to_initial_topics(self):
+        self.subscribe_to_topic("chatter")
+        self.subscribe_to_camera("usbcam_image_0")
+
  
 class TkMultiTopicApp:
     
@@ -146,7 +136,7 @@ class TkMultiTopicApp:
             try:
 
                 self.ros_node.subscribe_to_topic(topic_name)
-                self.add_topic_label(topic_name)
+                self.add_topic_label(topic_name, 100, 100)
 
             except Exception as e:
 
@@ -168,7 +158,7 @@ class TkMultiTopicApp:
             
             try:
                 self.ros_node.subscribe_to_camera(camera_topic_name)
-                self.add_camera_label(camera_topic_name)
+                self.add_camera_label(camera_topic_name, 100, 100)
 
             except Exception as e:
 
@@ -177,6 +167,14 @@ class TkMultiTopicApp:
         else:
 
             messagebox.showerror("Invalid Input", "Please enter a valid camera topic name.")
+
+    def show_initial_topics(self):
+
+        #self.ros_node.subscribe_to_topic("chatter")
+        self.add_topic_label("chatter", 100, 100)
+
+        #self.ros_node.subscribe_to_camera("usbcam_image_0")
+        self.add_camera_label("usbcam_image_0", 100, 300)
 
     # Labeling logic
     def add_topic_label(self, topic_name, x, y):
@@ -348,6 +346,8 @@ def main():
     root.title("Andrew GUI Test")
     root.geometry("800x600")  
     app = TkMultiTopicApp(root, ros_node)
+    ros_node.subscribe_to_initial_topics()
+    app.show_initial_topics()
 
     try:
         root.mainloop()
