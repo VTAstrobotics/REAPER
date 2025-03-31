@@ -4,6 +4,9 @@
 #include <string>
 #include <sstream>
 
+#include <iostream>
+#include <string> 
+
 #include "sensor_msgs/msg/joy.hpp"
 #include "action_interfaces/action/dump.hpp"
 #include "action_interfaces/action/dig.hpp"
@@ -22,6 +25,29 @@ using std::placeholders::_2;
 
 namespace teleop_control
 {
+
+    /**
+     * determines who the user is to set the controls to
+     */
+    enum class User {
+        //users: Cameron, Collin, Anthony, Casie, Emma
+        
+        //controls:
+        cameron;
+        
+        //controls:
+        collin;
+        
+        //controls:
+        anthony;
+        
+        //controls:
+        casie;
+        
+        //controls:
+        emma; 
+        
+    }
 
 /*
  * Takes in controller inputs and sends a goal to the various action servers (ex. drive, dump, etc)
