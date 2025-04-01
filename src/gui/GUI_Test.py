@@ -176,6 +176,25 @@ class TkMultiTopicApp:
         #self.ros_node.subscribe_to_camera("usbcam_image_0")
         self.add_camera_label("usbcam_image_0", 100, 300)
 
+        # Ensure the initial topics' labels are linked to updates
+        self.messages_widgets["chatter"] = {
+            "frame": self.messages_frame,
+            "message_label": self.messages_widgets["chatter"]["message_label"],
+            "last_data": None,
+            "timeout_timer": None
+        }
+
+        self.messages_widgets["usbcam_image_0"] = {
+            "frame": self.messages_frame,
+            "message_label": self.camera_labels["usbcam_image_0"],
+            "last_data": None,
+            "timeout_timer": None
+        }
+        #if "chatter" in self.messages_widgets:
+            #self.messages_widgets["chatter"]["message_label"].config(text=self.ros_node.messages.get("chatter", "No data received yet"))
+        #if "usbcam_image_0" in self.camera_labels:
+            #self.camera_labels["usbcam_image_0"].config(text="Waiting for camera feed...")
+
     # Labeling logic
     def add_topic_label(self, topic_name, x, y):
         
