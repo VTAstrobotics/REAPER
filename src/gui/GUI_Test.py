@@ -8,9 +8,11 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image as RosImage
 import cv2
 from cv_bridge import CvBridge
+import time
 
 # Test Talker Node
 # ros2 run demo_nodes_cpp talker
+# ros2 run camera_streamer usbCamStreamer --cam 0
  
 class MultiTopicSubscriber(Node):
 
@@ -51,11 +53,6 @@ class MultiTopicSubscriber(Node):
         self.custom_subscriptions[camera_topic] = subscription
         self.camera_frames[camera_topic] = None
         self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
-
-    def subscribe_to_initial_topics(self):
-        self.subscribe_to_topic("chatter")
-        self.subscribe_to_camera("usbcam_image_0")
-
  
 class TkMultiTopicApp:
     
@@ -118,9 +115,6 @@ class TkMultiTopicApp:
         self.update_camera_thread.daemon = True
         self.update_camera_thread.start()
 
-        # Launch RViz in a subprocess
-        self.launch_rviz()
-
     # Subscription logic 
     def subscribe_to_topic(self):
 
@@ -137,6 +131,30 @@ class TkMultiTopicApp:
 
                 self.ros_node.subscribe_to_topic(topic_name)
                 self.add_topic_label(topic_name, 100, 100)
+
+            except Exception as e:
+
+                messagebox.showerror("Error", f"Failed to subscribe: {e}")
+        else:
+
+            messagebox.showerror("Invalid Input", "Please enter a valid topic name.")
+
+    # Subscription logic 
+    def subscribe_to_topic_init(self, topic_name2, x, y):
+
+        topic_name = topic_name2
+
+        if topic_name:
+
+            if topic_name in self.messages_widgets:
+
+                messagebox.showinfo("Already Subscribed", f"Already subscribed to {topic_name}.")
+                return
+
+            try:
+
+                self.ros_node.subscribe_to_topic(topic_name)
+                self.add_topic_label(topic_name, x, y)
 
             except Exception as e:
 
@@ -168,24 +186,28 @@ class TkMultiTopicApp:
 
             messagebox.showerror("Invalid Input", "Please enter a valid camera topic name.")
 
-    def show_initial_topics(self):
-     
-        self.add_topic_label("chatter", 100, 100)
-        self.add_camera_label("usbcam_image_0", 100, 300)
-     
-        if "chatter" in self.messages_widgets:
-            self.messages_widgets["chatter"]["message_label"].config(text=self.ros_node.messages.get("chatter", "No data received yet"))
-        if "usbcam_image_0" in self.camera_labels:
-            self.camera_labels["usbcam_image_0"].config(text="Waiting for camera feed...")
-         
-        camera_update_thread = threading.Thread(target=self.update_camera_frames)
-        camera_update_thread.daemon = True
-        camera_update_thread.start()
-        
-        chatter_update_thread = threading.Thread(target=self.update_chatter_messages)
-        chatter_update_thread.daemon = True
-        chatter_update_thread.start()
- 
+    def subscribe_to_camera_topic_init(self, camera_topic, x, y):
+
+        camera_topic_name = camera_topic
+
+        if camera_topic_name:
+
+            if camera_topic_name in self.camera_labels:
+
+                messagebox.showinfo("Already Subscribed", f"Already subscribed to {camera_topic_name}.")
+                return
+            
+            try:
+                self.ros_node.subscribe_to_camera(camera_topic_name)
+                self.add_camera_label(camera_topic_name, x, y)
+
+            except Exception as e:
+
+                messagebox.showerror("Error", f"Failed to subscribe: {e}")
+
+        else:
+
+            messagebox.showerror("Invalid Input", "Please enter a valid camera topic name.")
 
     # Labeling logic
     def add_topic_label(self, topic_name, x, y):
@@ -303,7 +325,7 @@ class TkMultiTopicApp:
         while rclpy.ok():
 
             rclpy.spin_once(self.ros_node, timeout_sec=0.1)
-
+            
             for topic_name, widgets in self.messages_widgets.items():
 
                 new_message = self.ros_node.messages.get(topic_name, "No data received yet")
@@ -321,6 +343,7 @@ class TkMultiTopicApp:
                     self.check_data_timeout(topic_name, label_message)
                     
     def update_camera_frames(self):
+
         while rclpy.ok():
             for topic, frame in self.ros_node.camera_frames.items():
                 if frame is not None and topic in self.camera_labels:
@@ -340,25 +363,19 @@ class TkMultiTopicApp:
         self.messages_widgets[topic_name]["timeout_timer"] = timer
         timer.start()
 
-    # Launches rviz
-    def launch_rviz(self):
-        rviz_cmd = ["ros2", "run", "rviz2", "rviz2"]
-        # try:
-            # subprocess.Popen(rviz_cmd)
-        # except Exception as e:
-            # messagebox.showerror("Error", f"Failed to launch RViz: {e}")
-
 def main():
 
+    # Main loop
     rclpy.init()
     ros_node = MultiTopicSubscriber()
- 
     root = tk.Tk()
     root.title("Andrew GUI Test")
     root.geometry("800x600")  
     app = TkMultiTopicApp(root, ros_node)
-    ros_node.subscribe_to_initial_topics()
-    app.show_initial_topics()
+
+    # Declare your initial topics and positions
+    #app.subscribe_to_topic_init("chatter", 100, 100)
+    #app.subscribe_to_camera_topic_init("usbcam_image_0", 100, 300)
 
     try:
         root.mainloop()
