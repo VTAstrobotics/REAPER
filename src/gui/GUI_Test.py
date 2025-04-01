@@ -169,31 +169,23 @@ class TkMultiTopicApp:
             messagebox.showerror("Invalid Input", "Please enter a valid camera topic name.")
 
     def show_initial_topics(self):
-
-        #self.ros_node.subscribe_to_topic("chatter")
+     
         self.add_topic_label("chatter", 100, 100)
-
-        #self.ros_node.subscribe_to_camera("usbcam_image_0")
         self.add_camera_label("usbcam_image_0", 100, 300)
-
-        # Ensure the initial topics' labels are linked to updates
-        self.messages_widgets["chatter"] = {
-            "frame": self.messages_frame,
-            "message_label": self.messages_widgets["chatter"]["message_label"],
-            "last_data": None,
-            "timeout_timer": None
-        }
-
-        self.messages_widgets["usbcam_image_0"] = {
-            "frame": self.messages_frame,
-            "message_label": self.camera_labels["usbcam_image_0"],
-            "last_data": None,
-            "timeout_timer": None
-        }
-        #if "chatter" in self.messages_widgets:
-            #self.messages_widgets["chatter"]["message_label"].config(text=self.ros_node.messages.get("chatter", "No data received yet"))
-        #if "usbcam_image_0" in self.camera_labels:
-            #self.camera_labels["usbcam_image_0"].config(text="Waiting for camera feed...")
+     
+        if "chatter" in self.messages_widgets:
+            self.messages_widgets["chatter"]["message_label"].config(text=self.ros_node.messages.get("chatter", "No data received yet"))
+        if "usbcam_image_0" in self.camera_labels:
+            self.camera_labels["usbcam_image_0"].config(text="Waiting for camera feed...")
+         
+        camera_update_thread = threading.Thread(target=self.update_camera_frames)
+        camera_update_thread.daemon = True
+        camera_update_thread.start()
+        
+        chatter_update_thread = threading.Thread(target=self.update_chatter_messages)
+        chatter_update_thread.daemon = True
+        chatter_update_thread.start()
+ 
 
     # Labeling logic
     def add_topic_label(self, topic_name, x, y):
@@ -269,7 +261,7 @@ class TkMultiTopicApp:
             # Destroy the frame associated with the topic
             self.messages_widgets[topic_name]["frame"].destroy()
             del self.messages_widgets[topic_name]
-
+ 
     # Dragging logic
     def bind_drag_events(self, widget):
 
