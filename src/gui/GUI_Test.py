@@ -373,10 +373,16 @@ def main():
     root.geometry("800x600")  
     app = TkMultiTopicApp(root, ros_node)
 
-    # Declare your initial topics and positions
-    #app.subscribe_to_topic_init("chatter", 100, 100)
-    #app.subscribe_to_camera_topic_init("usbcam_image_0", 100, 300)
-
+    # Declare initial topics and subscribe
+    initial_topics = [("chatter", 100, 100)]
+    initial_cameras = [("usbcam_image_0", 100, 300)]
+    
+    for topic_name, x, y in initial_topics:
+        threading.Thread(target=app.subscribe_to_topic_init, args=(topic_name, x, y), daemon=True).start()
+    
+    for camera_name, x, y in initial_cameras:
+        threading.Thread(target=app.subscribe_to_camera_topic_init, args=(camera_name, x, y), daemon=True).start()
+     
     try:
         root.mainloop()
     except KeyboardInterrupt:
