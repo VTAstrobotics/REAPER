@@ -369,13 +369,13 @@ def main():
     rclpy.init()
     ros_node = MultiTopicSubscriber()
     root = tk.Tk()
-    root.title("Andrew GUI Test")
+    root.title("Astrobotics GUI")
     root.geometry("800x600")  
     app = TkMultiTopicApp(root, ros_node)
 
     # Declare initial topics and subscribe
-    initial_topics = [("chatter", 100, 100)]
-    initial_cameras = [("usbcam_image_0", 100, 300)]
+    initial_topics = [("chatter", 100, 100), ("junk", 300, 100)]
+    initial_cameras = [("usbcam_image_0", 100, 300), ("usbcam_image_2", 600, 600)]
     
     for topic_name, x, y in initial_topics:
         threading.Thread(target=app.subscribe_to_topic_init, args=(topic_name, x, y), daemon=True).start()
