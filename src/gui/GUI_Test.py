@@ -53,6 +53,19 @@ class MultiTopicSubscriber(Node):
         self.custom_subscriptions[camera_topic] = subscription
         self.camera_frames[camera_topic] = None
         self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
+
+    def unsubscribe_from_topic(self, topic_name):
+        if topic_name in self.custom_subscriptions:
+            self.destroy_subscription(self.custom_subscriptions[topic_name])
+            del self.custom_subscriptions[topic_name]
+
+        if topic_name in self.messages:
+            del self.messages[topic_name]
+
+        if topic_name in self.camera_frames:
+            del self.camera_frames[topic_name]
+
+        self.get_logger().info(f"Unsubscribed from topic: {topic_name}")
  
 class TkMultiTopicApp:
     
@@ -110,10 +123,7 @@ class TkMultiTopicApp:
         self.update_message_thread = threading.Thread(target=self.update_messages)
         self.update_message_thread.daemon = True
         self.update_message_thread.start()
-
-        self.update_camera_thread = threading.Thread(target=self.update_camera_frames)
-        self.update_camera_thread.daemon = True
-        self.update_camera_thread.start()
+        self.root.after(100, self.update_camera_frames)
 
     # Subscription logic 
     def subscribe_to_topic(self):
@@ -273,16 +283,20 @@ class TkMultiTopicApp:
             child.bind("<Button-3>", lambda event, menu=right_click_menu: menu.post(event.x_root, event.y_root))
 
     def remove_topic(self, topic_name):
- 
         if topic_name in self.messages_widgets:
-            
-            # Cancel the timeout timer if it's running
+ 
             if self.messages_widgets[topic_name]["timeout_timer"]:
                 self.messages_widgets[topic_name]["timeout_timer"].cancel()
-
-            # Destroy the frame associated with the topic
+      
             self.messages_widgets[topic_name]["frame"].destroy()
             del self.messages_widgets[topic_name]
+         
+        if topic_name in self.camera_labels:
+            del self.camera_labels[topic_name]
+    
+        # Unsubscribe
+        self.ros_node.unsubscribe_from_topic(topic_name)
+
  
     # Dragging logic
     def bind_drag_events(self, widget):
@@ -343,16 +357,18 @@ class TkMultiTopicApp:
                     self.check_data_timeout(topic_name, label_message)
                     
     def update_camera_frames(self):
+    
+        for topic, frame in self.ros_node.camera_frames.items():
+            if frame is not None and topic in self.camera_labels:
+                cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(cv_image)
+                img_tk = ImageTk.PhotoImage(image=img)
+                self.camera_labels[topic].config(image=img_tk)
+                self.camera_labels[topic].image = img_tk  # Prevent garbage collection
 
-        while rclpy.ok():
-            for topic, frame in self.ros_node.camera_frames.items():
-                if frame is not None and topic in self.camera_labels:
-                    cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    img = Image.fromarray(cv_image)
-                    img_tk = ImageTk.PhotoImage(image=img)
-                    self.camera_labels[topic].config(image=img_tk)
-                    self.camera_labels[topic].image = img_tk
-
+         # Schedule the next update on the main thread
+         self.root.after(100, self.update_camera_frames)
+ 
     def check_data_timeout(self, topic_name, label_message):
  
         def timeout_action():
