@@ -366,8 +366,8 @@ class TkMultiTopicApp:
                 self.camera_labels[topic].config(image=img_tk)
                 self.camera_labels[topic].image = img_tk  # Prevent garbage collection
 
-         # Schedule the next update on the main thread
-         self.root.after(100, self.update_camera_frames)
+        # Schedule the next update on the main thread
+        self.root.after(100, self.update_camera_frames)
  
     def check_data_timeout(self, topic_name, label_message):
  
