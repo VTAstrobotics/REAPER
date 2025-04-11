@@ -56,7 +56,8 @@ def generate_launch_description():
         output='screen',
         #parameters=[{'use_sim_time': use_sim_time}],
         remappings=[('/robot_description', '/reaper_description')],
-        arguments=[urdf_file])
+        arguments=[urdf_file],
+    )
 
     start_joint_state_publisher_cmd = Node(
         condition=IfCondition(use_joint_state_pub),
@@ -64,7 +65,9 @@ def generate_launch_description():
         executable='joint_state_publisher_gui',
         name='joint_state_publisher_gui',
         output='screen',
-        arguments=[urdf_file])
+        parameters=[{"zeros": {"joint_Linkage": -3.1, "joint_Bucket": -0.8}}], # zeros = starting config
+        arguments=[urdf_file],
+    )
 
     rviz_cmd = Node(
         condition=IfCondition(use_rviz),
@@ -72,12 +75,14 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         arguments=['-d', rviz_config_file],
-        output='screen')
+        output='screen',
+    )
 
     tf_map= Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments= ["0", "0", "0", "0", "0", "0", "map", "odom"])
+        arguments= ["0", "0", "0", "0", "0", "0", "map", "odom"],
+    )
 
     # Create the launch description and populate
     ld = LaunchDescription()

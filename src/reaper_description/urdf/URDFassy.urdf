@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
 <robot
   name="URDFassy">
-  
+
   <!-- Chassis Link -->
   <link
     name="Chassis">
@@ -103,8 +103,8 @@
     <axis
       xyz="0 0 1" />
     <limit
-      lower="-2.6"
-      upper="0.4"
+      lower="-3.1"
+      upper="0.55"
       effort="100"
       velocity="5.0" />
   </joint>
@@ -164,9 +164,11 @@
       link="Bucket" />
     <axis
       xyz="0 0 1" />
+    <zeros
+      />
     <limit
-      lower="-1.57"
-      upper="1.57"
+      lower="-2.40"
+      upper="1.05"
       effort="100"
       velocity="5.0" />
   </joint>
