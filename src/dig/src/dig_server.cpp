@@ -10,7 +10,6 @@
 #include "std_msgs/msg/float32.hpp"
 #include "ctre/phoenix6/mechanisms/SimpleDifferentialMechanism.hpp"
 #include "SparkMax.hpp"
-#include "PIDController.hpp"
 #include "state_messages_utils/motor_to_msg.hpp"
 
 
@@ -77,12 +76,15 @@ namespace dig_server
       // link_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
 
       // Set linkage current limits
-      link_configs.CurrentLimits.SupplyCurrentLimit = 30;
-      link_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+      /* calculated by 80 Nm from mechanical as max output on output shaft, at 100:1 gear ratio
+       * so 0.8 Nm on motor / 0.01926 kT = 41.5 A. Round down to 40 just in case.
+       * see https://ctre.download/files/datasheet/Motor%20Performance%20Analysis%20Report.pdf for KrakenX60 kT */
+      link_configs.CurrentLimits.StatorCurrentLimit = 40;
+      link_configs.CurrentLimits.StatorCurrentLimitEnable = true;
 
-      // Set duty cycle limits
-      link_configs.MotorOutput.PeakForwardDutyCycle = 0.1;
-      link_configs.MotorOutput.PeakReverseDutyCycle = -0.1;
+      // based on wire awg (10)
+      link_configs.CurrentLimits.SupplyCurrentLimit = 45;
+      link_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
       // Motion Magic!!
       link_configs.MotionMagic.MotionMagicCruiseVelocity = 0.1 ;
@@ -169,12 +171,15 @@ namespace dig_server
       // bckt_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
 
       // Set bucket current limits
-      bckt_configs.CurrentLimits.SupplyCurrentLimit = 30;
-      bckt_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
+      /* calculated by 55 Nm from mechanical as max output on output shaft, at 75:1 gear ratio
+       * so 0.73 Nm on motor / 0.01926 kT = 38.1 A. Round down to 35 just in case.
+       * see https://ctre.download/files/datasheet/Motor%20Performance%20Analysis%20Report.pdf for KrakenX60 kT */
+      bckt_configs.CurrentLimits.StatorCurrentLimit = 35;
+      bckt_configs.CurrentLimits.StatorCurrentLimitEnable = true;
 
-      // Set duty cycle limits
-      bckt_configs.MotorOutput.PeakForwardDutyCycle = 0.25;
-      bckt_configs.MotorOutput.PeakReverseDutyCycle = -0.2;
+      // based on wire awg (10)
+      bckt_configs.CurrentLimits.SupplyCurrentLimit = 45;
+      bckt_configs.CurrentLimits.SupplyCurrentLimitEnable = true;
 
       // Motion Magic
       bckt_configs.MotionMagic.MotionMagicCruiseVelocity = 0.1;
