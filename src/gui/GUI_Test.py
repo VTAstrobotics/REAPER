@@ -392,6 +392,7 @@ def main():
     # Declare initial topics and subscribe
     initial_topics = [("chatter", 100, 100), ("junk", 300, 100)]
     initial_cameras = [("usbcam_image_0", 100, 300), ("usbcam_image_2", 600, 600)]
+    #initial_cameras = [("usbcam_image_2", 600, 600)]
     
     for topic_name, x, y in initial_topics:
         threading.Thread(target=app.subscribe_to_topic_init, args=(topic_name, x, y), daemon=True).start()
