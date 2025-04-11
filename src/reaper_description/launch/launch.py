@@ -16,7 +16,8 @@ def generate_launch_description():
     launch_dir = os.path.join(bringup_dir, 'launch')
 
     # Launch configuration variables specific to simulation
-    rviz_config_file = LaunchConfiguration('rviz_config_file')
+    # rviz_config_file = LaunchConfiguration('rviz_config_file')
+    rviz_config_file = "/workspaces/REAPER/src/reaper_description/config/default_config.rviz"
     use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
     use_joint_state_pub = LaunchConfiguration('use_joint_state_pub')
     use_rviz = LaunchConfiguration('use_rviz')
