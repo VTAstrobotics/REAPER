@@ -192,16 +192,22 @@ private:
             return;
         }
 
-        if (valid_toggle_press(BUTTON_X, raw)) {
-dig_goal.link_pos_goal = 0;
-dig_goal.bckt_pos_goal = 0;
-            slow_turn_ = !slow_turn_;
-            if (slow_turn_) {
-                RCLCPP_INFO(this->get_logger(), "Y: Decreasing the max turning rate");
-            } else {
-                RCLCPP_INFO(this->get_logger(), "Y: Turning back to full speed");
-            }
+//        if (valid_toggle_press(BUTTON_X, raw)) {
+//dig_goal.link_pos_goal = 0;
+//dig_goal.bckt_pos_goal = 0;
+//            slow_turn_ = !slow_turn_;
+//            if (slow_turn_) {
+//                RCLCPP_INFO(this->get_logger(), "Y: Decreasing the max turning rate");
+//            } else {
+//                RCLCPP_INFO(this->get_logger(), "Y: Turning back to full speed");
+//            }
+//
+//        }
 
+        if (raw.buttons[BUTTON_X]) {
+            dump_goal.pwr_goal = 0.25;
+            RCLCPP_INFO(this->get_logger(), "B: Dump with power %f", dump_goal.pwr_goal);
+            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
         if (valid_toggle_press(BUTTON_Y, raw)) {
@@ -377,12 +383,6 @@ dig_goal.bckt_pos_goal = 0;
             dig_goal.vibr_pwr_goal = -0.2;
             RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
 
-        }
-
-        if (raw.buttons[BUTTON_B]) {
-            dump_goal.pwr_goal = 0.25;
-            RCLCPP_INFO(this->get_logger(), "B: Dump with power %f", dump_goal.pwr_goal);
-            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
         }
 
         // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down

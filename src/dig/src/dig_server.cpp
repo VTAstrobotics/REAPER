@@ -60,20 +60,20 @@ namespace dig_server
       link_configs.Slot0.kS = 0.003;
       link_configs.Slot0.kV = 0.80;
       //link_configs.Slot0.kA = 0.05;
-      link_configs.Slot0.kG = 0.015;
-      link_configs.Slot0.kP = 0.00;//0.8 * K_u;
-      link_configs.Slot0.kI = 0; // 0; PD controller
-      link_configs.Slot0.kD = 0;//0.1 * K_u * T_u;
+      link_configs.Slot0.kG = 0.325;
+      // link_configs.Slot0.kP = 0.1;//0.8 * K_u;
+      // link_configs.Slot0.kI = 0; // 0; PD controller
+      // link_configs.Slot0.kD = 0.1;//0.1 * K_u * T_u;
 
       // Slot 1 gains
       link_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      // link_configs.Slot1.kS = 0;
-      // link_configs.Slot1.kV = 0;
+      link_configs.Slot1.kS = 0.003;
+      link_configs.Slot1.kV = 0.0;
       // link_configs.Slot1.kA = 0;
       // link_configs.Slot1.kG = 0;
-      // link_configs.Slot1.kP = .03; // 0.8 * K_u;
+      link_configs.Slot1.kP = 3; // 0.8 * K_u;
       // link_configs.Slot1.kI = 0; // 0; PD controller
-      // link_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
+      link_configs.Slot1.kD = 0.1; //0.1 * K_u * T_u;
 
       // Set linkage current limits
       /* calculated by 80 Nm from mechanical as max output on output shaft, at 100:1 gear ratio
@@ -470,7 +470,7 @@ namespace dig_server
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
       if (pwr == 0) { // hold position
-        controls::MotionMagicVelocityVoltage velocity_command{0_tps}; // velocity turns per second
+        controls::DifferentialVelocityVoltage velocity_command{0_tps, 0_tr}; // velocity turns per second
         link_mech.SetControl(velocity_command);
       } else {
         controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
@@ -494,7 +494,7 @@ namespace dig_server
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
       if (pwr == 0) { // hold position
-        controls::MotionMagicVelocityVoltage velocity_command{0_tps}; // velocity turns per second
+        controls::DifferentialVelocityVoltage velocity_command{0_tps, 0_tr}; // velocity turns per second
         bckt_mech.SetControl(velocity_command);
       } else {
         controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
