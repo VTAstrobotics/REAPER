@@ -53,9 +53,6 @@ RUN rosdep update
 RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> ~/.bashrc
 RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 
-# For UI on Windows
-ENV DISPLAY=host.docker.internal:0
-
 ###############################################################################
 #                                                                             #
 # Add dependencies below using RUN <command you used to install>              #
