@@ -52,9 +52,9 @@ class MultiTopicSubscriber(Node):
         def callback(msg, topic=camera_topic):
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
             # Latency
-            msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-            current_time = time.time()
-            latency_ms = (current_time - msg_time) * 1000.0
+            msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec
+            current_time = time.time() * 1e-9
+            latency_ms = (current_time - msg_time) * 1000
             self.camera_frames[topic] = (cv_image, latency_ms)
 
         subscription = self.create_subscription(RosImage, camera_topic, callback, 10)
@@ -96,7 +96,7 @@ class TkMultiTopicApp:
 
         # Joystick check
         self.joystick_status = tk.Label(root, text="Checking joystick topics...", bg="white", fg="black", font=("Arial", 10, "bold"))
-        self.joystick_status.place(x=500, y=10)
+        self.joystick_status.place(x=600, y=10)
         self.root.after(1000, self.check_joystick_topics)
 
         # Frame 
