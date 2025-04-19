@@ -44,6 +44,7 @@ public:
         this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
 
         this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
+        this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy_operator", 10, std::bind(&Distributor::joy1_cb, this, _1));
 
         for (size_t i = 0; i < sizeof(last_btn_press_)/sizeof(*last_btn_press_); i++)
         {
@@ -62,6 +63,7 @@ private:
     Sharepoints
     */
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy1_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy2_sub_;
     rclcpp_action::Client<Dump>::SharedPtr dump_ptr_;
     rclcpp_action::Client<Dig>::SharedPtr dig_ptr_;
     rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
@@ -334,6 +336,66 @@ private:
         this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
     }
 
+    void joy2_cb(const sensor_msgs::msg::Joy& raw){
+
+
+        // Dig action server
+        auto dig_goal = Dig::Goal();
+        auto send_dig_goal_options = rclcpp_action::Client<Dig>::SendGoalOptions();
+        send_dig_goal_options.goal_response_callback = std::bind(&Distributor::dig_response_cb, this, _1);
+        send_dig_goal_options.feedback_callback = std::bind(&Distributor::dig_fb_cb, this, _1, _2);
+        send_dig_goal_options.result_callback = std::bind(&Distributor::dig_result_cb, this, _1);
+
+        // Dump action server
+        auto dump_goal = Dump::Goal();
+        auto send_dump_goal_options = rclcpp_action::Client<Dump>::SendGoalOptions();
+        send_dump_goal_options.goal_response_callback = std::bind(&Distributor::dump_response_cb, this, _1);
+        send_dump_goal_options.feedback_callback = std::bind(&Distributor::dump_fb_cb, this, _1, _2);
+        send_dump_goal_options.result_callback = std::bind(&Distributor::dump_result_cb, this, _1);
+        //TODO: decide what controls each person has LMAO
+
+        if (valid_press(BUTTON_LBUMPER, raw)) {
+            RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
+            dig_goal.dig_link_pwr_goal += 0.05;
+        }
+
+        if (valid_press(BUTTON_RBUMPER, raw)) {
+            RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
+            dig_goal.dig_link_pwr_goal -= 0.15;
+        }
+        /**********************************************************************
+         *                                                                    *
+         * DUMP SYSTEM CONTROLS                                               *
+         *                                                                    *
+         **********************************************************************/
+        if (valid_press(BUTTON_A, raw)) {
+            RCLCPP_INFO(this->get_logger(), "A: Dumping 0.01 m^3");
+
+            dump_goal.deposition_goal = 0.01;
+
+            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+        }
+        if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
+            dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
+            RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
+            dump_goal.auton = false;
+            this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+        }
+
+        if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
+            RCLCPP_INFO(this->get_logger(), "Dpad Y: Not yet implemented. Doing nothing...");
+        }
+
+        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+        float LSY = raw.axes[AXIS_LEFTY];
+
+        // Apply cubic function for better control
+        LSY = std::pow(LSY, 3);
+        dump_goal.pwr_goal = LSY;
+
+        this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+        this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+    }
     /**
      * Sending Goals (dump, dig, drive)
     */
