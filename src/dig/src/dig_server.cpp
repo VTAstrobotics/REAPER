@@ -36,6 +36,25 @@ namespace dig_server
       r_link_mtr_.ClearStickyFaults();
       r_bckt_mtr_.ClearStickyFaults();
       l_bckt_mtr_.ClearStickyFaults();
+
+    // const float L_LINK_ENCODER_MAGIC_NUMBER_{-0.443848};
+    // const float R_LINK_ENCODER_MAGIC_NUMBER_{-0.341309};
+    // const float L_BCKT_ENCODER_MAGIC_NUMBER_{0.067383};
+    // const float R_BCKT_ENCODER_MAGIC_NUMBER_{0.315918};
+      
+      this->declare_parameter("left_linkage_offset", -.443848);
+      this->declare_parameter("right_linkage_offset", -.341309);
+      this->declare_parameter("left_bucket_offset", 0.067383);
+      this->declare_parameter("right_bucket_offset", 0.315918);
+
+      parameter_callback = std::make_shared<rclcpp::ParameterEventHandler>(this);
+
+      parameter_callback->add_parameter_callback("left_linkage_offset", std::bind(&DigActionServer::set_left_linkage_offset,this,std::placeholders::_1));
+      parameter_callback->add_parameter_callback("right_linkage_offset", std::bind(&DigActionServer::set_right_linkage_offset,this,std::placeholders::_1));
+      parameter_callback->add_parameter_callback("left_bucket_offset", std::bind(&DigActionServer::set_left_bucket_offset,this,std::placeholders::_1));
+      parameter_callback->add_parameter_callback("right_bucket_offset", std::bind(&DigActionServer::set_right_bucket_offset,this,std::placeholders::_1));
+      
+
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
           "dig",
@@ -269,6 +288,8 @@ namespace dig_server
 
   private:
     rclcpp_action::Server<Dig>::SharedPtr action_server_;
+
+    std::shared_ptr<rclcpp::ParameterEventHandler> parameter_callback;
 
     // linkage actuators
     hardware::TalonFX l_link_mtr_{20, "can0"}; // canid (each motor), can interface (same for all)
@@ -520,6 +541,28 @@ namespace dig_server
       // r_vib_mtr_.SetDutyCycle(pwr);
     }
 
+    void set_left_linkage_offset(const rclcpp::Parameter &p){
+      configs::CANcoderConfiguration config_;
+      config_.MagnetSensor.MagnetOffset = p.as_double();
+      l_link_cancoder_.GetConfigurator().Apply(config_);
+    }
+
+    void set_right_linkage_offset(const rclcpp::Parameter &p){
+      configs::CANcoderConfiguration config_;
+      config_.MagnetSensor.MagnetOffset = p.as_double();
+      r_link_cancoder_.GetConfigurator().Apply(config_);
+    }
+    void set_left_bucket_offset(const rclcpp::Parameter &p){
+      configs::CANcoderConfiguration config_;
+      config_.MagnetSensor.MagnetOffset = p.as_double();
+      l_bckt_cancoder_.GetConfigurator().Apply(config_);
+    }
+
+    void set_right_bucket_offset(const rclcpp::Parameter &p){
+      configs::CANcoderConfiguration config_;
+      config_.MagnetSensor.MagnetOffset = p.as_double();
+      r_bckt_cancoder_.GetConfigurator().Apply(config_);
+    }
     /**
      *
      */
