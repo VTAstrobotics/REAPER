@@ -9,6 +9,19 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 
+def get_serial(device_path: str) -> str:
+    """
+    Given '/dev/v4l/by-id/usb-046d_Brio_101_2441AP7CHQV8-video-index0',
+    returns '2441AP7CHQV8'.
+    """
+    base = os.path.basename(device_path)
+    # split on '_' and take the last chunk, e.g.
+    # '2441AP7CHQV8-video-index0'
+    last = base.split('_')[-1]
+    # strip off '-video-index0'
+    serial = last.replace('-video-index0', '')
+    return serial
+
 
 def generate_launch_description():
     config = os.path.join(
@@ -30,7 +43,7 @@ def generate_launch_description():
             Node(
                 package='camera_streamer',
                 executable='usbCamStreamerParam',
-                name=f'usbcam_node_{i}',
+                name=f'usbcam_node_{get_serial(cam_path)}',
                 parameters=[{'camera_path': cam_path}],
                 # you can also set output='screen' if you want logs on stdout
             )
