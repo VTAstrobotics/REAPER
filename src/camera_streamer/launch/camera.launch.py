@@ -1,6 +1,6 @@
 import launch
 import launch_ros.actions
-
+from glob import glob
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -16,13 +16,25 @@ def generate_launch_description():
         'config',
         'cameras.yaml'
     )
-    return launch.LaunchDescription([
-        launch_ros.actions.Node(
-        package='camera_streamer',
-        executable='usbCamStreamerParam',
-        namespace='camera',
-        name='camera_streamer'#,
-        # parameters=[config]
+    pattern   = os.path.join('/dev/v4l/by-id', 'usb-046d*-video-index0')
+    all_cams = glob(pattern)
+    available = [c for c in all_cams if os.path.exists(c)]
+    nodes = []
+    for i, cam_path in enumerate(available):
+        # turn '/dev/v4l/by-id/usb-FOOBAR-video-index0'
+        # into a valid topic suffix, e.g. 'usb_FOOBAR_video_index0'
+        suffix = cam_path.replace('/', '_').lstrip('_')
+        topic  = f'usbcam_image_{suffix}'
+
+        nodes.append(
+            Node(
+                package='camera_streamer',
+                executable='usbCamStreamerParam',
+                name=f'usbcam_node_{i}',
+                parameters=[{'camera_path': cam_path}],
+                # you can also set output='screen' if you want logs on stdout
+            )
         )
-    ])
+
+    return LaunchDescription(nodes)
     
