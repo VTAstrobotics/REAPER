@@ -13,6 +13,10 @@ import time
 # Test Talker Node
 # ros2 run demo_nodes_cpp talker
 # ros2 run camera_streamer usbCamStreamer --cam 0
+
+# Joystick topics
+joystick_topic_1 = "/chatter"
+joystick_topic_2 = "/junk"
  
 class MultiTopicSubscriber(Node):
 
@@ -47,12 +51,21 @@ class MultiTopicSubscriber(Node):
 
         def callback(msg, topic=camera_topic):
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-            self.camera_frames[topic] = cv_image
+            # Latency
+            msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+            current_time = time.time()
+            latency_ms = (current_time - msg_time) * 1000.0
+            self.camera_frames[topic] = (cv_image, latency_ms)
 
         subscription = self.create_subscription(RosImage, camera_topic, callback, 10)
         self.custom_subscriptions[camera_topic] = subscription
         self.camera_frames[camera_topic] = None
         self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
+
+    def joystick_topic_exists(self, topic_name):
+        topic_list = self.get_topic_names_and_types()
+        return any(name == topic_name for name, _ in topic_list)
+
 
     def unsubscribe_from_topic(self, topic_name):
         if topic_name in self.custom_subscriptions:
@@ -80,6 +93,11 @@ class TkMultiTopicApp:
 
         # Set colors
         self.root.configure(bg="white")
+
+        # Joystick check
+        self.joystick_status = tk.Label(root, text="Checking joystick topics...", bg="white", fg="black", font=("Arial", 10, "bold"))
+        self.joystick_status.place(x=500, y=10)
+        self.root.after(1000, self.check_joystick_topics)
 
         # Frame 
         self.input_frame = tk.Frame(root, bg="white")
@@ -219,6 +237,20 @@ class TkMultiTopicApp:
 
             messagebox.showerror("Invalid Input", "Please enter a valid camera topic name.")
 
+    def check_joystick_topics(self):
+
+        joy1_detected = self.ros_node.joystick_topic_exists(joystick_topic_1)
+        joy2_detected = self.ros_node.joystick_topic_exists(joystick_topic_2)
+
+        status_text = f"Joystick 1: {'✔' if joy1_detected else '✖'} | Joystick 2: {'✔' if joy2_detected else '✖'}"
+        status_color = "green" if joy1_detected and joy2_detected else "red"
+
+        self.joystick_status.config(text=status_text, fg=status_color)
+
+        # Re-check 
+        self.root.after(3000, self.check_joystick_topics)
+
+
     # Labeling logic
     def add_topic_label(self, topic_name, x, y):
         
@@ -226,7 +258,7 @@ class TkMultiTopicApp:
         label_frame.place(x=x, y=y) 
         label_topic = tk.Label(label_frame, text=f"Topic: {topic_name}", font=("Arial", 10, "bold"))
         label_topic.pack(side="top", padx=5, pady=2)
-        label_message = tk.Label(label_frame, text="No data received yet", font=("Arial", 12))
+        label_message = tk.Label(label_frame, text="No data received yet", font=("Arial", 12), compound="bottom")
         label_message.pack(side="top", padx=5, pady=2)
 
         # Enable dragging 
@@ -358,12 +390,16 @@ class TkMultiTopicApp:
                     
     def update_camera_frames(self):
     
-        for topic, frame in self.ros_node.camera_frames.items():
-            if frame is not None and topic in self.camera_labels:
+        for topic, data in self.ros_node.camera_frames.items():
+
+            if data is not None and topic in self.camera_labels:
+                frame, latency_ms = data
                 cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 img = Image.fromarray(cv_image)
                 img_tk = ImageTk.PhotoImage(image=img)
-                self.camera_labels[topic].config(image=img_tk)
+
+                # Update image
+                self.camera_labels[topic].config(image=img_tk, compound="bottom", text=f"Latency: {latency_ms:.1f} ms")
                 self.camera_labels[topic].image = img_tk  # Prevent garbage collection
 
         # Schedule the next update on the main thread
