@@ -178,18 +178,15 @@ private:
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		dig_goal.link_pos_goal = -0.1;
-		dig_goal.bckt_pos_goal = 0.1;
+		// dig_goal.link_pos_goal = -0.1;
+		// dig_goal.bckt_pos_goal = 0.1;
         }
 
-       if (valid_toggle_press(BUTTON_B, raw)) {
-            RCLCPP_INFO(this->get_logger(), "B: Canceling all goals. Robot should stop. To re-enable robot, press stop sequence (BACK, START, AND XBOX).");
+       if (valid_toggle_press(BUTTON_X, raw)) {
+            RCLCPP_INFO(this->get_logger(), "X: Auto dig");
 
-            this->drive_ptr_->async_cancel_all_goals();
-            this->dump_ptr_->async_cancel_all_goals();
-            this->dig_ptr_->async_cancel_all_goals();
-            teleop_disabled_ = true;
-            return;
+            // dig_goal.auton = true;
+            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         }
 
 //        if (valid_toggle_press(BUTTON_X, raw)) {
@@ -204,7 +201,7 @@ private:
 //
 //        }
 
-        if (raw.buttons[BUTTON_X]) {
+        if (raw.buttons[BUTTON_B]) {
             dump_goal.pwr_goal = 0.25;
             RCLCPP_INFO(this->get_logger(), "B: Dump with power %f", dump_goal.pwr_goal);
             this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
@@ -213,8 +210,8 @@ private:
         if (valid_toggle_press(BUTTON_Y, raw)) {
             RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
-            dig_goal.link_pos_goal = 0.35;
-            dig_goal.bckt_pos_goal = 0.22;
+            // dig_goal.link_pos_goal = 0.35;
+            // dig_goal.bckt_pos_goal = 0.22;
         }
 
         if (raw.buttons[BUTTON_LBUMPER]) {
@@ -235,10 +232,13 @@ private:
         }
 
         if (valid_toggle_press(BUTTON_MANUFACTURER, raw)) {
-            RCLCPP_INFO(this->get_logger(), "Xbox: Not yet implemented. Doing nothing...");
+            RCLCPP_INFO(this->get_logger(), "Xbox: Canceling all goals. Robot should stop. To re-enable robot, press stop sequence (BACK, START, AND XBOX).");
 
-            dig_goal.auton = true;
-            this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
+            this->drive_ptr_->async_cancel_all_goals();
+            this->dump_ptr_->async_cancel_all_goals();
+            this->dig_ptr_->async_cancel_all_goals();
+            teleop_disabled_ = true;
+            return;
         }
 
         if (valid_toggle_press(BUTTON_LSTICK, raw)) {
@@ -279,73 +279,6 @@ private:
          **********************************************************************/
 
         // Drive throttle
-        // float LT = raw.axes[AXIS_LTRIGGER];
-        // float RT = raw.axes[AXIS_RTRIGGER];
-
-        /*
-         * Shift triggers from [-1, 1], where
-         *    1 = not pressed
-         *   -1 = fully pressed
-         *    0 = halfway
-         * to [0, 1] where
-         *    0 = not pressed
-         *    1 = fully pressed
-         */
-        // LT = ((-1 * LT) + 1) * 0.5;
-        // RT = ((-1 * RT) + 1) * 0.5;
-
-        // Apply cubic function for better control
-        // LT = std::pow(LT, 3);
-        // RT = std::pow(RT, 3);
-
-        // drive_vel.linear.x  = RT - LT; // [-1, 1]
-
-        // Drive turning
-        // float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
-
-        // Apply cubic function for better control
-        // LSX = std::pow(LSX, 3);
-
-        // drive_vel.angular.z = LSX; // [-1, 1]
-
-        // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-
-        // Cameron
-        float LSY = raw.axes[AXIS_LEFTY];
-        LSY = std::pow(LSY, 3);
-        drive_vel.linear.x = LSY;
-
-        // Drive turning
-        float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
-
-        // Apply cubic function for better control
-        RSX = std::pow(RSX, 3);
-
-        drive_vel.angular.z = RSX; // [-1, 1]
-
-        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-        /**********************************************************************
-         *                                                                    *
-         * DIG SYSTEM CONTROLS                                                *
-         *                                                                    *
-         **********************************************************************/
-        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-        // float RSY = raw.axes[AXIS_RIGHTY];
-
-        // Apply cubic function for better control
-        // RSY = std::pow(RSY, 3);
-        // dig_goal.bckt_pwr_goal = RSY;
-        // dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
-
-        // if (raw.axes[AXIS_DPAD_Y]) { // in (-1, 0, 1) where -1 = down, 1 = up, 0 = none
-        // RCLCPP_INFO(this->get_logger(), "Dpad Y: Dig hardstop manual control");
-        // dig_goal.hstp_pwr_goal = raw.axes[AXIS_DPAD_Y];
-        // }
-
-
-        // Cameron
         float LT = raw.axes[AXIS_LTRIGGER];
         float RT = raw.axes[AXIS_RTRIGGER];
 
@@ -365,8 +298,71 @@ private:
         LT = std::pow(LT, 3);
         RT = std::pow(RT, 3);
 
-        dig_goal.bckt_pwr_goal = 0.1 * ( RT - LT);
+        // drive_vel.linear.x  = RT - LT; // [-1, 1]
+        drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some reason. temporary fix, make sure all spark max inversion settings are same. TODO!
 
+        // Drive turning
+        float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+
+        // Apply cubic function for better control
+        LSX = std::pow(LSX, 3);
+
+        drive_vel.angular.z = LSX; // [-1, 1]
+
+        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+
+
+        // Cameron
+        // float LSY = raw.axes[AXIS_LEFTY];
+        // LSY = std::pow(LSY, 3);
+        // drive_vel.linear.x = LSY;
+
+        // Drive turning
+        // float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
+
+        // Apply cubic function for better control
+        // RSX = std::pow(RSX, 3);
+
+        // drive_vel.angular.z = RSX; // [-1, 1]
+
+        // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+
+        /**********************************************************************
+         *                                                                    *
+         * DIG SYSTEM CONTROLS                                                *
+         *                                                                    *
+         **********************************************************************/
+        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+        float RSY = raw.axes[AXIS_RIGHTY];
+
+        // Apply cubic function for better control
+        RSY = std::pow(RSY, 3);
+        dig_goal.bckt_pwr_goal = -RSY;
+        dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+
+        // Cameron
+        // float LT = raw.axes[AXIS_LTRIGGER];
+        // float RT = raw.axes[AXIS_RTRIGGER];
+
+        /*
+         * Shift triggers from [-1, 1], where
+         *    1 = not pressed
+         *   -1 = fully pressed
+         *    0 = halfway
+         * to [0, 1] where
+         *    0 = not pressed
+         *    1 = fully pressed
+         */
+        // LT = ((-1 * LT) + 1) * 0.5;
+        // RT = ((-1 * RT) + 1) * 0.5;
+
+        // Apply cubic function for better control
+        // LT = std::pow(LT, 3);
+        // RT = std::pow(RT, 3);
+
+        // dig_goal.bckt_pwr_goal = 0.1 * ( RT - LT);
+
+            // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f", dig_goal.bckt_pwr_goal);
 
         /**********************************************************************
          *                                                                    *
