@@ -56,8 +56,8 @@ namespace drive_server
     // controls::DutyCycleOut drive_right_duty{0.0};
         double drive_left_duty = 0;
         double drive_right_duty = 0;
-        SparkMax left_motor{"can0", 10};
-        SparkMax right_motor{"can0", 11};
+        SparkMax left_motor{"can1", 10};
+        SparkMax right_motor{"can1", 11};
         // Motor 1
     bool has_goal{false};
     int loop_rate_hz{120};

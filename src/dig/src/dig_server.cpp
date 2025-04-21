@@ -271,24 +271,24 @@ namespace dig_server
     rclcpp_action::Server<Dig>::SharedPtr action_server_;
 
     // linkage actuators
-    hardware::TalonFX l_link_mtr_{20, "can0"}; // canid (each motor), can interface (same for all)
-    hardware::CANcoder l_link_cancoder_{1, "can0"};
-    hardware::TalonFX r_link_mtr_{23, "can0"};
-    hardware::CANcoder r_link_cancoder_{2, "can0"};
+    hardware::TalonFX l_link_mtr_{20, "can1"}; // canid (each motor), can interface (same for all)
+    hardware::CANcoder l_link_cancoder_{1, "can1"};
+    hardware::TalonFX r_link_mtr_{23, "can1"};
+    hardware::CANcoder r_link_cancoder_{2, "can1"};
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     mechanisms::SimpleDifferentialMechanism link_mech{l_link_mtr_, r_link_mtr_, false};
 
     // bucket rotators
-    hardware::TalonFX l_bckt_mtr_{21, "can0"};
-    hardware::CANcoder l_bckt_cancoder_{3, "can0"};
-    hardware::TalonFX r_bckt_mtr_{24, "can0"};
-    hardware::CANcoder r_bckt_cancoder_{4, "can0"};
+    hardware::TalonFX l_bckt_mtr_{21, "can1"};
+    hardware::CANcoder l_bckt_cancoder_{3, "can1"};
+    hardware::TalonFX r_bckt_mtr_{24, "can1"};
+    hardware::CANcoder r_bckt_cancoder_{4, "can1"};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, true};
 
     // vibration motors
-    // SparkMax l_vib_mtr_{"can0", 22};
-    // SparkMax r_vib_mtr_{"can0", 25};
+    // SparkMax l_vib_mtr_{"can1", 22};
+    // SparkMax r_vib_mtr_{"can1", 25};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{50};
