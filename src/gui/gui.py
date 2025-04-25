@@ -51,10 +51,13 @@ class MultiTopicSubscriber(Node):
 
         def callback(msg, topic=camera_topic):
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
-            # Latency
-            msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec
-            current_time = time.time() * 1e-9
-            latency_ms = (current_time - msg_time) * 1000
+
+            # Time -> Ros Time
+            msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+            now = self.get_clock().now().to_msg()
+            now_time = now.sec + now.nanosec * 1e-9
+            latency_ms = (now_time - msg_time) * 1000.0
+
             self.camera_frames[topic] = (cv_image, latency_ms)
 
         subscription = self.create_subscription(RosImage, camera_topic, callback, 10)
@@ -112,6 +115,19 @@ class TkMultiTopicApp:
 
         self.subscribe_button = tk.Button(self.input_frame, text="Subscribe", command=self.subscribe_to_topic, bg="red", fg="white")
         self.subscribe_button.grid(row=0, column=2, padx=5, pady=5)
+
+        # Create timer
+        self.timer_frame = tk.Frame(root, bg="white")
+        self.timer_frame.place(x=650, y=60)
+        self.timer_label = tk.Label(self.timer_frame, text=self.format_time(self.remaining_time), font=("Arial", 16, "bold"), fg="blue", bg="white")
+        self.timer_label.grid(row=0, column=0, columnspan=2, pady=5)
+        self.start_timer_button = tk.Button(self.timer_frame, text="Start Match", command=self.start_timer)
+        self.start_timer_button.grid(row=1, column=0)
+        self.reset_timer_button = tk.Button(self.timer_frame, text="Reset Match", command=self.reset_timer)
+        self.reset_timer_button.grid(row=1, column=1)
+        self.radio_var = tk.IntVar(value=self.selected_duration)
+        tk.Radiobutton(self.timer_frame, text="Comp 1", variable=self.radio_var, value=150, bg="white", command=self.update_timer_duration).grid(row=2, column=0)
+        tk.Radiobutton(self.timer_frame, text="Comp 2", variable=self.radio_var, value=225, bg="white", command=self.update_timer_duration).grid(row=2, column=1)
 
         # Camera topic labels, grid, and buttons
         self.camera_label = tk.Label(self.input_frame, text="Enter Camera Name:", bg="white", fg="red")
@@ -414,6 +430,33 @@ class TkMultiTopicApp:
         timer = threading.Timer(3, timeout_action)
         self.messages_widgets[topic_name]["timeout_timer"] = timer
         timer.start()
+
+    def format_time(self, seconds):
+        return f"{seconds // 60}:{seconds % 60:02}"
+
+    def update_timer_duration(self):
+        self.selected_duration = self.radio_var.get()
+        self.remaining_time = self.selected_duration
+        self.timer_label.config(text=self.format_time(self.remaining_time))
+
+    def start_timer(self):
+        if not self.timer_running:
+            self.timer_running = True
+            self.countdown()
+
+    def reset_timer(self):
+        self.timer_running = False
+        self.remaining_time = self.selected_duration
+        self.timer_label.config(text=self.format_time(self.remaining_time))
+
+    def countdown(self):
+        if self.timer_running and self.remaining_time > 0:
+            self.remaining_time -= 1
+            self.timer_label.config(text=self.format_time(self.remaining_time))
+            self.root.after(1000, self.countdown)
+        elif self.remaining_time == 0:
+            self.timer_running = False
+            self.timer_label.config(text="Time's up!")
 
 def main():
 
