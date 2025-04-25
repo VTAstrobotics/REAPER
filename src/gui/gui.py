@@ -54,9 +54,9 @@ class MultiTopicSubscriber(Node):
 
             # Time -> Ros Time
             msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-            now = self.get_clock().now().to_msg()
+            now = self.get_clock().now().to_msg() * 1e-9
             now_time = now.sec + now.nanosec * 1e-9
-            latency_ms = (now_time - msg_time) * 1000.0
+            latency_ms = (now_time - msg_time)
 
             self.camera_frames[topic] = (cv_image, latency_ms)
 
@@ -99,7 +99,7 @@ class TkMultiTopicApp:
 
         # Joystick check
         self.joystick_status = tk.Label(root, text="Checking joystick topics...", bg="white", fg="black", font=("Arial", 10, "bold"))
-        self.joystick_status.place(x=600, y=10)
+        self.joystick_status.place(x=1000, y=10)
         self.root.after(1000, self.check_joystick_topics)
 
         # Frame 
@@ -117,8 +117,11 @@ class TkMultiTopicApp:
         self.subscribe_button.grid(row=0, column=2, padx=5, pady=5)
 
         # Create timer
+        self.remaining_time = 0
+        self.selected_duration = 0
+        self.timer_running = False
         self.timer_frame = tk.Frame(root, bg="white")
-        self.timer_frame.place(x=650, y=60)
+        self.timer_frame.place(x=650, y=10)
         self.timer_label = tk.Label(self.timer_frame, text=self.format_time(self.remaining_time), font=("Arial", 16, "bold"), fg="blue", bg="white")
         self.timer_label.grid(row=0, column=0, columnspan=2, pady=5)
         self.start_timer_button = tk.Button(self.timer_frame, text="Start Match", command=self.start_timer)
