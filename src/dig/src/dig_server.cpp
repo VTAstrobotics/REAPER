@@ -12,7 +12,6 @@
 #include "SparkMax.hpp"
 #include "state_messages_utils/motor_to_msg.hpp"
 
-
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
@@ -258,13 +257,7 @@ namespace dig_server
       // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
       // r_vib_mtr_.BurnFlash();
 
-
-      RCLCPP_DEBUG(this->get_logger(), "Ready for actireturnon");
-      if(&l_bckt_mtr_ == nullptr){
-              RCLCPP_DEBUG(this->get_logger(), "null pointer");
-      }
-
-
+      RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }
 
   private:
