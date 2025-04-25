@@ -125,7 +125,8 @@ namespace dig_server
       // Left link cancoder configs
       configs::CANcoderConfiguration l_link_cancoder_config_;
       l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      l_link_cancoder_config_.MagnetSensor.MagnetOffset = L_LINK_ENCODER_MAGIC_NUMBER_;
+      l_link_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("left_linkage_offset").as_double();
+
 
       l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
 
@@ -146,7 +147,8 @@ namespace dig_server
       // Right linkage cancoder configs
       configs::CANcoderConfiguration r_link_cancoder_config_;
       r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
-      r_link_cancoder_config_.MagnetSensor.MagnetOffset = R_LINK_ENCODER_MAGIC_NUMBER_;
+      r_link_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_linkage_offset").as_double();
+;
 
       r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
 
@@ -220,7 +222,8 @@ namespace dig_server
       // Left bckt cancoder configs
       configs::CANcoderConfiguration l_bckt_cancoder_config_;
       l_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = L_BCKT_ENCODER_MAGIC_NUMBER_;
+      l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("left_bucket_offset").as_double();
+      ;
 
       l_bckt_cancoder_.GetConfigurator().Apply(l_bckt_cancoder_config_);
 
@@ -241,7 +244,7 @@ namespace dig_server
       // Right bckt cancoder configs
       configs::CANcoderConfiguration r_bckt_cancoder_config_;
       r_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive; // INVERTED BECAUSE THE CANCODER IS MOUNTED INVERTED, EVEN THOUGH THE MOTOR IS NOT!
-      r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = R_BCKT_ENCODER_MAGIC_NUMBER_;
+      r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_bucket_offset").as_double();;
 
       r_bckt_cancoder_.GetConfigurator().Apply(r_bckt_cancoder_config_);
 
