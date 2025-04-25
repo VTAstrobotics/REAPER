@@ -301,7 +301,7 @@ namespace dig_server
     hardware::TalonFX r_bckt_mtr_{24, "can1"};
     hardware::CANcoder r_bckt_cancoder_{4, "can1"};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
-    mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, true};
+    mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, false};
 
     // vibration motors
     // SparkMax l_vib_mtr_{"can1", 22};
@@ -316,10 +316,10 @@ namespace dig_server
     const float DEFAULT_VAL_{-987654.321};
 
     // whatever values aligns 0.25 as straight up and -0.25 as straight down
-    const float L_LINK_ENCODER_MAGIC_NUMBER_{-0.443848};
-    const float R_LINK_ENCODER_MAGIC_NUMBER_{-0.341309};
-    const float L_BCKT_ENCODER_MAGIC_NUMBER_{0.067383};
-    const float R_BCKT_ENCODER_MAGIC_NUMBER_{0.315918};
+    const float L_LINK_ENCODER_MAGIC_NUMBER_{-0.539063};
+    const float R_LINK_ENCODER_MAGIC_NUMBER_{-0.947510};
+    const float L_BCKT_ENCODER_MAGIC_NUMBER_{0.814453};
+    const float R_BCKT_ENCODER_MAGIC_NUMBER_{0.727295};
 
     // position limits
     const float LINK_MIN_POS_{-.15};

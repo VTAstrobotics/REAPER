@@ -178,8 +178,8 @@ private:
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		// dig_goal.link_pos_goal = -0.1;
-		// dig_goal.bckt_pos_goal = 0.1;
+		dig_goal.link_pos_goal = -0.1;
+		//dig_goal.bckt_pos_goal = 0.1;
         }
 
        if (valid_toggle_press(BUTTON_X, raw)) {
