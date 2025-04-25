@@ -183,9 +183,9 @@ private:
         }
 
        if (valid_toggle_press(BUTTON_X, raw)) {
-            RCLCPP_INFO(this->get_logger(), "X: Auto dig");
+            RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
 
-            // dig_goal.auton = true;
+            // dig_goal.scoop = true;
             // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
         }
 

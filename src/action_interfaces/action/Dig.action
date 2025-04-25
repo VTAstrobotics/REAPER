@@ -17,7 +17,8 @@ float32 hstp_pos_goal -987654.321
 # Type 3: Autonomous control
 # apparently you can only use the std_srvs/Trigger for services not actions?
 # unfortunately, it doesnt seem you can detect whether data was sent or not.
-bool auton false
+bool scoop false
+bool dig_to_dump false
 ---
 # Result
 float32 est_link_goal

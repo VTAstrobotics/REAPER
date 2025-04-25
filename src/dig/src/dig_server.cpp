@@ -36,11 +36,6 @@ namespace dig_server
       r_bckt_mtr_.ClearStickyFaults();
       l_bckt_mtr_.ClearStickyFaults();
 
-    // const float L_LINK_ENCODER_MAGIC_NUMBER_{-0.443848};
-    // const float R_LINK_ENCODER_MAGIC_NUMBER_{-0.341309};
-    // const float L_BCKT_ENCODER_MAGIC_NUMBER_{0.067383};
-    // const float R_BCKT_ENCODER_MAGIC_NUMBER_{0.315918};
-      
       this->declare_parameter("left_linkage_offset", -.443848);
       this->declare_parameter("right_linkage_offset", -.341309);
       this->declare_parameter("left_bucket_offset", 0.067383);
@@ -52,7 +47,6 @@ namespace dig_server
       parameter_callback->add_parameter_callback("right_linkage_offset", std::bind(&DigActionServer::set_right_linkage_offset,this,std::placeholders::_1));
       parameter_callback->add_parameter_callback("left_bucket_offset", std::bind(&DigActionServer::set_left_bucket_offset,this,std::placeholders::_1));
       parameter_callback->add_parameter_callback("right_bucket_offset", std::bind(&DigActionServer::set_right_bucket_offset,this,std::placeholders::_1));
-      
 
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
@@ -85,10 +79,6 @@ namespace dig_server
 
       // Slot 1 gains
       link_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      link_configs.Slot1.kS = 0.003;
-      link_configs.Slot1.kV = 0.0;
-      // link_configs.Slot1.kA = 0;
-      // link_configs.Slot1.kG = 0;
       link_configs.Slot1.kP = 3; // 0.8 * K_u;
       // link_configs.Slot1.kI = 0; // 0; PD controller
       link_configs.Slot1.kD = 0.1; //0.1 * K_u * T_u;
@@ -127,7 +117,6 @@ namespace dig_server
       l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
       l_link_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("left_linkage_offset").as_double();
 
-
       l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
 
       // Use absolute cancoder on the left linkage motor
@@ -148,7 +137,6 @@ namespace dig_server
       configs::CANcoderConfiguration r_link_cancoder_config_;
       r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
       r_link_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_linkage_offset").as_double();
-;
 
       r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
 
@@ -182,10 +170,6 @@ namespace dig_server
 
       // Slot 1 gains
       bckt_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      // bckt_configs.Slot1.kS = 0;
-      // bckt_configs.Slot1.kV = 0;
-      // bckt_configs.Slot1.kA = 0;
-      // bckt_configs.Slot1.kG = 0;
       // bckt_configs.Slot1.kP = .03; // 0.8 * K_u;
       // bckt_configs.Slot1.kI = 0; // 0; PD controller
       // bckt_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
@@ -223,7 +207,6 @@ namespace dig_server
       configs::CANcoderConfiguration l_bckt_cancoder_config_;
       l_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
       l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("left_bucket_offset").as_double();
-      ;
 
       l_bckt_cancoder_.GetConfigurator().Apply(l_bckt_cancoder_config_);
 
@@ -244,7 +227,7 @@ namespace dig_server
       // Right bckt cancoder configs
       configs::CANcoderConfiguration r_bckt_cancoder_config_;
       r_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive; // INVERTED BECAUSE THE CANCODER IS MOUNTED INVERTED, EVEN THOUGH THE MOTOR IS NOT!
-      r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_bucket_offset").as_double();;
+      r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_bucket_offset").as_double();
 
       r_bckt_cancoder_.GetConfigurator().Apply(r_bckt_cancoder_config_);
 
@@ -315,12 +298,6 @@ namespace dig_server
      * TODO: def this in header file used in both places? */
     const float DEFAULT_VAL_{-987654.321};
 
-    // whatever values aligns 0.25 as straight up and -0.25 as straight down
-    const float L_LINK_ENCODER_MAGIC_NUMBER_{-0.539063};
-    const float R_LINK_ENCODER_MAGIC_NUMBER_{-0.947510};
-    const float L_BCKT_ENCODER_MAGIC_NUMBER_{0.814453};
-    const float R_BCKT_ENCODER_MAGIC_NUMBER_{0.727295};
-
     // position limits
     const float LINK_MIN_POS_{-.15};
     const float LINK_MAX_POS_{0.35};
@@ -329,14 +306,25 @@ namespace dig_server
 
     // lookup table for auto dig
     // time (s),actuator angle (external rotation [0, 1]),bucket angle (rotations [0, 1]), vibration (duty cycle [-1,1])
-    float LOOKUP_TB_[7][4] = {
-      0,0.1,-0.3,0,
-      1,-0.5,0.5,0,
-      2,-0.1,0.16,0,
-      3,-0.1,0.16,0,
-      4,-0.1,0.16,0,
-      5,-0.1,0.16,0,
-      6,-0.1,0.16,0,
+    // float SCOOP_LUT_[7][4] = {
+    std::vector<std::vector<float>> SCOOP_LUT_ = {
+      {0,0.1,-0.3,0},
+      {1,-0.5,0.5,0},
+      {2,-0.1,0.16,0},
+      {3,-0.1,0.16,0},
+      {4,-0.1,0.16,0},
+      {5,-0.1,0.16,0},
+      {6,-0.1,0.16,0},
+    };
+
+    std::vector<std::vector<float>> DIG_TO_DUMP_LUT_ = {
+      {0,0.1,-0.3,0},
+      {1,-0.5,0.5,0},
+      {2,-0.1,0.16,0},
+      {3,-0.1,0.16,0},
+      {4,-0.1,0.16,0},
+      {5,-0.1,0.16,0},
+      {6,-0.1,0.16,0},
     };
 
 
@@ -415,7 +403,7 @@ namespace dig_server
       auto result = std::make_shared<Dig::Result>();
       std::vector<std::thread> threads;
 
-      if (goal->auton) { // full auto
+      if (goal->scoop || goal->dig_to_dump) { // full auto
         RCLCPP_DEBUG(this->get_logger(), "execute: autonomous control");
         execute_auton(goal_handle, feedback, result); // note we do not need a new thread
 
@@ -858,28 +846,30 @@ namespace dig_server
       RCLCPP_DEBUG(this->get_logger(), "execute_auton: executing...");
       rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
 
+      std::vector<std::vector<float>>& lookup_tb = goal_handle->get_goal()->scoop ? SCOOP_LUT_ : DIG_TO_DUMP_LUT_;
+
       float& link_percent_done = feedback->percent_link_done;
       float& bckt_percent_done = feedback->percent_bckt_done;
       float& vibr_percent_done = feedback->percent_vibr_done;
 
       // time (s),linkage angle (rots),bucket angle (rots), vibration (duty cycle [-1,1])
-      for (size_t i = 0; i < sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0]); i++)
+      for (size_t i = 0; i < sizeof(lookup_tb)/sizeof(lookup_tb.at(0)); i++)
       {
         // get the starting time for this iteration of the loop
         double next_goal_time = this->now().seconds();
 
-        if (i == sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0]) - 1)
+        if (i == sizeof(lookup_tb)/sizeof(lookup_tb.at(0)) - 1)
         {
           // if it's the last iteration, we can't look-ahead, so assume some constant length of time
           next_goal_time += 1; // TODO change this??
         } else {
-          next_goal_time += (LOOKUP_TB_[i+1][0] - LOOKUP_TB_[i][0]);
+          next_goal_time += (lookup_tb.at(i+1).at(0) - lookup_tb.at(i).at(0));
         }
 
         RCLCPP_DEBUG(this->get_logger(), "execute_auton: i=%ld now = %f, nex goal = %f", i, this->now().seconds(), next_goal_time);
 
-        for (size_t j = 0; j < sizeof(LOOKUP_TB_[0])/sizeof(LOOKUP_TB_[0][0]); j++) {
-          RCLCPP_DEBUG(this->get_logger(), "%f, ", LOOKUP_TB_[i][j]);
+        for (size_t j = 0; j < sizeof(lookup_tb.at(0))/sizeof(lookup_tb.at(0).at(0)); j++) {
+          RCLCPP_DEBUG(this->get_logger(), "%f, ", lookup_tb.at(i).at(j));
         }
 
         std::array<std::thread, 2> threads;
@@ -889,15 +879,15 @@ namespace dig_server
           if (goal_handle->is_canceling()) { return; }
 
           // linkage and bucket to a set position
-          //link_pos(LOOKUP_TB_[i][1]);
-          //bckt_pos(LOOKUP_TB_[i][2]);
+          //link_pos(lookup_tb.at(i).at(1));
+          //bckt_pos(lookup_tb.at(i).at(2));
 
-          threads[0] = std::thread([this, goal_handle, feedback, result, i, &link_percent_done]() {
+          threads[0] = std::thread([this, goal_handle, feedback, result, lookup_tb, i, &link_percent_done]() {
               execute_pos(
                   goal_handle,
                   feedback,
                   result,
-                  LOOKUP_TB_[i][1],
+                  lookup_tb.at(i).at(1),
                   1, // vel
                   &l_link_mtr_,
                   LINK_MIN_POS_,
@@ -908,12 +898,12 @@ namespace dig_server
                   __func__);
           });
 
-          threads[1] = std::thread([this, goal_handle, feedback, result, i, &bckt_percent_done]() {
+          threads[1] = std::thread([this, goal_handle, feedback, result, lookup_tb, i, &bckt_percent_done]() {
               execute_pos(
                   goal_handle,
                   feedback,
                   result,
-                  LOOKUP_TB_[i][2],
+                  lookup_tb.at(i).at(2),
                   1, // vel
                   &l_bckt_mtr_,
                   BCKT_MIN_POS_,
@@ -928,11 +918,11 @@ namespace dig_server
           threads[1].join();
 
           // vibration motors duty cycle
-//          vibr_pwr(LOOKUP_TB_[i][3]);
+//          vibr_pwr(lookup_tb.at(i).at(3));
 
-          link_percent_done = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
-          bckt_percent_done = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
-          vibr_percent_done = (i/sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0])) * 100;
+          link_percent_done = (i/sizeof(lookup_tb)/sizeof(lookup_tb.at(0))) * 100;
+          bckt_percent_done = (i/sizeof(lookup_tb)/sizeof(lookup_tb.at(0))) * 100;
+          vibr_percent_done = (i/sizeof(lookup_tb)/sizeof(lookup_tb.at(0))) * 100;
           goal_handle->publish_feedback(feedback);
 
           loop_rate.sleep();
