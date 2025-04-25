@@ -858,9 +858,9 @@ namespace dig_server
       RCLCPP_DEBUG(this->get_logger(), "execute_auton: executing...");
       rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
 
-      auto &link_percent_done = feedback->percent_link_done;
-      auto &bckt_percent_done = feedback->percent_bckt_done;
-      auto &vibr_percent_done = feedback->percent_vibr_done;
+      float& link_percent_done = feedback->percent_link_done;
+      float& bckt_percent_done = feedback->percent_bckt_done;
+      float& vibr_percent_done = feedback->percent_vibr_done;
 
       // time (s),linkage angle (rots),bucket angle (rots), vibration (duty cycle [-1,1])
       for (size_t i = 0; i < sizeof(LOOKUP_TB_)/sizeof(LOOKUP_TB_[0]); i++)
@@ -882,6 +882,8 @@ namespace dig_server
           RCLCPP_DEBUG(this->get_logger(), "%f, ", LOOKUP_TB_[i][j]);
         }
 
+        std::array<std::thread, 2> threads;
+
         while (this->now().seconds() < next_goal_time)
         {
           if (goal_handle->is_canceling()) { return; }
@@ -890,36 +892,40 @@ namespace dig_server
           //link_pos(LOOKUP_TB_[i][1]);
           //bckt_pos(LOOKUP_TB_[i][2]);
 
+          threads[0] = std::thread([this, goal_handle, feedback, result, i, &link_percent_done]() {
+              execute_pos(
+                  goal_handle,
+                  feedback,
+                  result,
+                  LOOKUP_TB_[i][1],
+                  1, // vel
+                  &l_link_mtr_,
+                  LINK_MIN_POS_,
+                  LINK_MAX_POS_,
+                  link_percent_done,
+                  std::bind(&DigActionServer::link_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
+                  result->est_link_goal,
+                  __func__);
+          });
 
-      execute_pos(
-        goal_handle,
-        feedback,
-        result,
-        LOOKUP_TB_[i][1],
-        1, // vel
-        &l_link_mtr_,
-        LINK_MIN_POS_,
-        LINK_MAX_POS_,
-        link_percent_done,
-        std::bind(&DigActionServer::link_pos, this, _1, _2),
-        result->est_link_goal,
-        __func__
-      );
+          threads[1] = std::thread([this, goal_handle, feedback, result, i, &bckt_percent_done]() {
+              execute_pos(
+                  goal_handle,
+                  feedback,
+                  result,
+                  LOOKUP_TB_[i][2],
+                  1, // vel
+                  &l_bckt_mtr_,
+                  BCKT_MIN_POS_,
+                  BCKT_MAX_POS_,
+                  bckt_percent_done,
+                  std::bind(&DigActionServer::bckt_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
+                  result->est_bckt_goal,
+                  __func__);
+          });
 
-      execute_pos(
-        goal_handle,
-        feedback,
-        result,
-        LOOKUP_TB_[i][2],
-        1, // vel
-        &l_bckt_mtr_,
-        BCKT_MIN_POS_,
-        BCKT_MAX_POS_,
-        bckt_percent_done,
-        std::bind(&DigActionServer::bckt_pos, this, _1, _2),
-        result->est_bckt_goal,
-        __func__
-      );
+          threads[0].join();
+          threads[1].join();
 
           // vibration motors duty cycle
 //          vibr_pwr(LOOKUP_TB_[i][3]);
