@@ -54,9 +54,9 @@ class MultiTopicSubscriber(Node):
 
             # Time -> Ros Time
             msg_time = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-            now = self.get_clock().now().to_msg() * 1e-9
-            now_time = now.sec + now.nanosec * 1e-9
-            latency_ms = (now_time - msg_time)
+            now = self.get_clock().now().to_msg() #* 1e-9
+            now_time = now.sec + now.nanosec #* 1e-9
+            latency_ms = (now_time - msg_time) * 1e-9
 
             self.camera_frames[topic] = (cv_image, latency_ms)
 
@@ -121,8 +121,8 @@ class TkMultiTopicApp:
         self.selected_duration = 0
         self.timer_running = False
         self.timer_frame = tk.Frame(root, bg="white")
-        self.timer_frame.place(x=650, y=10)
-        self.timer_label = tk.Label(self.timer_frame, text=self.format_time(self.remaining_time), font=("Arial", 16, "bold"), fg="blue", bg="white")
+        self.timer_frame.place(x=650, y=0)
+        self.timer_label = tk.Label(self.timer_frame, text=self.format_time(self.remaining_time), font=("Arial", 16, "bold"), fg="red", bg="white")
         self.timer_label.grid(row=0, column=0, columnspan=2, pady=5)
         self.start_timer_button = tk.Button(self.timer_frame, text="Start Match", command=self.start_timer)
         self.start_timer_button.grid(row=1, column=0)
