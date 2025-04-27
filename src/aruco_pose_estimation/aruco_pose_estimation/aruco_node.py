@@ -101,10 +101,11 @@ class PosePublisher(Node):
         try:
             frame = imutils.resize(frame, width=600)
             corners, ids, _ = self.arucoDetector.detectMarkers(frame)
-            cloneframe = frame
-            # cv2.aruco.drawDetectedMarkers(cloneframe, corners, ids)
+            cloneframe = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+            
 
             if ids is not None and len(corners) > 0:
+                
                 
 
                 for markerCorner, markerID in zip(corners, ids.flatten()):
@@ -129,8 +130,10 @@ class PosePublisher(Node):
                         self.pose_publisher.publish(pose_msg)
                         self.get_logger().info(str(pose_msg))
                         self.get_logger().info(f"Published pose")
-                        # annotated = self.bridge.cv2_to_imgmsg(frame, encoding="bgra8")
-                        # self.annotated_publisher.publish(annotated)
+                        cv2.aruco.drawDetectedMarkers(cloneframe, corners, ids)
+                        cv2.drawFrameAxes(cloneframe, self.cameraMatrix, self.distCoeffs, rvec, tvec, 0.1)
+                        annotated = self.bridge.cv2_to_imgmsg(cloneframe, encoding="bgr8")
+                        self.annotated_publisher.publish(annotated)
 
         except Exception as e:
             self.get_logger().error(f'Error processing frame: {str(e)}')
