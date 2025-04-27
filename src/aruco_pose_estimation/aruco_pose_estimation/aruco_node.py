@@ -39,6 +39,7 @@ class PosePublisher(Node):
         
 
         self.pose_publisher = self.create_publisher(Pose, f'pose_{camera}', 10)
+        self.annotated_publisher = self.create_publisher(Image, f"annotated_image_{camera}", 3)
         self.stop_subscription = self.create_subscription(
             Bool,
             'stop_aruco',
@@ -59,7 +60,7 @@ class PosePublisher(Node):
         self.arucoDetector = cv2.aruco.ArucoDetector(self.arucoDict, self.arucoParams)
 
         # Load camera calibration data
-        datapath = "/workspace/src/aruco_pose_estimation/config"
+        datapath = "/home/astrobotics/Documents/REAPER/src/aruco_pose_estimation/config"
         paramPath = os.path.join(datapath, "matrixanddist.npz")
         if not os.path.exists(paramPath):
             self.get_logger().error(".npz path does not exist")
@@ -93,15 +94,19 @@ class PosePublisher(Node):
             self.get_logger().error(f"Failed to convert image: {e}")
             return
         
-        frame = self.bridge.imgmsg_to_cv2(msg, 'bgra8')
+        # frame = self.bridge.imgmsg_to_cv2(msg, 'bgra8')
 
         if self.stop:
             return
         try:
             frame = imutils.resize(frame, width=600)
             corners, ids, _ = self.arucoDetector.detectMarkers(frame)
+            cloneframe = frame
+            # cv2.aruco.drawDetectedMarkers(cloneframe, corners, ids)
 
             if ids is not None and len(corners) > 0:
+                
+
                 for markerCorner, markerID in zip(corners, ids.flatten()):
                     imagePoints = markerCorner.reshape((4, 2))
                     success, rvec, tvec = cv2.solvePnP(
@@ -124,6 +129,8 @@ class PosePublisher(Node):
                         self.pose_publisher.publish(pose_msg)
                         self.get_logger().info(str(pose_msg))
                         self.get_logger().info(f"Published pose")
+                        # annotated = self.bridge.cv2_to_imgmsg(frame, encoding="bgra8")
+                        # self.annotated_publisher.publish(annotated)
 
         except Exception as e:
             self.get_logger().error(f'Error processing frame: {str(e)}')
