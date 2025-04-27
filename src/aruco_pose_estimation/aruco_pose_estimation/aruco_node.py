@@ -59,7 +59,7 @@ class PosePublisher(Node):
         self.arucoDetector = cv2.aruco.ArucoDetector(self.arucoDict, self.arucoParams)
 
         # Load camera calibration data
-        datapath = "/home/astrobotics/ArucoTagROS/"
+        datapath = "/workspace/src/aruco_pose_estimation/data"
         paramPath = os.path.join(datapath, "matrixanddist.npz")
         if not os.path.exists(paramPath):
             self.get_logger().error(".npz path does not exist")
