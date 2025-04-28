@@ -275,7 +275,6 @@ namespace dig_server
     hardware::CANcoder l_link_cancoder_{1, "can1"};
     hardware::TalonFX r_link_mtr_{23, "can1"};
     hardware::CANcoder r_link_cancoder_{2, "can1"};
-    controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
     mechanisms::SimpleDifferentialMechanism link_mech{l_link_mtr_, r_link_mtr_, false};
 
     // bucket rotators
@@ -689,25 +688,17 @@ namespace dig_server
      * sets the linkage motors to go to a position within its bounds
      * @param pos the position for the linkage to go to
      */
-    void link_pos(double pos, double vel = 1) {
+    void link_pos(double pos) {
       if (!linkage_in_bounds(pos)) {
         controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
         link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
       }
 
-      (void)vel; // for unused warning
+      units::angle::turn_t angle{pos * 1_tr};
+      controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
 
       link_mech.Periodic();
-
-      units::angle::turn_t angle{pos * 1_tr};
-      units::angular_velocity::turns_per_second_t speed{vel};
-
-      // controls::MotionMagicVoltage link_req{0_tr};
-      // l_link_mtr_.SetControl(link_req);
-      // l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
-
-      controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
       link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
     }
 
@@ -715,20 +706,17 @@ namespace dig_server
      * sets the bucket motors to go to a position within its bounds
      * @param pos the position for the linkage to go to
      */
-    void bckt_pos(double pos, double vel = 1) {
-      if (!bucket_in_bounds(pos)) { return; }
-      (void)vel; // for unused warning
-
-      bckt_mech.Periodic();
+    void bckt_pos(double pos) {
+      if (!bucket_in_bounds(pos)) {
+        controls::DifferentialMotionMagicDutyCycle position_command{l_bckt_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
+        bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
+        return;
+      }
 
       units::angle::turn_t angle{pos * 1_tr};
-      units::angular_velocity::turns_per_second_t speed{vel};
-
-      // l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
-      // l_bckt_pos_duty_cycle_.Position = angle;
-      // l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
-
       controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
+
+      bckt_mech.Periodic();
       bckt_mech.SetControl(position_command);
     }
 
@@ -747,7 +735,7 @@ namespace dig_server
 
     void execute_pos(const std::shared_ptr<GoalHandleDig> goal_handle,
       std::shared_ptr<Dig::Feedback> feedback,
-      std::shared_ptr<Dig::Result> result, double goal_val, double vel,
+      std::shared_ptr<Dig::Result> result, double goal_val,
       hardware::TalonFX* motor, const double MIN_POS, const double MAX_POS,
       float& percent_done, std::function<void(double, double)> pos_func,
       float& est_goal, const char* print_prefix)
@@ -765,7 +753,7 @@ namespace dig_server
         RCLCPP_DEBUG_ONCE(this->get_logger(), "execute_pos: Loop rate %f ms", 1000 * (1.0/(double)(LOOP_RATE_HZ_))); //this is the correct math with correct units :)
         ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0/(double)(LOOP_RATE_HZ_)));
 
-        pos_func(goal_val, vel);
+        pos_func(goal_val);
         current_pos = (float)motor->GetPosition().GetValue();
 
         percent_done = (abs(goal_val) - abs(current_pos))/abs(goal_val) * 100;
@@ -792,12 +780,11 @@ namespace dig_server
         feedback,
         result,
         linkage_goal,
-        1, // vel
         &l_link_mtr_,
         LINK_MIN_POS_,
         LINK_MAX_POS_,
         link_percent_done,
-        std::bind(&DigActionServer::link_pos, this, _1, _2),
+        std::bind(&DigActionServer::link_pos, this, _1),
         result->est_link_goal,
         __func__
       );
@@ -818,12 +805,11 @@ namespace dig_server
         feedback,
         result,
         bucket_goal,
-        1, // vel
         &l_bckt_mtr_,
         BCKT_MIN_POS_,
         BCKT_MAX_POS_,
         bckt_percent_done,
-        std::bind(&DigActionServer::bckt_pos, this, _1, _2),
+        std::bind(&DigActionServer::bckt_pos, this, _1),
         result->est_bckt_goal,
         __func__
       );
@@ -888,7 +874,6 @@ namespace dig_server
                   feedback,
                   result,
                   lookup_tb.at(i).at(1),
-                  1, // vel
                   &l_link_mtr_,
                   LINK_MIN_POS_,
                   LINK_MAX_POS_,
@@ -904,7 +889,6 @@ namespace dig_server
                   feedback,
                   result,
                   lookup_tb.at(i).at(2),
-                  1, // vel
                   &l_bckt_mtr_,
                   BCKT_MIN_POS_,
                   BCKT_MAX_POS_,
@@ -936,13 +920,11 @@ namespace dig_server
         result->est_bckt_goal = (double)l_bckt_mtr_.GetPosition().GetValue();
         result->est_vibr_goal = 0;
 
-        // goal_handle->succeed(result);
         RCLCPP_INFO(this->get_logger(), "execute_auton: Goal succeeded");
       } else {
         RCLCPP_ERROR(this->get_logger(), "execute_auton: Goal failed");
       }
 
-      // has_goal_ = false;
     }
 
   }; // class DigActionServer
