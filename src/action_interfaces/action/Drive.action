@@ -1,4 +1,5 @@
-geometry_msgs/Twist velocity_goal 
+geometry_msgs/Twist velocity_goal
+bool drive_auto 
 ---
 geometry_msgs/Twist curr_velocity
 ---
