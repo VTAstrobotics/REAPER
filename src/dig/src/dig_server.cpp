@@ -67,7 +67,7 @@ namespace dig_server
       configs::TalonFXConfiguration link_configs{};
 
       // Slot 0 gains
-      float K_u = 1.0, T_u = 0.04;
+      // float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       link_configs.Slot0.kS = 0.003;
       link_configs.Slot0.kV = 0.80;
@@ -157,7 +157,7 @@ namespace dig_server
       configs::TalonFXConfiguration bckt_configs{};
 
       // Slot 0 gains
-      K_u = 0.5, T_u = 0.04;
+      // K_u = 0.5, T_u = 0.04;
       // not an arm but the gravity changes based on the angle
       bckt_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       bckt_configs.Slot0.kS = 0.008;
