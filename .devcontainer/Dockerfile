@@ -1,8 +1,8 @@
 FROM ros:humble-ros-base-jammy
 
 # Basic ROS2 setup
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-desktop=0.10.0-1* \
+RUN apt update && apt install -y --no-install-recommends \
+    ros-humble-desktop \
     python3 \
     python3-pip \
     && pip3 install setuptools==58.2.0 \
@@ -89,6 +89,12 @@ RUN pip install numpy opencv-python
 RUN sudo apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup
+
+# For simulation
+RUN sudo apt install -y \
+    gazebo \
+    ros-humble-joint-state-publisher-gui \
+    ros-humble-xacro
 
 # install turtlebot demo, including gz, unless on a Jetson
 # i swear that it worked before but it doesnt anymore. So basically install this manually if you want nav stuff until i can figure this out.
