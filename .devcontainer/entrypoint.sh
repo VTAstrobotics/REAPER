@@ -12,6 +12,11 @@ sudo chmod 777 /workspaces/REAPER/.devcontainer/build.log
 #                                                                             #
 ###############################################################################
 
+# Set up git mergetool cli
+git config merge.tool vimdiff
+git config merge.conflictstyle diff3
+git config mergetool.prompt false
+
 # ROS basic build and source
 cd /workspaces/REAPER/
 source build_scripts/build.sh

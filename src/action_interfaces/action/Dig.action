@@ -6,29 +6,26 @@
 ################################################################################
 
 # Type 1: Full manual control (Power)
-float32 dig_link_pwr_goal 0
-float32 dig_bckt_pwr_goal 0
-float32 dig_hstp_pwr_goal 0
-float32 dig_vibr_pwr_goal 0
+float32 link_pwr_goal -987654.321
+float32 bckt_pwr_goal -987654.321
+float32 vibr_pwr_goal -987654.321
 # Type 2: Position control
-float32 dig_link_pos_goal 0
-float32 dig_bckt_pos_goal 0
-float32 dig_hstp_pos_goal 0
+float32 link_pos_goal -987654.321
+float32 bckt_pos_goal -987654.321
+float32 hstp_pos_goal -987654.321
 # it doesn't make sense to have a position goal for vibration motors. use power.
 # Type 3: Autonomous control
 # apparently you can only use the std_srvs/Trigger for services not actions?
 # unfortunately, it doesnt seem you can detect whether data was sent or not.
-bool auton false
-bool pos false
+bool scoop false
+bool dig_to_dump false
 ---
 # Result
-float32 est_dig_link_goal
-float32 est_dig_bckt_goal
-float32 est_dig_hstp_goal
-float32 est_dig_vibr_goal
+float32 est_link_goal
+float32 est_bckt_goal
+float32 est_vibr_goal
 ---
 # Feedback
 float32 percent_link_done
 float32 percent_bckt_done
-float32 percent_hstp_done
 float32 percent_vibr_done
