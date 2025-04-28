@@ -178,8 +178,10 @@ private:
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		dig_goal.link_pos_goal = -0.1;
+		//dig_goal.link_pos_goal = -0.1;
 		//dig_goal.bckt_pos_goal = 0.1;
+		//dig_goal.link_pos_goal = 0;
+		dig_goal.bckt_pos_goal = 0;
         }
 
        if (valid_toggle_press(BUTTON_X, raw)) {
@@ -221,7 +223,7 @@ private:
 
         if (raw.buttons[BUTTON_RBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal = 0.20;
+            dig_goal.link_pwr_goal = 0.40;
 
             // dump_goal.deposition_goal = 0.1;
             // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
@@ -279,68 +281,6 @@ private:
          **********************************************************************/
 
         // Drive throttle
-        float LT = raw.axes[AXIS_LTRIGGER];
-        float RT = raw.axes[AXIS_RTRIGGER];
-
-        /*
-         * Shift triggers from [-1, 1], where
-         *    1 = not pressed
-         *   -1 = fully pressed
-         *    0 = halfway
-         * to [0, 1] where
-         *    0 = not pressed
-         *    1 = fully pressed
-         */
-        LT = ((-1 * LT) + 1) * 0.5;
-        RT = ((-1 * RT) + 1) * 0.5;
-
-        // Apply cubic function for better control
-        LT = std::pow(LT, 3);
-        RT = std::pow(RT, 3);
-
-        // drive_vel.linear.x  = RT - LT; // [-1, 1]
-        drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some reason. temporary fix, make sure all spark max inversion settings are same. TODO!
-
-        // Drive turning
-        float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
-
-        // Apply cubic function for better control
-        LSX = std::pow(LSX, 3);
-
-        drive_vel.angular.z = LSX; // [-1, 1]
-
-        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-
-        // Cameron
-        // float LSY = raw.axes[AXIS_LEFTY];
-        // LSY = std::pow(LSY, 3);
-        // drive_vel.linear.x = LSY;
-
-        // Drive turning
-        // float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
-
-        // Apply cubic function for better control
-        // RSX = std::pow(RSX, 3);
-
-        // drive_vel.angular.z = RSX; // [-1, 1]
-
-        // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-        /**********************************************************************
-         *                                                                    *
-         * DIG SYSTEM CONTROLS                                                *
-         *                                                                    *
-         **********************************************************************/
-        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-        float RSY = raw.axes[AXIS_RIGHTY];
-
-        // Apply cubic function for better control
-        RSY = std::pow(RSY, 3);
-        dig_goal.bckt_pwr_goal = -RSY;
-        dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
-
-        // Cameron
         // float LT = raw.axes[AXIS_LTRIGGER];
         // float RT = raw.axes[AXIS_RTRIGGER];
 
@@ -360,9 +300,72 @@ private:
         // LT = std::pow(LT, 3);
         // RT = std::pow(RT, 3);
 
-        // dig_goal.bckt_pwr_goal = 0.1 * ( RT - LT);
+        // drive_vel.linear.x  = RT - LT; // [-1, 1]
+        // drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some reason. temporary fix, make sure all spark max inversion settings are same. TODO!
 
-            // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f", dig_goal.bckt_pwr_goal);
+        // Drive turning
+        // float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+
+        // Apply cubic function for better control
+        // LSX = std::pow(LSX, 3);
+
+        // drive_vel.angular.z = LSX; // [-1, 1]
+
+        // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+
+
+        // Cameron
+        float LSY = raw.axes[AXIS_LEFTY];
+        LSY = std::pow(LSY, 3);
+        drive_vel.linear.x = -LSY;
+
+        // Drive turning
+        //float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
+        float RSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+
+        // Apply cubic function for better control
+        RSX = std::pow(RSX, 3);
+
+        drive_vel.angular.z = RSX; // [-1, 1]
+
+        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+
+        /**********************************************************************
+         *                                                                    *
+         * DIG SYSTEM CONTROLS                                                *
+         *                                                                    *
+         **********************************************************************/
+        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+        // float RSY = raw.axes[AXIS_RIGHTY];
+
+        // Apply cubic function for better control
+        // RSY = std::pow(RSY, 3);
+        // dig_goal.bckt_pwr_goal = -RSY;
+        // dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+
+        // Cameron
+        float LT = raw.axes[AXIS_LTRIGGER];
+        float RT = raw.axes[AXIS_RTRIGGER];
+
+        /*
+         * Shift triggers from [-1, 1], where
+         *    1 = not pressed
+         *   -1 = fully pressed
+         *    0 = halfway
+         * to [0, 1] where
+         *    0 = not pressed
+         *    1 = fully pressed
+         */
+        LT = ((-1 * LT) + 1) * 0.5;
+        RT = ((-1 * RT) + 1) * 0.5;
+
+        // Apply cubic function for better control
+        LT = std::pow(LT, 3);
+        RT = std::pow(RT, 3);
+
+        dig_goal.bckt_pwr_goal =- 0.1 * ( RT - LT);
+
+        // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f", dig_goal.bckt_pwr_goal);
 
         /**********************************************************************
          *                                                                    *

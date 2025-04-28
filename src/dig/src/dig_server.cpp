@@ -197,9 +197,9 @@ namespace dig_server
       bckt_configs.MotorOutput.Inverted = signals::InvertedValue::Clockwise_Positive;
 
       // Soft limits
-      bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
+      bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = false;
       bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = BCKT_MAX_POS_;
-      bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
+      bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = false;
       bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = BCKT_MIN_POS_;
 
       // Individual configs for the left bucket motor
@@ -474,7 +474,7 @@ namespace dig_server
 
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
-      if (pwr == 0) { // hold position
+      if (APPROX(pwr, 0)) { // hold position
         controls::DifferentialVelocityVoltage velocity_command{0_tps, 0_tr}; // velocity turns per second
         link_mech.SetControl(velocity_command);
       } else {
@@ -712,7 +712,7 @@ namespace dig_server
     }
 
     /**
-     * sets the linkage motors to go to a position within its bounds
+     * sets the bucket motors to go to a position within its bounds
      * @param pos the position for the linkage to go to
      */
     void bckt_pos(double pos, double vel = 1) {
