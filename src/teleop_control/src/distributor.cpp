@@ -354,6 +354,15 @@ private:
         send_dump_goal_options.result_callback = std::bind(&Distributor::dump_result_cb, this, _1);
         //TODO: decide what controls each person has LMAO
 
+        const int STOP_SEQ_BTNS[] = { BUTTON_BACK, BUTTON_START, BUTTON_MANUFACTURER };
+        if (valid_presses(STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS)/sizeof(*STOP_SEQ_BTNS), raw) && !stop_mode_) {
+            RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. SHUTTING DOWN");
+            teleop_disabled_ = !teleop_disabled_;
+            stop_mode_ = true;
+        } else {
+            stop_mode_ = false;
+        }
+
         if (valid_press(BUTTON_LBUMPER, raw)) {
             RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
             dig_goal.dig_link_pwr_goal += 0.05;
