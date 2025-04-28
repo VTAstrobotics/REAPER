@@ -60,5 +60,7 @@ install(TARGETS
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
-
+install(DIRECTORY
+	launch
+	DESTINATION share/${PROJECT_NAME}/)
 ament_package()
