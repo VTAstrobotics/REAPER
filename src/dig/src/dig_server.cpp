@@ -135,23 +135,23 @@ namespace dig_server
     rclcpp_action::Server<Dig>::SharedPtr action_server_;
 
     // linkage actuators
-    hardware::TalonFX l_link_mtr_{20, "can0"}; // canid (each motor), can interface (same for all)
+    hardware::TalonFX l_link_mtr_{20, "can1"}; // canid (each motor), can interface (same for all)
     controls::DutyCycleOut l_link_pwr_duty_cycle_{0}; // [-1, 1]
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX r_link_mtr_{23, "can0"};
+    hardware::TalonFX r_link_mtr_{23, "can1"};
 
     // bucket rotators
-    hardware::TalonFX l_bckt_mtr_{21, "can0"};
+    hardware::TalonFX l_bckt_mtr_{21, "can1"};
     controls::DutyCycleOut l_bckt_pwr_duty_cycle_{0};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
-    hardware::TalonFX r_bckt_mtr_{24, "can0"};
+    hardware::TalonFX r_bckt_mtr_{24, "can1"};
 
     // hardstop linear actuator
-    SparkMax hstp_mtr_{"can0", 26};
+    SparkMax hstp_mtr_{"can1", 26};
 
     // vibration motors
-    SparkMax l_vib_mtr_{"can0", 22};
-    SparkMax r_vib_mtr_{"can0", 25};
+    SparkMax l_vib_mtr_{"can1", 22};
+    SparkMax r_vib_mtr_{"can1", 25};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{50};

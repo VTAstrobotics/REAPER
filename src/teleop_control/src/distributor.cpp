@@ -43,8 +43,8 @@ public:
         this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig_action");
         this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
 
-        this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
-        this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy_operator", 10, std::bind(&Distributor::joy1_cb, this, _1));
+        this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("driver/joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
+        this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("operator/joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
 
         for (size_t i = 0; i < sizeof(last_btn_press_)/sizeof(*last_btn_press_); i++)
         {
