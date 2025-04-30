@@ -1,4 +1,5 @@
 geometry_msgs/Twist velocity_goal
+float32 distance_meters
 bool drive_auto 
 ---
 geometry_msgs/Twist curr_velocity

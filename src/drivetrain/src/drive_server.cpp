@@ -55,6 +55,8 @@ namespace drive_server
     // controls::DutyCycleOut drive_right_duty{0.0};
     double drive_left_duty = 0;
     double drive_right_duty = 0;
+    double driven_dist = 0;
+    double drive_factor = 0; //TODO: set this constant
     SparkMax left_motor{"can1", 10};
     SparkMax right_motor{"can1", 11};
     // Motor 1
@@ -113,6 +115,20 @@ namespace drive_server
       left_motor.SetVelocity(left_speed);
       right_motor.SetVelocity(right_speed);
     }
+
+    void drive_dist(double goal_dist){
+      driven_dist += drive_factor * (left_motor.GetPosition() + right_motor.GetPosition())/2;
+      
+      
+      left_motor.SetCtrlType(CtrlType::kPosition);
+      left_motor.SetCtrlType(CtrlType::kPosition);
+      left_motor.SetSetpoint(goal_dist);
+      right_motor.SetSetpoint(goal_dist);
+
+
+
+    }
+
     std::vector<double> curvatureDrive(double linear_speed, double z_rotation)
     {
       linear_speed = std::clamp(linear_speed, -1.0, 1.0);
@@ -132,69 +148,74 @@ namespace drive_server
       std::vector<double> speeds = {left_speed, right_speed};
       return speeds;
     }
-      void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
+    void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
+    {
+
+      RCLCPP_INFO(this->get_logger(), "Executing goal");
+      rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
+
+      const auto goal = goal_handle->get_goal();
+
+      auto feedback = std::make_shared<Drive::Feedback>();
+      auto result = std::make_shared<Drive::Result>();
+      double linear = goal->velocity_goal.linear.x;
+      double angular = goal->velocity_goal.angular.z;
+
+      double v_left = linear - angular;
+      double v_right = linear + angular;
+
+      auto start_time = this->now();
+      auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
+
+      while (rclcpp::ok() && this->now() < end_time)
       {
-
-        RCLCPP_INFO(this->get_logger(), "Executing goal");
-        rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
-
-        const auto goal = goal_handle->get_goal();
-
-        auto feedback = std::make_shared<Drive::Feedback>();
-        auto result = std::make_shared<Drive::Result>();
-        double linear = goal->velocity_goal.linear.x;
-        double angular = goal->velocity_goal.angular.z;
-        if(goal->drive_auto){
-          drive_auto(linear, angular);
-        }
-
-          double v_left = linear - angular;
-          double v_right = linear + angular;
-        
-
-        auto start_time = this->now();
-        auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
-        
-        while (rclcpp::ok() && this->now() < end_time)
+        if (goal_handle->is_canceling())
         {
-          if (goal_handle->is_canceling())
-          {
-            RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-            goal_handle->canceled(result);
-            RCLCPP_INFO(this->get_logger(), "Goal canceled");
-            Drive_Goal_Handle = nullptr;
-            has_goal = false;
-            return;
-          }
-          left_motor.Heartbeat();
-          right_motor.Heartbeat();
-          if(!goal->drive_auto){
+          RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+          goal_handle->canceled(result);
+          RCLCPP_INFO(this->get_logger(), "Goal canceled");
+          Drive_Goal_Handle = nullptr;
+          has_goal = false;
+          return;
+        }
+        left_motor.Heartbeat();
+        right_motor.Heartbeat();
+        if (!goal->drive_auto)
+        {
           left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
           right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
           feedback->inst_velocity.linear.x = v_left;
           feedback->inst_velocity.angular.z = v_right; // placeholders
-          }
-          goal_handle->publish_feedback(feedback);
-
-          loop_rate.sleep();
         }
-
-        // drive_left_duty.Output = 0.0;
-        // drive_right_duty.Output = 0.0;
-        // drive_left.SetControl(drive_left_duty);
-        // drive_right.SetControl(drive_right_duty);
-
-        if (rclcpp::ok())
+        if (goal->drive_auto)
         {
-          result->curr_velocity = goal->velocity_goal;
-          goal_handle->succeed(result);
-          RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-          Drive_Goal_Handle = nullptr;
-          has_goal = false;
+          drive_auto(linear, angular);
         }
-      }
-    }; // class DriveActionServer
+        if(abs(goal->distance_meters) > 0 ){
+          drive_dist(goal->distance_meters);
+        }
 
-  }; // namespace drive_server
+        goal_handle->publish_feedback(feedback);
+
+        loop_rate.sleep();
+      }
+
+      // drive_left_duty.Output = 0.0;
+      // drive_right_duty.Output = 0.0;
+      // drive_left.SetControl(drive_left_duty);
+      // drive_right.SetControl(drive_right_duty);
+
+      if (rclcpp::ok())
+      {
+        result->curr_velocity = goal->velocity_goal;
+        goal_handle->succeed(result);
+        RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+        Drive_Goal_Handle = nullptr;
+        has_goal = false;
+      }
+    }
+  }; // class DriveActionServer
+
+}; // namespace drive_server
 
 RCLCPP_COMPONENTS_REGISTER_NODE(drive_server::DriveActionServer)
