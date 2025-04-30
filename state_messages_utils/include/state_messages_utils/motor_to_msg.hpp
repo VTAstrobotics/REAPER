@@ -11,20 +11,20 @@ namespace state_messages_utils
     class motor_to_msg
     {
     protected:
-        rclcpp::Node::SharedPtr node_to_publish_under_;
-        state_messages::msg::MotorState msg_;
-        rclcpp::TimerBase::SharedPtr timer_;
-        rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr state_publisher_;
+        rclcpp::Node::SharedPtr node_to_publish_under;
+        state_messages::msg::MotorState msg;
+        rclcpp::TimerBase::SharedPtr timer;
+        rclcpp::Publisher<state_messages::msg::MotorState>::SharedPtr state_publisher;
 
     public:
         motor_to_msg(const rclcpp::Node::SharedPtr& node, const std::string& motor_name);
         virtual  ~motor_to_msg() ;
         virtual void publish_state();
     };
-   
+
     class kraken_to_msg: public motor_to_msg{
         private:
-    hardware::TalonFX* motor_;
+    hardware::TalonFX* motor;
     double input_voltage_{0}; //BUS VOLTAGE
     double current_speed_{0}; //in units/S either m/s or rot/s or rad/s; clarify which in your code
     double current_current_{0}; // in Amps
