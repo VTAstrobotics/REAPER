@@ -8,7 +8,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     # This finds the path to your package's share directory,
     # where you have your 'config' folder.
-    package_share_dir = get_package_share_directory('ukf')
+    package_share_dir = get_package_share_directory('ukf_package')
     
     # Build the path to your YAML config file
     ukf_config_file = os.path.join(package_share_dir, 'config', 'ukf_config.yaml')
