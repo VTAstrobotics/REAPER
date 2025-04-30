@@ -438,7 +438,7 @@ namespace dig_server
 
       } else { // at least some manual control
         // linkage
-        if (!APPROX(GOAL->link_pos_goal, DEFAULT_VAL_)) {
+        if (!approx(GOAL->link_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: linkage position control");
           threads.emplace_back(std::bind(&DigActionServer::exe_link_pos, this, _1, _2, _3), GOAL_HANDLE, feedback, result);
 
@@ -449,7 +449,7 @@ namespace dig_server
         }
 
         // bucket
-        if (!APPROX(GOAL->bckt_pos_goal, DEFAULT_VAL_)) {
+        if (!approx(GOAL->bckt_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: bucket position control");
           threads.emplace_back(std::bind(&DigActionServer::exe_bckt_pos, this, _1, _2, _3), GOAL_HANDLE, feedback, result);
 
@@ -490,7 +490,7 @@ namespace dig_server
      * sets the linkage motors to run with a specific duty cycle in [-1, 1]
      * @param pwr the duty cycle for the motors to run at
      */
-    void link_pwr(double pwr) {
+    void link_pwr(float pwr) {
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
@@ -503,7 +503,7 @@ namespace dig_server
 
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
-      if (APPROX(pwr, 0)) { // hold position
+      if (approx(pwr, 0)) { // hold position
         controls::DifferentialVelocityVoltage const VELOCITY_COMMAND{0_tps, 0_tr}; // velocity turns per second
         link_mech_.SetControl(VELOCITY_COMMAND);
       } else {
@@ -516,7 +516,7 @@ namespace dig_server
      * sets the bucket motors to run with a specific duty cycle in [-1, 1]
      * @param pwr the duty cycle for the motors to run at
      */
-    void bckt_pwr(double pwr) {
+    void bckt_pwr(float pwr) {
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "bckt_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
@@ -527,7 +527,7 @@ namespace dig_server
         "bckt_pwr: bckt_pos L:%lf | R:%lf", (double) l_bckt_mtr_.GetPosition().GetValue(),
         (double) r_bckt_mtr_.GetPosition().GetValue());
 
-      if (pwr == 0) { // hold position
+      if (approx(pwr, 0)) { // hold position
         controls::DifferentialVelocityVoltage const VELOCITY_COMMAND{0_tps, 0_tr}; // velocity turns per second
         bckt_mech_.SetControl(VELOCITY_COMMAND);
       } else {
@@ -540,7 +540,7 @@ namespace dig_server
      * sets the vibration motors to run with a specific duty cycle in [-1, 1]
      * @param pwr the duty cycle for the motors to run at
      */
-    void vibr_pwr(double pwr){
+    void vibr_pwr(float pwr){
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "vibr_pwr: %lf was out of bounds. Power goals should always be in [-1, 1]", pwr);
@@ -736,7 +736,7 @@ namespace dig_server
      * @return true if we have reached the position OR the goal is out of bounds (so we aren't trying to go anyway)
      */
     bool reached_pos(float current_pos, float goal, float min, float max) {
-      return !pos_in_bounds(goal, min, max) || APPROX(current_pos, goal);
+      return !pos_in_bounds(goal, min, max) || approx(current_pos, goal);
     }
 
     void execute_pos(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,

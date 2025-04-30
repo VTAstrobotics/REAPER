@@ -26,8 +26,11 @@ echo "## Setting up clang-format on C/C++ source"
 SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -f 2)
 
 # for clang-tidy
-echo "## Building source code"
-echo "### Build" # might consider adding rm -rf build/ install/ log/
+echo "## Clean build source code"
+echo "### Clean"
+rm -rf build/ install/ log/
+
+echo "### Build"
 colcon build --symlink-install --merge-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 echo "### Source"
