@@ -129,8 +129,8 @@ class TkMultiTopicApp:
         self.reset_timer_button = tk.Button(self.timer_frame, text="Reset Match", command=self.reset_timer)
         self.reset_timer_button.grid(row=1, column=1)
         self.radio_var = tk.IntVar(value=self.selected_duration)
-        tk.Radiobutton(self.timer_frame, text="Comp 1", variable=self.radio_var, value=150, bg="white", command=self.update_timer_duration).grid(row=2, column=0)
-        tk.Radiobutton(self.timer_frame, text="Comp 2", variable=self.radio_var, value=225, bg="white", command=self.update_timer_duration).grid(row=2, column=1)
+        tk.Radiobutton(self.timer_frame, text="UCF", variable=self.radio_var, value=900, bg="white", command=self.update_timer_duration).grid(row=2, column=0)
+        tk.Radiobutton(self.timer_frame, text="KSC", variable=self.radio_var, value=1800, bg="white", command=self.update_timer_duration).grid(row=2, column=1)
 
         # Camera topic labels, grid, and buttons
         self.camera_label = tk.Label(self.input_frame, text="Enter Camera Name:", bg="white", fg="red")
