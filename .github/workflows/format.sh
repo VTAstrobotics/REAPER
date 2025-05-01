@@ -23,7 +23,8 @@ git config --global user.name "Clang Format"
 git update-index --assume-unchanged .github/workflows/*
 
 echo "## Setting up clang-format on C/C++ source"
-SRC=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|h\|hpp\|cpp\)\$" | cut -f 2)
+SRC_HEADERS=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(h\|hpp\)\$" | cut -f 2)
+SRC_IMPLEMENTATION=$(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|cpp\)\$" | cut -f 2)
 
 # for clang-tidy
 echo "## Clean build source code"
@@ -37,7 +38,7 @@ echo "### Source"
 source install/setup.bash
 
 echo "## Run clang-format on C/C++ src code"
-clang-format -style=file -i $SRC
+clang-format -style=file -i $SRC_HEADERS $SRC_IMPLEMENTATION
 
 echo "## Merge build, and source"
 colcon build --symlink-install --merge-install --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -47,11 +48,11 @@ find build/ -name compile_commands.json -exec jq -s 'add' {} + > compile_command
 source install/setup.bash
 
 echo "## Running clang-tidy on C/C++ src code"
-clang-tidy --config-file=.clang-tidy -p . --fix $SRC
+clang-tidy --config-file=.clang-tidy -p . --fix --header-filter=$SRC_HEADERS $SRC_IMPLEMENTATION
 
 echo "## Commiting files if it builds after clean"
 echo "### Clean"
-rm -rf build/ install/ log/
+rm -rf build/ install/ log/ compile_commands.json
 
 echo "### Build using build script"
 source build_scripts/build.sh 2> >(tee err.log >&2)
