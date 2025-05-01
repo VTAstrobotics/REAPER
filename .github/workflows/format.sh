@@ -49,8 +49,10 @@ source install/setup.bash
 echo "## Running clang-tidy on C/C++ src code"
 clang-tidy --config-file=.clang-tidy -p . --fix $SRC
 
-echo "## Commiting files if it builds"
+echo "## Commiting files if it builds after clean"
+rm -rf build/ install/ log/
 source build_scripts/build.sh 2> >(tee err.log >&2)
+
 if [ -s err.log ]; then
     echo Build failed due to output in stderr. Yes, this fails on warnings. Fix them.;
     exit 1;
