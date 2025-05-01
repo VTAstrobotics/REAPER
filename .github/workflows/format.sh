@@ -50,7 +50,10 @@ echo "## Running clang-tidy on C/C++ src code"
 clang-tidy --config-file=.clang-tidy -p . --fix $SRC
 
 echo "## Commiting files if it builds after clean"
+echo "### Clean"
 rm -rf build/ install/ log/
+
+echo "### Build using build script"
 source build_scripts/build.sh 2> >(tee err.log >&2)
 
 if [ -s err.log ]; then
