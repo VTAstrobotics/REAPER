@@ -10,6 +10,8 @@ import imutils
 import numpy as np
 import math
 import argparse
+from tf2_ros import TransformBroadcaster
+from geometry_msgs.msg import TransformStamped
 class Quaternion:
     w: float
     x: float
@@ -53,6 +55,8 @@ class PosePublisher(Node):
             
         self.bridge = CvBridge()
         self.stop = False
+        
+        self.tf_broadcaster = TransformBroadcaster(self)
 
 
         self.arucoDict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_50)
@@ -83,7 +87,22 @@ class PosePublisher(Node):
     
         else:
             self.get_logger().info("Resumed")
+    def publish_transform(self, pose:Pose):
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = "base_link" 
+        t.child_frame_id = f"{camera_name}"#  TODO: FIGURE OUT HOW TO GET THE CAMERA NAME FROM THE IMAGE LMAO
 
+        t.transform.translation.x = pose.position.x
+        t.transform.translation.y = pose.position.y
+        t.transform.translation.z = pose.position.z
+        
+        t.transform.rotation.x = pose.orientation.x 
+        t.transform.rotation.y = pose.orientation.y 
+        t.transform.rotation.z = pose.orientation.z 
+        t.transform.rotation.w = pose.orientation.w 
+
+        TransformBroadcaster.sendTransform(t)
     def image_callback(self, msg):
         self.get_logger().info("Received image")
 
