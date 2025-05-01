@@ -90,6 +90,8 @@ class PosePublisher(Node):
     def publish_transform(self, pose:Pose):
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
+        #TODO: MAKE this provide the transform between the april tag and the camera then let the URDF figure out the rest
+        # probably need a static broadcaster for the map frame position of the april tag
         t.header.frame_id = "base_link" 
         t.child_frame_id = f"{camera_name}"#  TODO: FIGURE OUT HOW TO GET THE CAMERA NAME FROM THE IMAGE LMAO
 
@@ -102,7 +104,7 @@ class PosePublisher(Node):
         t.transform.rotation.z = pose.orientation.z 
         t.transform.rotation.w = pose.orientation.w 
 
-        TransformBroadcaster.sendTransform(t)
+        TransformBroadcaster.sendTransform()
     def image_callback(self, msg):
         self.get_logger().info("Received image")
 
