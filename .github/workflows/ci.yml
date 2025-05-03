@@ -59,7 +59,7 @@ jobs:
 
     - name: Modify that Dockerfile for the other jobs
       run: |
-        echo "RUN sudo apt update && sudo apt install -y jq xz-utils clang-tidy" >> .github/workflows/ci/Dockerfile
+        echo "RUN sudo apt update && sudo apt install -y jq xz-utils clang-tidy clang-tools" >> .github/workflows/ci/Dockerfile
         echo "RUN mkdir -p /home/astro-dev/src/ci/" >> .github/workflows/ci/Dockerfile
         echo "COPY .github/workflows/entrypoint.sh /home/astro-dev/src/ci/" >> .github/workflows/ci/Dockerfile
         echo "COPY .github/workflows/format.sh /home/astro-dev/src/ci/" >> .github/workflows/ci/Dockerfile

@@ -31,7 +31,7 @@ namespace state_messages_utils
     double current_applied_voltage_{0}; // in volts, this is the duty cycle * input voltage
     double current_position_{0}; // the current position in m, rots, or radians, clarify which in your code         Float64 current_current
         public:
-        kraken_to_msg(const rclcpp::Node::SharedPtr& node, std::string motor_name, hardware::TalonFX* motor, float frequency);
+        kraken_to_msg(const rclcpp::Node::SharedPtr& node, const std::string& motor_name, hardware::TalonFX* motor, float frequency);
         ~kraken_to_msg() override;
         void publish_state() override;
     };
