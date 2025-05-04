@@ -36,12 +36,15 @@ def quaternion_from_euler(roll, pitch, yaw):
     q.y = sy * cp * sr + cy * sp * cr
     q.z = sy * cp * cr - cy * sp * sr
     return q 
+def to_float(x):
+    return float(x)
+
 class PosePublisher(Node):
     def __init__(self, camera):
         super().__init__(f'pose_publisher_{camera}')
         
 
-        self.pose_publisher = self.create_publisher(PoseWithCovarianceStamped, f'/pose_{camera}', 10)
+        self.pose_publisher = self.create_publisher(PoseWithCovarianceStamped, f'pose_{camera}', 10)
         self.annotated_publisher = self.create_publisher(Image, f"annotated_image_{camera}", 3)
         self.stop_subscription = self.create_subscription(
             Bool,
@@ -141,13 +144,22 @@ class PosePublisher(Node):
                         pose_msg.pose.pose.orientation.w = quat[3]
                         pos_var = 0.01**2
                         ang_var = (5*math.pi/180)**2
-                        pose_msg.pose.covariance = [
+                        cov = [
                         pos_var, 0,       0,       0,       0,       0,
                         0,       pos_var, 0,       0,       0,       0,
                         0,       0,       pos_var, 0,       0,       0,
                         0,       0,       0,       ang_var, 0,       0,
                         0,       0,       0,       0,       ang_var, 0,
                         0,       0,       0,       0,       0,       ang_var]
+                        pose_msg.pose.covariance = [to_float(x) for x in cov]
+
+                        # pose_msg = Pose()
+                        # pose_msg.position.x, pose_msg.position.y, pose_msg.position.z = tvec.flatten()
+                        # pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z = rvec.flatten()[:3]
+                        # pose_msg.orientation.w = 0.0 
+                        # quaternion = quaternion_from_euler(rvec[0], rvec[1], rvec[2])
+                        # pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z = quaternion.x, quaternion.y, quaternion.z 
+                        # pose_msg.orientation.w = quaternion.w
 
                         self.pose_publisher.publish(pose_msg)
                         self.get_logger().info(str(pose_msg))
