@@ -10,6 +10,9 @@ import imutils
 import numpy as np
 import math
 import argparse
+from geometry_msgs.msg import PoseWithCovarianceStamped
+import tf_transformations
+
 class Quaternion:
     w: float
     x: float
@@ -38,7 +41,7 @@ class PosePublisher(Node):
         super().__init__(f'pose_publisher_{camera}')
         
 
-        self.pose_publisher = self.create_publisher(Pose, f'pose_{camera}', 10)
+        self.pose_publisher = self.create_publisher(PoseWithCovarianceStamped, f'/pose_{camera}', 10)
         self.annotated_publisher = self.create_publisher(Image, f"annotated_image_{camera}", 3)
         self.stop_subscription = self.create_subscription(
             Bool,
@@ -119,13 +122,32 @@ class PosePublisher(Node):
                     
                     if success:
 
-                        pose_msg = Pose()
-                        pose_msg.position.x, pose_msg.position.y, pose_msg.position.z = tvec.flatten()
-                        pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z = rvec.flatten()[:3]
-                        pose_msg.orientation.w = 0.0 
-                        quaternion = quaternion_from_euler(rvec[0], rvec[1], rvec[2])
-                        pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z = quaternion.x, quaternion.y, quaternion.z 
-                        pose_msg.orientation.w = quaternion.w
+                        pose_msg = PoseWithCovarianceStamped()
+                        pose_msg.header.stamp = self.get_clock().now().to_msg()
+                        pose_msg.header.frame_id = "camera_link"  
+
+                        
+                        pose_msg.pose.pose.position.x = float(tvec[0])
+                        pose_msg.pose.pose.position.y = float(tvec[1])
+                        pose_msg.pose.pose.position.z = float(tvec[2])
+
+                        rot_mat, _ = cv2.Rodrigues(rvec)
+                        quat = tf_transformations.quaternion_from_matrix(
+                            np.vstack((np.hstack((rot_mat, [[0],[0],[0]])), [0,0,0,1])))
+
+                        pose_msg.pose.pose.orientation.x = quat[0]
+                        pose_msg.pose.pose.orientation.y = quat[1]
+                        pose_msg.pose.pose.orientation.z = quat[2]
+                        pose_msg.pose.pose.orientation.w = quat[3]
+                        pos_var = 0.01**2
+                        ang_var = (5*math.pi/180)**2
+                        pose_msg.pose.covariance = [
+                        pos_var, 0,       0,       0,       0,       0,
+                        0,       pos_var, 0,       0,       0,       0,
+                        0,       0,       pos_var, 0,       0,       0,
+                        0,       0,       0,       ang_var, 0,       0,
+                        0,       0,       0,       0,       ang_var, 0,
+                        0,       0,       0,       0,       0,       ang_var]
 
                         self.pose_publisher.publish(pose_msg)
                         self.get_logger().info(str(pose_msg))
