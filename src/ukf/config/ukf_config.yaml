@@ -10,16 +10,16 @@ ukf_filter_node:
     base_link_frame: "base_link"
 
     pose0:
-      topic: "/pose_0" #aruco pose
+      topic: "/pose_0"
       frame_id: "camera_link"
-      config: [false, false, false,
-                false, false, false,
-                true,  true,  true,
-                false, false, false,
-                false, false, false]
+      config: [true,  true,  true,     # x y z
+              true,  true,  true,     
+              false, false, false,    
+              false, false, false,    
+              false, false, false]    
       differential: false
-      relative: false
-      queue_size: 5
+      relative:     false
+      queue_size:   5
       # rejection_threshold: 2.0 #rejection threshold, may not be needed
     # pose1:
     #   topic: "drive/pose" #drive pose
