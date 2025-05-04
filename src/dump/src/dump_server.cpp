@@ -45,7 +45,7 @@ namespace dump_server
 
   private:
     rclcpp_action::Server<Dump>::SharedPtr action_server_;
-    hardware::TalonFX conveyorMotor{30, "can0"};
+    hardware::TalonFX conveyorMotor{30, "can1"};
     controls::DutyCycleOut conveyorDutyCycle{0};
     float volume_deposited{0};
     bool has_goal{false};
@@ -116,6 +116,9 @@ namespace dump_server
         execute_pwr_dump(goal_handle);
 
       }
+      double amps = conveyorMotor.GetTorqueCurrent().GetValueAsDouble();
+      RCLCPP_INFO(this->get_logger(), "OUTPUT CURRENT: %f", amps * 19.26 * pow(10, -3));
+
     }
     void execute_withForce(const std::shared_ptr<GoalHandleDump> goal_handle)
     {
@@ -163,7 +166,7 @@ namespace dump_server
 
     void execute_pwr_dump(const std::shared_ptr<GoalHandleDump> goal_handle)
     {
-      RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
+      // RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
 
       const auto goal = goal_handle->get_goal();
       double power_goal = goal->pwr_goal;
