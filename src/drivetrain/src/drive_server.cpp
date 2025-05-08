@@ -62,7 +62,7 @@ class DriveActionServer : public rclcpp::Node
   int loop_rate_hz_{120};
   double track_width_{1.0};
   double normalization_constant_ = 1; // change this during testing
-  std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle_;
+  std::shared_ptr<GoalHandleDrive> drive_goal_handle_;
 
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID& uuid,
@@ -149,7 +149,7 @@ class DriveActionServer : public rclcpp::Node
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
         GOAL_HANDLE->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        Drive_Goal_Handle_ = nullptr;
+        drive_goal_handle_ = nullptr;
         has_goal_ = false;
         return;
       }
@@ -173,7 +173,7 @@ class DriveActionServer : public rclcpp::Node
       result->curr_velocity = GOAL->velocity_goal;
       GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-      Drive_Goal_Handle_ = nullptr;
+      drive_goal_handle_ = nullptr;
       has_goal_ = false;
     }
   }

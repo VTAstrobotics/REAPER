@@ -308,7 +308,7 @@ namespace dig_server
     // lookup table for auto dig
     // time (s),actuator angle (external rotation [0, 1]),bucket angle (rotations [0, 1]), vibration (duty cycle [-1,1])
     // float SCOOP_LUT_[7][4] = {
-    std::vector<std::vector<float>> SCOOP_LUT_ = {
+    const std::vector<std::vector<float>> SCOOP_LUT_ = {
       {0,0.1,-0.3,0},
       {1,-0.5,0.5,0},
       {2,-0.1,0.16,0},
@@ -318,7 +318,7 @@ namespace dig_server
       {6,-0.1,0.16,0},
     };
 
-    std::vector<std::vector<float>> DIG_TO_DUMP_LUT_ = {
+    const std::vector<std::vector<float>> DIG_TO_DUMP_LUT_ = {
       {0,0.1,-0.3,0},
       {1,-0.5,0.5,0},
       {2,-0.1,0.16,0},
@@ -390,10 +390,10 @@ namespace dig_server
      *
      */
     rclcpp_action::CancelResponse handle_cancel(
-        const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE)
+        const std::shared_ptr<GoalHandleDig>& goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-      (void) GOAL_HANDLE; // for unused warning
+      (void) goal_handle; // for unused warning
 
       // stop motion
       link_pwr(0);
@@ -410,57 +410,57 @@ namespace dig_server
     /**
      *
      */
-    void handle_accepted(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE)
+    void handle_accepted(const std::shared_ptr<GoalHandleDig>& goal_handle)
     {
       using namespace std::placeholders;
       // this needs to return quickly to avoid blocking the executor, so spin up a new thread
-      std::thread{std::bind(&DigActionServer::execute, this, _1), GOAL_HANDLE}.detach();
+      std::thread{std::bind(&DigActionServer::execute, this, _1), goal_handle}.detach();
     }
 
     /**
      * Parses the parameters and calls the appropriate helper function
      */
-    void execute(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE)
+    void execute(const std::shared_ptr<GoalHandleDig>& goal_handle)
     {
       static auto left_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_linkage", &l_link_mtr_, 100);
       static auto right_linkage_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_linkage", &r_link_mtr_, 100);
       static auto left_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "left_bucket", &l_bckt_mtr_, 50);
       static auto right_bucket_logger = state_messages_utils::kraken_to_msg(this->shared_from_this(), "right_bucket", &r_bckt_mtr_, 50);
 
-      const auto GOAL = GOAL_HANDLE->get_goal();
+      const auto GOAL = goal_handle->get_goal();
       auto feedback = std::make_shared<Dig::Feedback>();
       auto result = std::make_shared<Dig::Result>();
       std::vector<std::thread> threads;
 
       if (GOAL->scoop || GOAL->dig_to_dump) { // full auto
         RCLCPP_DEBUG(this->get_logger(), "execute: autonomous control");
-        execute_auton(GOAL_HANDLE, feedback, result); // note we do not need a new thread
+        execute_auton(goal_handle, feedback, result); // note we do not need a new thread
 
       } else { // at least some manual control
         // linkage
         if (!approx(GOAL->link_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: linkage position control");
-          threads.emplace_back(std::bind(&DigActionServer::exe_link_pos, this, _1, _2, _3), GOAL_HANDLE, feedback, result);
+          threads.emplace_back(std::bind(&DigActionServer::exe_link_pos, this, _1, _2, _3), goal_handle, feedback, result);
 
         } else {
           RCLCPP_DEBUG(this->get_logger(), "execute: linkage power control");
-          threads.emplace_back(std::bind(&DigActionServer::exe_link_pwr, this, _1, _2, _3), GOAL_HANDLE, feedback, result);
+          threads.emplace_back(std::bind(&DigActionServer::exe_link_pwr, this, _1, _2, _3), goal_handle, feedback, result);
 
         }
 
         // bucket
         if (!approx(GOAL->bckt_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: bucket position control");
-          threads.emplace_back(std::bind(&DigActionServer::exe_bckt_pos, this, _1, _2, _3), GOAL_HANDLE, feedback, result);
+          threads.emplace_back(std::bind(&DigActionServer::exe_bckt_pos, this, _1, _2, _3), goal_handle, feedback, result);
 
         } else {
           RCLCPP_DEBUG(this->get_logger(), "execute: bucket power control");
-          threads.emplace_back(std::bind(&DigActionServer::exe_bckt_pwr, this, _1, _2, _3), GOAL_HANDLE, feedback, result);
+          threads.emplace_back(std::bind(&DigActionServer::exe_bckt_pwr, this, _1, _2, _3), goal_handle, feedback, result);
 
         }
 
         // vibration
-        exe_vibr_pwr(GOAL_HANDLE, feedback, result); // note we do not need a new thread
+        exe_vibr_pwr(goal_handle, feedback, result); // note we do not need a new thread
 
         // wait for all goals to finish
         for (auto& thread : threads) {
@@ -471,10 +471,10 @@ namespace dig_server
       } // end if/else for autonomy
 
       // handle goal completion
-      if (GOAL_HANDLE->is_canceling()) {
-        GOAL_HANDLE->canceled(result);
+      if (goal_handle->is_canceling()) {
+        goal_handle->canceled(result);
       } else {
-        GOAL_HANDLE->succeed(result);
+        goal_handle->succeed(result);
       }
 
       has_goal_ = false;
@@ -557,14 +557,14 @@ namespace dig_server
     /**
      *
      */
-    void execute_pwr(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void execute_pwr(const std::shared_ptr<GoalHandleDig>& goal_handle,
       std::shared_ptr<Dig::Feedback> feedback,
       const std::shared_ptr<Dig::Result>& result, float goal_val,
       float& percent_done, const std::function<void(double)>& pwr_func,
       float& est_goal, const char* print_prefix)
     {
       (void) result; // for unused warning
-      if (GOAL_HANDLE->is_canceling()) { return; }
+      if (goal_handle->is_canceling()) { return; }
 
       RCLCPP_DEBUG_ONCE(this->get_logger(), "execute_pwr: Loop rate %d ms", 1000/(LOOP_RATE_HZ_)); //this is the correct math with correct units :)
       ctre::phoenix::unmanaged::FeedEnable(1000/(LOOP_RATE_HZ_));
@@ -572,7 +572,7 @@ namespace dig_server
       pwr_func(goal_val);
 
       percent_done = 100;
-      GOAL_HANDLE->publish_feedback(std::move(feedback));
+      goal_handle->publish_feedback(std::move(feedback));
 
       goal_done_helper(est_goal, goal_val, this->get_logger(), print_prefix);
     }
@@ -581,16 +581,16 @@ namespace dig_server
      * runs the dig linkage motors to a duty cycle goal
      * @param goal_handle pointer to the goal
      */
-    void exe_link_pwr(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void exe_link_pwr(const std::shared_ptr<GoalHandleDig>& goal_handle,
       const std::shared_ptr<Dig::Feedback>& feedback,
       const std::shared_ptr<Dig::Result>& result) {
-      float const LINKAGE_GOAL = GOAL_HANDLE->get_goal()->link_pwr_goal;
+      float const LINKAGE_GOAL = goal_handle->get_goal()->link_pwr_goal;
       float& link_percent_done = feedback->percent_link_done;
 
       link_mech_.Periodic();
 
       execute_pwr(
-        GOAL_HANDLE,
+        goal_handle,
         feedback,
         result,
         LINKAGE_GOAL,
@@ -605,16 +605,16 @@ namespace dig_server
      * runs the dig linkage motors to a duty cycle goal
      * @param goal_handle pointer to the goal
      */
-    void exe_bckt_pwr(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void exe_bckt_pwr(const std::shared_ptr<GoalHandleDig>& goal_handle,
       const std::shared_ptr<Dig::Feedback>& feedback,
       const std::shared_ptr<Dig::Result>& result) {
-      float const BUCKET_GOAL = GOAL_HANDLE->get_goal()->bckt_pwr_goal;
+      float const BUCKET_GOAL = goal_handle->get_goal()->bckt_pwr_goal;
       float& bckt_percent_done = feedback->percent_bckt_done;
 
       bckt_mech_.Periodic();
 
       execute_pwr(
-        GOAL_HANDLE,
+        goal_handle,
         feedback,
         result,
         BUCKET_GOAL,
@@ -629,14 +629,14 @@ namespace dig_server
      * runs the dig linkage motors to a duty cycle goal
      * @param goal_handle pointer to the goal
      */
-    void exe_vibr_pwr(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void exe_vibr_pwr(const std::shared_ptr<GoalHandleDig>& goal_handle,
       const std::shared_ptr<Dig::Feedback>& feedback,
       const std::shared_ptr<Dig::Result>& result) {
-      float const VIBRATION_GOAL = GOAL_HANDLE->get_goal()->vibr_pwr_goal;
+      float const VIBRATION_GOAL = goal_handle->get_goal()->vibr_pwr_goal;
       float& vibr_percent_done = feedback->percent_vibr_done;
 
       execute_pwr(
-        GOAL_HANDLE,
+        goal_handle,
         feedback,
         result,
         VIBRATION_GOAL,
@@ -739,7 +739,7 @@ namespace dig_server
       return !pos_in_bounds(goal, min, max) || approx(current_pos, goal);
     }
 
-    void execute_pos(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void execute_pos(const std::shared_ptr<GoalHandleDig>& goal_handle,
       const std::shared_ptr<Dig::Feedback>& feedback,
       const std::shared_ptr<Dig::Result>& result, float goal_val,
       hardware::TalonFX* motor, const float MIN_POS, const float MAX_POS,
@@ -754,7 +754,7 @@ namespace dig_server
       {
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
           "execute_pos: cur %f, goal %f, min %f, max %f", current_pos, goal_val, MIN_POS, MAX_POS);
-        if (GOAL_HANDLE->is_canceling()) { return; }
+        if (goal_handle->is_canceling()) { return; }
 
         RCLCPP_DEBUG_ONCE(this->get_logger(), "execute_pos: Loop rate %d ms", 1000/(LOOP_RATE_HZ_)); //this is the correct math with correct units :)
         ctre::phoenix::unmanaged::FeedEnable(1000/(LOOP_RATE_HZ_));
@@ -763,7 +763,7 @@ namespace dig_server
         current_pos = (float)motor->GetPosition().GetValue();
 
         percent_done = (abs(goal_val) - abs(current_pos))/abs(goal_val) * 100;
-        GOAL_HANDLE->publish_feedback(feedback);
+        goal_handle->publish_feedback(feedback);
 
         loop_rate.sleep();
       }
@@ -775,14 +775,14 @@ namespace dig_server
      * runs the dig linkage motors to a duty cycle goal
      * @param goal_handle pointer to the goal
      */
-    void exe_link_pos(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void exe_link_pos(const std::shared_ptr<GoalHandleDig>& goal_handle,
       const std::shared_ptr<Dig::Feedback>& feedback,
       const std::shared_ptr<Dig::Result>& result) {
-      float const LINKAGE_GOAL = GOAL_HANDLE->get_goal()->link_pos_goal;
+      float const LINKAGE_GOAL = goal_handle->get_goal()->link_pos_goal;
       float& link_percent_done = feedback->percent_link_done;
 
       execute_pos(
-        GOAL_HANDLE,
+        goal_handle,
         feedback,
         result,
         LINKAGE_GOAL,
@@ -800,14 +800,14 @@ namespace dig_server
      * runs the dig linkage motors to a duty cycle goal
      * @param goal_handle pointer to the goal
      */
-    void exe_bckt_pos(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
+    void exe_bckt_pos(const std::shared_ptr<GoalHandleDig>& goal_handle,
       const std::shared_ptr<Dig::Feedback>& feedback,
       const std::shared_ptr<Dig::Result>& result) {
-      float const BUCKET_GOAL = GOAL_HANDLE->get_goal()->bckt_pos_goal;
+      float const BUCKET_GOAL = goal_handle->get_goal()->bckt_pos_goal;
       float& bckt_percent_done = feedback->percent_bckt_done;
 
       execute_pos(
-        GOAL_HANDLE,
+        goal_handle,
         feedback,
         result,
         BUCKET_GOAL,
@@ -831,18 +831,18 @@ namespace dig_server
      * autonomously moves the dig actuators to scoop
      * @param goal_handle pointer to the goal
      */
-    void execute_auton(const std::shared_ptr<GoalHandleDig>& GOAL_HANDLE,
-      const std::shared_ptr<Dig::Feedback>& FEEDBACK,
-      const std::shared_ptr<Dig::Result>& RESULT)
+    void execute_auton(const std::shared_ptr<GoalHandleDig>& goal_handle,
+      const std::shared_ptr<Dig::Feedback>& feedback,
+      const std::shared_ptr<Dig::Result>& result)
     {
       RCLCPP_DEBUG(this->get_logger(), "execute_auton: executing...");
       rclcpp::Rate loop_rate(LOOP_RATE_HZ_); // TODO: is needed?
 
-      std::vector<std::vector<float>>& lookup_tb = GOAL_HANDLE->get_goal()->scoop ? SCOOP_LUT_ : DIG_TO_DUMP_LUT_;
+      const std::vector<std::vector<float>>& lookup_tb = goal_handle->get_goal()->scoop ? SCOOP_LUT_ : DIG_TO_DUMP_LUT_;
 
-      float& link_percent_done = FEEDBACK->percent_link_done;
-      float& bckt_percent_done = FEEDBACK->percent_bckt_done;
-      float& vibr_percent_done = FEEDBACK->percent_vibr_done;
+      float& link_percent_done = feedback->percent_link_done;
+      float& bckt_percent_done = feedback->percent_bckt_done;
+      float& vibr_percent_done = feedback->percent_vibr_done;
 
       const size_t NUM_ROWS = lookup_tb.size();
       const char* func_name = __func__;
@@ -871,39 +871,39 @@ namespace dig_server
 
         while (this->now().seconds() < next_goal_time)
         {
-          if (GOAL_HANDLE->is_canceling()) { return; }
+          if (goal_handle->is_canceling()) { return; }
 
           // linkage and bucket to a set position
           //link_pos(lookup_tb.at(i).at(1));
           //bckt_pos(lookup_tb.at(i).at(2));
 
-          threads[0] = std::thread([this, GOAL_HANDLE, FEEDBACK, RESULT, lookup_tb, i, &link_percent_done, &func_name]() {
+          threads[0] = std::thread([this, goal_handle, feedback, result, lookup_tb, i, &link_percent_done, &func_name]() {
               execute_pos(
-                  GOAL_HANDLE,
-                  FEEDBACK,
-                  RESULT,
+                  goal_handle,
+                  feedback,
+                  result,
                   lookup_tb.at(i).at(1),
                   &l_link_mtr_,
                   LINK_MIN_POS_,
                   LINK_MAX_POS_,
                   link_percent_done,
                   std::bind(&DigActionServer::link_pos, this, std::placeholders::_1),
-                  RESULT->est_link_goal,
+                  result->est_link_goal,
                   func_name);
           });
 
-          threads[1] = std::thread([this, GOAL_HANDLE, FEEDBACK, RESULT, lookup_tb, i, &bckt_percent_done, &func_name]() {
+          threads[1] = std::thread([this, goal_handle, feedback, result, lookup_tb, i, &bckt_percent_done, &func_name]() {
               execute_pos(
-                  GOAL_HANDLE,
-                  FEEDBACK,
-                  RESULT,
+                  goal_handle,
+                  feedback,
+                  result,
                   lookup_tb.at(i).at(2),
                   &l_bckt_mtr_,
                   BCKT_MIN_POS_,
                   BCKT_MAX_POS_,
                   bckt_percent_done,
                   std::bind(&DigActionServer::bckt_pos, this, std::placeholders::_1),
-                  RESULT->est_bckt_goal,
+                  result->est_bckt_goal,
                   func_name);
           });
 
@@ -916,7 +916,7 @@ namespace dig_server
           link_percent_done = (static_cast<float>(i * 100)/static_cast<float>(NUM_ROWS));
           bckt_percent_done = (static_cast<float>(i * 100)/static_cast<float>(NUM_ROWS));
           vibr_percent_done = (static_cast<float>(i * 100)/static_cast<float>(NUM_ROWS));
-          GOAL_HANDLE->publish_feedback(FEEDBACK);
+          goal_handle->publish_feedback(feedback);
 
           loop_rate.sleep();
         }
@@ -925,9 +925,9 @@ namespace dig_server
 
       if (rclcpp::ok())
       {
-        RESULT->est_link_goal = (float)l_link_mtr_.GetPosition().GetValue();
-        RESULT->est_bckt_goal = (float)l_bckt_mtr_.GetPosition().GetValue();
-        RESULT->est_vibr_goal = 0;
+        result->est_link_goal = (float)l_link_mtr_.GetPosition().GetValue();
+        result->est_bckt_goal = (float)l_bckt_mtr_.GetPosition().GetValue();
+        result->est_vibr_goal = 0;
 
         // goal_handle->succeed(result);
         RCLCPP_INFO(this->get_logger(), "execute_auton: Goal succeeded");

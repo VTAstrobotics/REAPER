@@ -42,16 +42,19 @@ source install/setup.bash
 
 echo "## Running clang-tidy on C/C++ src code"
 # this script is better than running clang-tidy manually, but has similar effect
+
+# it also runs clang-format after with the -format option, but incompatible version somehow so
+# i just do it manually. feel free to figure out version issue i dont really care.
+# it would probably work if we update the dev container to ubuntu 24, which you need to
+# update ros from humble, then you can get the most updated version of the run-clang-tidy script
+# and clang-format and clang-tools and it would be fine
 python3 .github/workflows/run-clang-tidy.py \
-    -export-fixes=tidy-fixes.yaml \
+    -extra-arg=-v \
     -fix \
-    -header-filter="$(git ls-tree --full-tree -r HEAD | grep -e "\.\(h\|hpp\)\$" | cut -f 2)" \
+    -header-filter="$SRC_HEADERS" \
     -p=. \
     -style=none \
-    $(git ls-tree --full-tree -r HEAD | grep -e "\.\(c\|cpp\)\$" | cut -f 2)
-
-echo "### Printing all suggestions from tidy-fixes.yaml"
-cat tidy-fixes.yaml
+    src/
 
 echo "## Run clang-format on C/C++ src code"
 clang-format -style=file -i $SRC_HEADERS $SRC_IMPLEMENTATION

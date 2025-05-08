@@ -39,17 +39,17 @@ class DumpActionServer : public rclcpp::Node
     configs::CurrentLimitsConfigs lim_config{};
     lim_config.SupplyCurrentLimit = 30;
     lim_config.SupplyCurrentLimitEnable = true;
-    conveyorMotor_.GetConfigurator().Apply(lim_config);
+    conveyor_motor_.GetConfigurator().Apply(lim_config);
   }
 
  private:
   rclcpp_action::Server<Dump>::SharedPtr action_server_;
-  hardware::TalonFX conveyorMotor_{30, "can1"};
-  controls::DutyCycleOut conveyorDutyCycle_{0};
+  hardware::TalonFX conveyor_motor_{30, "can1"};
+  controls::DutyCycleOut conveyor_duty_cycle_{0};
   float volume_deposited_{0};
   bool has_goal_{false};
   int loop_rate_hz_{20};
-  std::shared_ptr<GoalHandleDump> Dump_Goal_Handle_;
+  std::shared_ptr<GoalHandleDump> dump_goal_handle_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description_ =
     this->create_subscription<std_msgs::msg::Float32>(
       "/dump/volume", 2,
@@ -74,7 +74,8 @@ class DumpActionServer : public rclcpp::Node
   }
 
   rclcpp_action::GoalResponse handle_goal(
-    const rclcpp_action::GoalUUID& uuid, const std::shared_ptr<const Dump::Goal>& goal)
+    const rclcpp_action::GoalUUID& uuid,
+    const std::shared_ptr<const Dump::Goal>& goal)
   {
     RCLCPP_INFO(this->get_logger(),
                 "Received goal request with order %f m^3 or %f power",
@@ -84,10 +85,10 @@ class DumpActionServer : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "Accepted Goal and Will soon Execute it");
       has_goal_ = true;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-    }       RCLCPP_INFO(this->get_logger(),
-                  "rejected goal, there must be one still executing");
-      return rclcpp_action::GoalResponse::REJECT;
-   
+    }
+    RCLCPP_INFO(this->get_logger(),
+                "rejected goal, there must be one still executing");
+    return rclcpp_action::GoalResponse::REJECT;
   }
 
   rclcpp_action::CancelResponse handle_cancel(
@@ -95,8 +96,8 @@ class DumpActionServer : public rclcpp::Node
   {
     (void)GOAL_HANDLE; // for unused warning
     RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-    conveyorDutyCycle_.Output = 0;
-    Dump_Goal_Handle_ = nullptr;
+    conveyor_duty_cycle_.Output = 0;
+    dump_goal_handle_ = nullptr;
     has_goal_ = false;
     return rclcpp_action::CancelResponse::ACCEPT;
   }
@@ -123,7 +124,7 @@ class DumpActionServer : public rclcpp::Node
       RCLCPP_DEBUG(this->get_logger(), "execute: manual power control");
       execute_pwr_dump(GOAL_HANDLE);
     }
-    double const AMPS = conveyorMotor_.GetTorqueCurrent().GetValueAsDouble();
+    double const AMPS = conveyor_motor_.GetTorqueCurrent().GetValueAsDouble();
     RCLCPP_INFO(this->get_logger(), "OUTPUT CURRENT: %f",
                 AMPS * 19.26 * pow(10, -3));
   }
@@ -133,7 +134,7 @@ class DumpActionServer : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
       loop_rate_hz_); // this should be 20 hz which I can't imagine not being
-                     // enough for the dump
+                      // enough for the dump
     const auto GOAL = GOAL_HANDLE->get_goal();
     auto feedback = std::make_shared<Dump::Feedback>();
     auto result = std::make_shared<Dump::Result>();
@@ -143,7 +144,7 @@ class DumpActionServer : public rclcpp::Node
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
         GOAL_HANDLE->canceled(result);
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
-        Dump_Goal_Handle_ = nullptr; // Reset the active goal
+        dump_goal_handle_ = nullptr; // Reset the active goal
         has_goal_ = false;
         return;
       }
@@ -152,8 +153,8 @@ class DumpActionServer : public rclcpp::Node
       auto result = std::make_shared<Dump::Result>();
       ctre::phoenix::unmanaged::FeedEnable(
         pow(static_cast<float>(loop_rate_hz_), -1));
-      conveyorDutyCycle_.Output = SPEED;
-      conveyorMotor_.SetControl(conveyorDutyCycle_);
+      conveyor_duty_cycle_.Output = SPEED;
+      conveyor_motor_.SetControl(conveyor_duty_cycle_);
       RCLCPP_INFO(this->get_logger(), "The motor should be running");
       amount_done = volume_deposited_ / GOAL->deposition_goal * 100;
 
@@ -166,7 +167,7 @@ class DumpActionServer : public rclcpp::Node
       GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
       volume_deposited_ = 0;
-      Dump_Goal_Handle_ = nullptr;
+      dump_goal_handle_ = nullptr;
       has_goal_ = false;
     }
   }
@@ -193,15 +194,16 @@ class DumpActionServer : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "Goal is canceling");
       GOAL_HANDLE->canceled(result);
       RCLCPP_INFO(this->get_logger(), "Goal canceled");
-      Dump_Goal_Handle_ = nullptr; // Reset the active goal
+      dump_goal_handle_ = nullptr; // Reset the active goal
       has_goal_ = false;
       return;
     }
 
-    ctre::phoenix::unmanaged::FeedEnable(1000 * (1.0 / (double)(loop_rate_hz_)));
+    ctre::phoenix::unmanaged::FeedEnable(1000 *
+                                         (1.0 / (double)(loop_rate_hz_)));
 
-    conveyorDutyCycle_.Output = POWER_GOAL;
-    conveyorMotor_.SetControl(conveyorDutyCycle_);
+    conveyor_duty_cycle_.Output = POWER_GOAL;
+    conveyor_motor_.SetControl(conveyor_duty_cycle_);
     amount_done = 100;
 
     GOAL_HANDLE->publish_feedback(feedback);
@@ -215,7 +217,7 @@ class DumpActionServer : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(), "execute_pwr: Goal failed");
     }
 
-    Dump_Goal_Handle_ = nullptr;
+    dump_goal_handle_ = nullptr;
     has_goal_ = false;
   }
 }; // class DumpActionServer
