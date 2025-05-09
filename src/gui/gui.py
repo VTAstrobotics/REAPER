@@ -27,6 +27,7 @@ class MultiTopicSubscriber(Node):
         self.messages = {}
         self.bridge = CvBridge()
         self.camera_frames = {}
+        self.camera_frames_lock = threading.Lock()
 
     def subscribe_to_topic(self, topic_name):
 
@@ -64,6 +65,8 @@ class MultiTopicSubscriber(Node):
         self.custom_subscriptions[camera_topic] = subscription
         self.camera_frames[camera_topic] = None
         self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
+        with self.camera_frames_lock:
+            self.camera_frames[topic] = (cv_image, latency_ms)
 
     def joystick_topic_exists(self, topic_name):
         topic_list = self.get_topic_names_and_types()
@@ -408,6 +411,9 @@ class TkMultiTopicApp:
                     self.check_data_timeout(topic_name, label_message)
                     
     def update_camera_frames(self):
+
+        with self.ros_node.camera_frames_lock:
+            frames_copy = dict(self.ros_node.camera_frames) 
     
         for topic, data in self.ros_node.camera_frames.items():
 
