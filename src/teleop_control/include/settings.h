@@ -1,5 +1,5 @@
-#ifndef _SETTINGS_H
-#define _SETTINGS_H
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 /**
  * @defgroup dmpMac Dump Macros
@@ -85,7 +85,7 @@
 /** @ingroup uart
  *  @brief Settings for the UART serial file descriptor
  */
-#define UART_FD_SETTINGS O_RDWR | O_NOCTTY | O_NONBLOCK
+#define UART_FD_SETTINGS (O_RDWR | O_NOCTTY | O_NONBLOCK)
 /**
  * @ingroup uart
  * @brief Length of the UART receive buffer
