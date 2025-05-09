@@ -64,6 +64,8 @@ echo "### Clean"
 rm -rf build/ install/ log/ compile_commands.json
 
 echo "### Build using build script"
+unset AMENT_PREFIX_PATH
+source /opt/ros/humble/setup.bash
 source build_scripts/build.sh 2> >(tee err.log >&2)
 
 if [ -s err.log ]; then

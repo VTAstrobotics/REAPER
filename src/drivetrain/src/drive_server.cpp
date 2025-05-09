@@ -75,10 +75,10 @@ class DriveActionServer : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "Accepted Goal and Will soon Execute it");
       has_goal_ = true;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-    }       RCLCPP_INFO(this->get_logger(),
-                  "rejected goal, there must be one still executing");
-      return rclcpp_action::GoalResponse::REJECT;
-   
+    }
+    RCLCPP_INFO(this->get_logger(),
+                "rejected goal, there must be one still executing");
+    return rclcpp_action::GoalResponse::REJECT;
   }
 
   rclcpp_action::CancelResponse handle_cancel(
@@ -129,7 +129,7 @@ class DriveActionServer : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
       loop_rate_hz_); // this should be 20 hz which I can't imagine not being
-                     // enough for the dump
+                      // enough for the dump
 
     const auto GOAL = GOAL_HANDLE->get_goal();
 
