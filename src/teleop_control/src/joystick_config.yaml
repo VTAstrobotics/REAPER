@@ -1,0 +1,12 @@
+buttons:
+  0: dig        # Button A
+  1: dump       # Button B
+  4: dig_down   # LB
+  5: dig_up     # RB
+  3: toggle_slow_turn # Y
+
+axes:
+  1: throttle   # LSY (left stick Y)
+  0: turn       # LSX
+  3: bucket     # RSY
+  6: dump_manual # D-pad horizontal
