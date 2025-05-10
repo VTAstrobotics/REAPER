@@ -11,6 +11,7 @@ This GUI is currently maintained by Andrew Walls.
 ## Current Features
 
 -  Can display multiple ros topics and camera feeds.
+-  Shows a match timer and controller connectivity
 -  Displays when topic data times out or doesn't show
 -  Individual topics can be rearraged and removed using mouse controls.
 -  Subscribe to topics while running OR specify topic to initalize on startup.
@@ -39,6 +40,6 @@ You can remove any topic by right clicking within the window and clicking "remov
 
 ## TODO
 
--  Camera latency values
--  Controller connectivity display
+-  Clean up certain display (Controller display, maybe timer)
+-  More user-friendly initial configuration
 -  "Swapping" camera feeds in one window
