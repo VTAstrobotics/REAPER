@@ -2,97 +2,128 @@
 import re
 import subprocess
 import sys
+import os
+import fcntl
+import pyudev
+import time
 
-def get_bus_dev_by_name(name_substr: str):
+# from <linux/usbdevice_fs.h>
+USBDEVFS_RESET = ord('U') << (4*2) | 20
+
+def find_canable_bus_dev():
     """
-    Return (bus, dev) for the first lsusb line whose description
-    contains name_substr (case‐insensitive), e.g. "canable".
+    Return (bus, dev) for the first lsusb line containing 'canable'.
     """
+    pat = re.compile(r'^Bus\s+(\d{3})\s+Device\s+(\d{3}):', re.IGNORECASE)
     out = subprocess.check_output(['lsusb'], text=True)
     for line in out.splitlines():
-        # Example line:
-        # Bus 001 Device 007: ID 16d0:117e MCS CANable2 b158aa7 github.com/normaldotcom/canable2.git
-        m = re.match(
-            r'Bus\s+(\d{3})\s+Device\s+(\d{3}):\s+ID\s+[0-9a-f]{4}:[0-9a-f]{4}\s+(.+)$',
-            line, re.IGNORECASE
-        )
-        if m:
-            desc = m.group(3)
-            if re.search(name_substr, desc, re.IGNORECASE):
+        if 'canable' in line.lower():
+            m = pat.match(line)
+            if m:
                 return int(m.group(1)), int(m.group(2))
     return None, None
 
-def get_port_path(bus: int, dev: int):
+def usb_reset(bus: int, dev: int):
     """
-    Parse `lsusb -t` and return a port path like "1-1.1.3"
-    for the given bus and device numbers.
+    Send USBDEVFS_RESET ioctl to /dev/bus/usb/<bus>/<dev>.
     """
-    tree = subprocess.check_output(['lsusb', '-t'], text=True)
-    lines = tree.splitlines()
+    path = f"/dev/bus/usb/{bus:03d}/{dev:03d}"
+    if not os.path.exists(path):
+        print(f"Error: device node {path} does not exist!", file=sys.stderr)
+        sys.exit(1)
+    fd = os.open(path, os.O_WRONLY)
+    try:
+        fcntl.ioctl(fd, USBDEVFS_RESET, 0)
+    finally:
+        os.close(fd)
+        
 
-    # Match the Bus block header: "/:  Bus 01.Port 02: ..."`
-    bus_pattern = re.compile(r'^/:\s+Bus\s+%02d\.Port\s+(\d+):' % bus)
-    in_block = False
-    port_map = {}
+# … your find_canable_bus_dev() and usb_reset() here …
+def wait_for_remove_and_add(bus, dev, timeout=5.0, poll_interval=0.1):
+    context = pyudev.Context()
+    monitor = pyudev.Monitor.from_netlink(context)
+    monitor.filter_by(subsystem='usb')
+    monitor.start()  # begin listening
 
-    for line in lines:
-        # Enter our bus block
-        m_bus = bus_pattern.match(line)
-        if m_bus:
-            root_port = int(m_bus.group(1))
-            in_block = True
-            port_map.clear()
+    start = time.time()
+    removed = False
+
+    while True:
+        # Compute how much time is left
+        elapsed = time.time() - start
+        if elapsed > timeout:
+            return False
+
+        # Wait up to poll_interval for a udev event
+        device = monitor.poll(timeout=poll_interval)
+        if device is None:
+            # no event this tick, loop back to check timeout
             continue
-        # Exit if another bus starts
-        if in_block and line.startswith('/:') and not bus_pattern.match(line):
-            break
-        if not in_block:
+
+        action = device.action
+        # udev properties are strings like "001", so zero-pad
+        if device.get('BUSNUM') == f"{bus:03d}" and device.get('DEVNUM') == f"{dev:03d}":
+            if action == 'remove':
+                print("[INFO] Received udev remove event")
+                removed = True
+            elif removed and action == 'add':
+                print("[INFO] Received udev add event")
+                return True
+
+    # never reached
+
+
+def wait_for_remove_and_add(bus, dev, timeout=5.0, poll_interval=0.1):
+    context = pyudev.Context()
+    monitor = pyudev.Monitor.from_netlink(context)
+    monitor.filter_by(subsystem='usb')
+    monitor.start()  # begin listening
+
+    start = time.time()
+    removed = False
+
+    while True:
+        # Compute how much time is left
+        elapsed = time.time() - start
+        if elapsed > timeout:
+            return False
+
+        # Wait up to poll_interval for a udev event
+        device = monitor.poll(timeout=poll_interval)
+        if device is None:
+            # no event this tick, loop back to check timeout
             continue
 
-        # Lines like "    |__ Port 1: Dev 007, If 0, ..."
-        m = re.match(r'^(?P<indent>\s*)\|__\s+Port\s+(\d+):\s+Dev\s+(\d+)', line)
-        if not m:
-            continue
+        action = device.action
+        # udev properties are strings like "001", so zero-pad
+        if device.get('BUSNUM') == f"{bus:03d}" and device.get('DEVNUM') == f"{dev:03d}":
+            if action == 'remove':
+                print("[INFO] Received udev remove event")
+                removed = True
+            elif removed and action == 'add':
+                print("[INFO] Received udev add event")
+                return True
 
-        indent = m.group('indent')
-        depth = len(indent) // 4
-        port_num = int(m.group(2))
-        dev_num = int(m.group(3))
+    # never reached
 
-        port_map[depth] = port_num
 
-        if dev_num == dev:
-            # Build path: bus-rootPort.sub1.sub2...
-            # First two parts: bus and root_port
-            path_parts = [str(bus), str(root_port)]
-            # Append each subport
-            for d in range(1, depth + 1):
-                path_parts[1] += f".{port_map[d]}"
-            # Return "bus-root.sub1.sub2"
-            return "-".join([path_parts[0], path_parts[1]])
-
-    return None
 
 def main():
-    # find by name substring "canable"
-    bus, dev = get_bus_dev_by_name("canable")
+    bus, dev = find_canable_bus_dev()
     if bus is None:
-        print("Error: no CANable device found in lsusb.", file=sys.stderr)
+        print("Error: could not find CANable in lsusb.", file=sys.stderr)
         sys.exit(1)
+    print(f"Resetting USB device bus={bus:03d} dev={dev:03d}")
+    usb_reset(bus, dev)
+    if wait_for_remove_and_add(bus, dev):
+        print("Device disconnected and reconnected successfully")
+    else:
+        print("Timeout waiting for udev events")
 
-    port_path = get_port_path(bus, dev)
-    if port_path is None:
-        print(f"Error: could not determine port path for Bus {bus} Dev {dev}.", file=sys.stderr)
-        sys.exit(1)
+    print("Reset complete.")
+    # In main():
 
-    cmd = ['./tl_reset_can.sh', f'port="{port_path}"']
-    print(f"Invoking: {' '.join(cmd)}")
-    ret = subprocess.call(cmd)
-    sys.exit(ret)
+
 
 if __name__ == "__main__":
     main()
-import os
-
-
-os
