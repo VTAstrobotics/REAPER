@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/Dump.action"
   "action/Drive.action"
   "action/Dig.action"
+  "action/Fuser.action"
   DEPENDENCIES builtin_interfaces action_msgs geometry_msgs
 )
 
