@@ -1,7 +1,7 @@
 /dig_action_server:
   ros__parameters:
-    left_linkage_offset: -0.520997
-    right_linkage_offset: 0.042139
-    left_bucket_offset: -0.183594
-    right_bucket_offset: 0.061202
+    left_linkage_offset: -0.025636
+    right_linkage_offset: -0.567392
+    left_bucket_offset: -0.015137
+    right_bucket_offset: 0.230147
     use_sim_time: false

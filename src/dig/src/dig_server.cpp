@@ -79,9 +79,9 @@ namespace dig_server
 
       // Slot 1 gains
       link_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
-      link_configs.Slot1.kP = 3; // 0.8 * K_u;
+      link_configs.Slot1.kP = 5; // 0.8 * K_u;
       // link_configs.Slot1.kI = 0; // 0; PD controller
-      link_configs.Slot1.kD = 0.1; //0.1 * K_u * T_u;
+      //link_configs.Slot1.kD = 0.5; //0.1 * K_u * T_u;
 
       // Set linkage current limits
       /* calculated by 80 Nm from mechanical as max output on output shaft, at 100:1 gear ratio
@@ -197,9 +197,9 @@ namespace dig_server
       bckt_configs.MotorOutput.Inverted = signals::InvertedValue::Clockwise_Positive;
 
       // Soft limits
-      bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = false;
+      bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
       bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitThreshold = BCKT_MAX_POS_;
-      bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = false;
+      bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
       bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = BCKT_MIN_POS_;
 
       // Individual configs for the left bucket motor
@@ -249,18 +249,18 @@ namespace dig_server
       // controls::PositionVoltage linkPV = controls::PositionVoltage{0_tr}.WithSlot(0);
 
       // Left vibration motor (NEO550) configuration
-      // l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      // l_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      // l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      // l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      // l_vib_mtr_.BurnFlash();
+      l_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      l_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      l_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      l_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      l_vib_mtr_.BurnFlash();
 
       // Right vibration motor (NEO550) configuration
-      // r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
-      // r_vib_mtr_.SetMotorType(MotorType::kBrushless);
-      // r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
-      // r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
-      // r_vib_mtr_.BurnFlash();
+      r_vib_mtr_.SetIdleMode(IdleMode::kCoast);
+      r_vib_mtr_.SetMotorType(MotorType::kBrushless);
+      r_vib_mtr_.SetSmartCurrentFreeLimit(10.0);
+      r_vib_mtr_.SetSmartCurrentStallLimit(10.0);
+      r_vib_mtr_.BurnFlash();
 
       RCLCPP_DEBUG(this->get_logger(), "Ready for action");
     }
@@ -283,11 +283,11 @@ namespace dig_server
     hardware::TalonFX r_bckt_mtr_{24, "can1"};
     hardware::CANcoder r_bckt_cancoder_{4, "can1"};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
-    mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, false};
+    mechanisms::SimpleDifferentialMechanism bckt_mech{l_bckt_mtr_, r_bckt_mtr_, true};
 
     // vibration motors
-    // SparkMax l_vib_mtr_{"can1", 22};
-    // SparkMax r_vib_mtr_{"can1", 25};
+    SparkMax l_vib_mtr_{"can1", 22};
+    SparkMax r_vib_mtr_{"can1", 25};
 
     bool has_goal_{false};
     const int LOOP_RATE_HZ_{50};
@@ -474,9 +474,11 @@ namespace dig_server
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
       if (APPROX(pwr, 0)) { // hold position
+        RCLCPP_INFO(this->get_logger(), "link_pwr: holding");
         controls::DifferentialVelocityVoltage velocity_command{0_tps, 0_tr}; // velocity turns per second
         link_mech.SetControl(velocity_command);
       } else {
+        RCLCPP_INFO(this->get_logger(), "link_pwr: sending power command");
         controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
         link_mech.SetControl(power_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
       }
@@ -514,14 +516,19 @@ namespace dig_server
       if (!pwr_in_bounds(pwr))
       {
         RCLCPP_ERROR(this->get_logger(), "vibr_pwr: %lf was out of bounds. Power goals should always be in [-1, 1]", pwr);
+
+      l_vib_mtr_.Heartbeat();
+      r_vib_mtr_.Heartbeat();
+      l_vib_mtr_.SetDutyCycle(0);
+      r_vib_mtr_.SetDutyCycle(0);
         return;
       }
 
-      // l_vib_mtr_.Heartbeat();
-      // r_vib_mtr_.Heartbeat();
+      l_vib_mtr_.Heartbeat();
+      r_vib_mtr_.Heartbeat();
 
-      // l_vib_mtr_.SetDutyCycle(pwr);
-      // r_vib_mtr_.SetDutyCycle(pwr);
+      l_vib_mtr_.SetDutyCycle(pwr);
+      r_vib_mtr_.SetDutyCycle(pwr);
     }
 
     void set_left_linkage_offset(const rclcpp::Parameter &p){
@@ -832,6 +839,7 @@ namespace dig_server
       RCLCPP_DEBUG(this->get_logger(), "execute_auton: executing...");
       rclcpp::Rate loop_rate(LOOP_RATE_HZ_);
 
+      // get correct lookup table based on auto scoop or dump
       std::vector<std::vector<float>>& lookup_tb = goal_handle->get_goal()->scoop ? SCOOP_LUT_ : DIG_TO_DUMP_LUT_;
 
       float& link_percent_done = feedback->percent_link_done;
@@ -902,7 +910,7 @@ namespace dig_server
           threads[1].join();
 
           // vibration motors duty cycle
-//          vibr_pwr(lookup_tb.at(i).at(3));
+          vibr_pwr(lookup_tb.at(i).at(3));
 
           link_percent_done = (i/sizeof(lookup_tb)/sizeof(lookup_tb.at(0))) * 100;
           bckt_percent_done = (i/sizeof(lookup_tb)/sizeof(lookup_tb.at(0))) * 100;
