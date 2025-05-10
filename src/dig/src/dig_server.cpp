@@ -690,7 +690,7 @@ namespace dig_server
      */
     void link_pos(double pos) {
       if (!linkage_in_bounds(pos)) {
-        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
+        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition(), 0_tr};
         link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
       }
@@ -708,7 +708,7 @@ namespace dig_server
      */
     void bckt_pos(double pos) {
       if (!bucket_in_bounds(pos)) {
-        controls::DifferentialMotionMagicDutyCycle position_command{l_bckt_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
+        controls::DifferentialMotionMagicDutyCycle position_command{l_bckt_cancoder_.GetAbsolutePosition(), 0_tr};
         bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
       }
