@@ -1,52 +1,112 @@
-
-import rclpy  # Import the ROS 2 Python client library
-from rclpy.node import Node  # Import the Node class from ROS 2
-import cv2  # Import OpenCV for computer vision tasks
-from cv_bridge import CvBridge  # Import CvBridge to convert between ROS and OpenCV images
-from sensor_msgs.msg import Image  # Import the Image message type from sensor_msgs
-import argparse  # Import argparse for command-line arguments
-
-def filter_usbcam_images(topics: list[str]) -> list[str]:
-    return [topic for topic in topics if topic.startswith('/usbcam_image')]
-
-class stream_fuser(Node):
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionServer, GoalResponse
+from rclpy.executors import MultiThreadedExecutor
+from sensor_msgs.msg import Image
+from action_interfaces.action import Fuser
+import re
+class ImageSelectorNode(Node):
     def __init__(self):
-        super().__init__(f'fuser')  # Initialize the Node with the name 'webcam_node'
-        self.subscribers = []
-        self.selected_camera = ""
-        self.timer = self.create_timer(1, self.get_all_cameras)
-        self.pub_timer = self.create_timer(50**-1, self.publish_image)
-        self.camera_publisher = self.create_publisher(str, "/driver/image")
-        self.selected_cam_sub = self.create_subscription(str, "selected_camera",self.change_selected_camera, 1)
-    def change_selected_camera(self, msg):
-        self.selected_cam = msg.data
-    def get_all_cameras(self):
-        topics_and_types = self.get_topic_names_and_types()
-        self.get_logger().info(f"camera topics = {topics_and_types}")
-        all_names = [name for name, _ in topics_and_types]
-        cameras  = filter_usbcam_images(all_names)
-        self.get_logger().info(f"camera topics = {cameras}")
-        for i in cameras:
-            if i not in self.subscribers:
-                self.subscribers.append(i)
-                
-    def publish_image(self):
-        self
+        super().__init__('image_selector')
+        self.get_logger().info('ImageSelector node starting up')
+        self.topic_pattern = re.compile(r'^/usbcam_image_[0-9A-Za-z_~{}]+$')
+        self.topic_prefix = "/usbcam_image_"
+        self.topics = []
+        self.index = 0
+        # Publisher for the selected image
+        self.publisher = self.create_publisher(Image, '/driver/selected_image', 10)
+        # Discover and subscribe to image topics
+        self.update_topics()
+        # Timer to periodically refresh topic list
+        self.create_timer(1.0, self.update_topics)
+        # Action server for increment/decrement
+        self._action_server = ActionServer(
+            self,
+            Fuser,
+            'change_image',
+            execute_callback=self.execute_callback,
+            goal_callback=self.goal_callback
+        )
+        self.get_logger().info('ChangeImage action server initialized')
 
-            
-        
-        
-        
+    def update_topics(self):
+        """Discover image topics and (un)subscribe as needed."""
+        names_types = self.get_topic_names_and_types()
+        found = [name for name, types in names_types
+                 if name.startswith(self.topic_prefix) and 'sensor_msgs/msg/Image' in types]
+        # Add new subscriptions
+        for name in found:
+            if name not in self.topics:
+                self.get_logger().info(f'New image topic discovered: {name}')
+                # subscribe with a callback capturing the topic name
+                sub = self.create_subscription(
+                    Image, name,
+                    lambda msg, t=name: self.image_callback(msg, t), 10)
+                self.topics.append(name)
+        # Remove lost subscriptions (optional)
+        for name in list(self.topics):
+            if name not in found:
+                self.get_logger().info(f'Image topic lost: {name}')
+                self.destroy_subscription(self.subscriptions[name])
+                self.topics.remove(name)
+                # Adjust index if necessary
+                self.index %= max(1, len(self.topics))
+        # Sort topics for deterministic order (optional)
+        self.topics.sort()
+
+    def image_callback(self, msg, topic):
+        """Re-publish messages from the selected topic."""
+        if topic == self.topics[self.index]:
+            # Forward the image
+            self.publisher.publish(msg)
+
+    def goal_callback(self, goal_request):
+        """Accept only valid goals."""
+        cmd = goal_request.command.lower()
+        if cmd not in ('increment', 'decrement'):
+            self.get_logger().warn(f'Rejecting invalid command: {cmd}')
+            return GoalResponse.REJECT
+        self.get_logger().info(f'Goal received: {cmd}')
+        return GoalResponse.ACCEPT
+
+    async def execute_callback(self, goal_handle):
+        """Execute an increment/decrement command."""
+        cmd = goal_handle.request.command.lower()
+        num = len(self.topics)
+        if num == 0:
+            # No topics to cycle through
+            goal_handle.succeed()
+            result = ChangeImage.Result()
+            result.success = False
+            result.message = 'No image topics available'
+            return result
+        # Compute new index with wrap-around
+        if cmd == 'increment':
+            self.index = (self.index + 1) % num
+        else:
+            self.index = (self.index - 1) % num
+        new_topic = self.topics[self.index]
+        self.get_logger().info(f'Image selection changed to {new_topic}')
+        goal_handle.succeed()
+        result = ChangeImage.Result()
+        result.success = True
+        result.message = f'Selected image: {new_topic}'
+        return result
+
+    def destroy(self):
+        self._action_server.destroy()
+        super().destroy_node()
+
 def main(args=None):
-    rclpy.init(args=args)  # Initialize the ROS 2 Python client library
-    node = stream_fuser()  # Create an instance of the CameraNode with the specified camera index
+    rclpy.init(args=args)
+    node = ImageSelectorNode()
+    # Use a MultiThreadedExecutor to handle subscriptions and action concurrently
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
     try:
-        rclpy.spin(node)  # Spin the node to keep it alive and processing callbacks
+        executor.spin()
     except KeyboardInterrupt:
-        pass  # Allow the user to exit with Ctrl+C
-    
-    
-
-
-if __name__ == '__main__':
-    main()  # Run the main function if this script is executed
+        pass
+    node.get_logger().info('Shutting down ImageSelector')
+    node.destroy()
+    rclpy.shutdown()

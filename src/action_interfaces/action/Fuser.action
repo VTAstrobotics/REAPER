@@ -1,0 +1,8 @@
+# Fuser.action
+string command  # "increment" or "decrement"
+---
+bool success
+string message  # e.g. status or current selection info
+---
+string feedback  # (unused or could hold intermediate status)
+
