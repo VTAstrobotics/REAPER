@@ -621,6 +621,7 @@ class Distributor : public rclcpp::Node
   void fuser_fb_cb(const FuserGoalHandle::SharedPtr& /*unused*/,
                    const std::shared_ptr<const Fuser::Feedback>& FEEDBACK)
   {
+    (void)FEEDBACK;
     RCLCPP_INFO(this->get_logger(), "Fuser action completed");
   }
 

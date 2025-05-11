@@ -63,7 +63,7 @@ class ImageSelectorNode(Node):
     def goal_callback(self, goal_request):
         """Accept only valid goals."""
         cmd = goal_request.command
-        if cmd not in (-1, 1):
+        if cmd not in (-1, 0, 1):
             self.get_logger().warn(f'Rejecting invalid command: {cmd}')
             return GoalResponse.REJECT
         self.get_logger().info(f'Goal received: {cmd}')
