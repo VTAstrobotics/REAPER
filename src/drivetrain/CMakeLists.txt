@@ -15,8 +15,6 @@ find_package(action_interfaces REQUIRED)
 find_package(unique_identifier_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sparkcan REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(sparkcan REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -39,14 +37,14 @@ target_compile_definitions(Drive_action_server PRIVATE "DRIVE_ACTION_CPP_BUILDIN
 
 
 ament_target_dependencies(Drive_action_server
-"rclcpp"
-"rclcpp_action"
-"rclcpp_components"
-"std_msgs"
-"geometry_msgs"
-"action_interfaces"
-"sparkcan"
-"sensor_msgs"
+  "rclcpp"
+  "rclcpp_action"
+  "rclcpp_components"
+  "std_msgs"
+  "geometry_msgs"
+  "action_interfaces"
+  "sparkcan"
+  "sensor_msgs"
 )
 
 rclcpp_components_register_node(Drive_action_server PLUGIN "drive_server::DriveActionServer" EXECUTABLE DriveActionServer)
