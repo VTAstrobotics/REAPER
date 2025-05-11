@@ -244,7 +244,7 @@ class Distributor : public rclcpp::Node
 
     if (raw.buttons[BUTTON_RBUMPER] != 0) {
       RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-      dig_goal.link_pwr_goal = 0.40;
+      dig_goal.link_pwr_goal = 0.60;
 
       // dump_goal.deposition_goal = 0.1;
       // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
