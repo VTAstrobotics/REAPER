@@ -55,13 +55,13 @@ namespace dig_server
           std::bind(&DigActionServer::handle_cancel, this, _1),
           std::bind(&DigActionServer::handle_accepted, this, _1));
 
-      // RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
-      // auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+      RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
+      auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
 
-      // if (ret != RCUTILS_RET_OK) {
-      //   RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
-      //   rcutils_reset_error();
-      // }
+      if (ret != RCUTILS_RET_OK) {
+        RCLCPP_ERROR(get_logger(), "Error setting severity: %s", rcutils_get_error_string().str);
+        rcutils_reset_error();
+      }
 
       // Linkage motor configuration
       configs::TalonFXConfiguration link_configs{};
@@ -85,9 +85,9 @@ namespace dig_server
 
       // Set linkage current limits
       /* calculated by 80 Nm from mechanical as max output on output shaft, at 100:1 gear ratio
-       * so 0.8 Nm on motor / 0.01926 kT = 41.5 A. Round down to 40 just in case.
+       * so 1.2 Nm on motor / 0.01926 kT = 62.3 A. Round down to 60 just in case.
        * see https://ctre.download/files/datasheet/Motor%20Performance%20Analysis%20Report.pdf for KrakenX60 kT */
-      link_configs.CurrentLimits.StatorCurrentLimit = 40;
+      link_configs.CurrentLimits.StatorCurrentLimit = 60;
       link_configs.CurrentLimits.StatorCurrentLimitEnable = true;
 
       // based on wire awg (10)
@@ -175,10 +175,10 @@ namespace dig_server
       // bckt_configs.Slot1.kD = 0; //0.1 * K_u * T_u;
 
       // Set bucket current limits
-      /* calculated by 55 Nm from mechanical as max output on output shaft, at 75:1 gear ratio
-       * so 0.73 Nm on motor / 0.01926 kT = 38.1 A. Round down to 35 just in case.
+      /* calculated by 80 Nm from mechanical as max output on output shaft, at 75:1 gear ratio
+       * so 1.06 Nm on motor / 0.01926 kT = 55.4 A. Round down to 50 just in case.
        * see https://ctre.download/files/datasheet/Motor%20Performance%20Analysis%20Report.pdf for KrakenX60 kT */
-      bckt_configs.CurrentLimits.StatorCurrentLimit = 35;
+      bckt_configs.CurrentLimits.StatorCurrentLimit = 50;
       bckt_configs.CurrentLimits.StatorCurrentLimitEnable = true;
 
       // based on wire awg (10)
@@ -194,7 +194,7 @@ namespace dig_server
       bckt_configs.MotorOutput.NeutralMode = signals::NeutralModeValue::Brake;
 
       // Set leader (left) bucket motor to clockwise positive
-      bckt_configs.MotorOutput.Inverted = signals::InvertedValue::Clockwise_Positive;
+      bckt_configs.MotorOutput.Inverted = signals::InvertedValue::CounterClockwise_Positive;
 
       // Soft limits
       bckt_configs.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
@@ -300,7 +300,7 @@ namespace dig_server
     // position limits
     const float LINK_MIN_POS_{-.15};
     const float LINK_MAX_POS_{0.35};
-    const float BCKT_MIN_POS_{-0.35};
+    const float BCKT_MIN_POS_{-0.30};
     const float BCKT_MAX_POS_{0.35};
 
     // lookup table for auto dig
@@ -408,7 +408,7 @@ namespace dig_server
 
       } else { // at least some manual control
         // linkage
-        if (!APPROX(goal->link_pos_goal, DEFAULT_VAL_)) {
+        if (!approx(goal->link_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: linkage position control");
           threads.emplace_back(std::thread{std::bind(&DigActionServer::exe_link_pos, this, _1, _2, _3), goal_handle, feedback, result});
 
@@ -419,7 +419,7 @@ namespace dig_server
         }
 
         // bucket
-        if (!APPROX(goal->bckt_pos_goal, DEFAULT_VAL_)) {
+        if (!approx(goal->bckt_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: bucket position control");
           threads.emplace_back(std::thread{std::bind(&DigActionServer::exe_bckt_pos, this, _1, _2, _3), goal_handle, feedback, result});
 
@@ -473,13 +473,18 @@ namespace dig_server
 
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
-      if (APPROX(pwr, 0)) { // hold position
+      if (approx(pwr, 0)) { // hold position
         RCLCPP_INFO(this->get_logger(), "link_pwr: holding");
         controls::DifferentialVelocityVoltage velocity_command{0_tps, 0_tr}; // velocity turns per second
         link_mech.SetControl(velocity_command);
       } else {
+	      double angle = 0;
+        angle = (double) r_link_cancoder_.GetAbsolutePosition().GetValue();
+	      if(angle < 0) {
+	      angle = 0;
+	      } 
         RCLCPP_INFO(this->get_logger(), "link_pwr: sending power command");
-        controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
+        controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr * cos(2* 3.141592 * angle)), 0 * 0_tr};
         link_mech.SetControl(power_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
       }
     }
@@ -696,13 +701,16 @@ namespace dig_server
      * @param pos the position for the linkage to go to
      */
     void link_pos(double pos) {
+	    RCLCPP_DEBUG(this->get_logger(), "link_pos: pos = %lf", pos);
       if (!linkage_in_bounds(pos)) {
-        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition(), 0_tr};
+	    RCLCPP_DEBUG(this->get_logger(), "link_pos: OUT OF BOUNDS! setting to %lf", l_link_cancoder_.GetAbsolutePosition().GetValue());
+        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
         link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
       }
 
       units::angle::turn_t angle{pos * 1_tr};
+	    //RCLCPP_DEBUG(this->get_logger(), "link_pos: IN BOUNDS! setting to %lf", angle.GetValue());
       controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
 
       link_mech.Periodic();
@@ -715,7 +723,7 @@ namespace dig_server
      */
     void bckt_pos(double pos) {
       if (!bucket_in_bounds(pos)) {
-        controls::DifferentialMotionMagicDutyCycle position_command{l_bckt_cancoder_.GetAbsolutePosition(), 0_tr};
+        controls::DifferentialMotionMagicDutyCycle position_command{l_bckt_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
         bckt_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
       }
@@ -737,14 +745,14 @@ namespace dig_server
      * @return true if we have reached the position OR the goal is out of bounds (so we aren't trying to go anyway)
      */
     bool reached_pos(double current_pos, double goal, float min, float max) {
-      return !pos_in_bounds(goal, min, max) || APPROX(current_pos, goal);
+      return !pos_in_bounds(goal, min, max) || approx(current_pos, goal);
     }
 
     void execute_pos(const std::shared_ptr<GoalHandleDig> goal_handle,
       std::shared_ptr<Dig::Feedback> feedback,
       std::shared_ptr<Dig::Result> result, double goal_val,
       hardware::TalonFX* motor, const double MIN_POS, const double MAX_POS,
-      float& percent_done, std::function<void(double, double)> pos_func,
+      float& percent_done, std::function<void(double)> pos_func,
       float& est_goal, const char* print_prefix)
     {
       (void) result; // for unused warning
@@ -886,7 +894,7 @@ namespace dig_server
                   LINK_MIN_POS_,
                   LINK_MAX_POS_,
                   link_percent_done,
-                  std::bind(&DigActionServer::link_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
+                  std::bind(&DigActionServer::link_pos, this, std::placeholders::_1), // Keep the bind for link_pos
                   result->est_link_goal,
                   __func__);
           });
@@ -901,7 +909,7 @@ namespace dig_server
                   BCKT_MIN_POS_,
                   BCKT_MAX_POS_,
                   bckt_percent_done,
-                  std::bind(&DigActionServer::bckt_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
+                  std::bind(&DigActionServer::bckt_pos, this, std::placeholders::_1), // Keep the bind for link_pos
                   result->est_bckt_goal,
                   __func__);
           });

@@ -194,14 +194,14 @@ class Distributor : public rclcpp::Node
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		dig_goal.link_pos_goal = -0.1;
+		//dig_goal.link_pos_goal = -0.1;
 		//dig_goal.bckt_pos_goal = 0.1;
 		//dig_goal.link_pos_goal = 0;
 		//dig_goal.bckt_pos_goal = 0;
 
 	        //vibration_on = !vibration_on;
         }
-		if (vibration_on) {dig_goal.vibr_pwr_goal = 0.3;}
+		if (vibration_on) {dig_goal.vibr_pwr_goal = 0.1;}
 
     if (valid_toggle_press(BUTTON_X, raw)) {
       RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
@@ -209,9 +209,6 @@ class Distributor : public rclcpp::Node
       // dig_goal.scoop = true;
       // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
     }
-            dig_goal.scoop = true;
-            // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
-        }
 
     //        if (valid_toggle_press(BUTTON_X, raw)) {
     // dig_goal.link_pos_goal = 0;
