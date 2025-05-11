@@ -14,6 +14,7 @@
 #include "std_msgs/msg/float32.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 namespace drive_server
 {
   class DriveActionServer : public rclcpp::Node
@@ -27,7 +28,6 @@ namespace drive_server
     {
       using namespace std::placeholders;
       
-
       this->action_server_ = rclcpp_action::create_server<Drive>(
           this,
           "drive",
@@ -49,6 +49,7 @@ namespace drive_server
         right_motor.BurnFlash();
         velocity_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/drive/velocity", 10);
         pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("/drive/pose", 10);
+        pose_with_covariance_publisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/drive/pose/covariance", 10);
         imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>("/imu/data", 10, std::bind(&DriveActionServer::imu_callback, this, _1));
         timer_ = this->create_wall_timer(std::chrono::milliseconds(8), std::bind(&DriveActionServer::timer_callback, this));
         past_time = this->now();
@@ -62,6 +63,7 @@ namespace drive_server
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_with_covariance_publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
     rclcpp::TimerBase::SharedPtr timer_;
     sensor_msgs::msg::Imu current_imu;
@@ -89,7 +91,7 @@ namespace drive_server
     //THESE VALUES NEED TO BE CHANGED TO THE ACTUAL ROBOT VALUES TO TEST
     double wheelCircumference = 0.3; //placeholder
     double normalization_constant = 1; //change this during testing
-    double track_width{1.0};
+    double track_width{167};
 
 
     rclcpp_action::GoalResponse handle_goal(
@@ -132,7 +134,6 @@ namespace drive_server
 
     void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg){
       current_imu = *msg;
-
     }
 
     struct Quaterniond
@@ -217,7 +218,21 @@ namespace drive_server
 
       pose_message.orientation = quat_msg;
     }
-
+    void getPoseCovarianceMessage(geometry_msgs::msg::Pose &pose_msg, geometry_msgs::msg::PoseWithCovarianceStamped &pose_msg_covariance){
+      pose_msg_covariance.header.stamp = this->now();
+      pose_msg_covariance.header.frame_id = "odom";          
+      pose_msg_covariance.pose.pose = pose_msg;              
+      pose_msg_covariance.pose.covariance =
+      {
+        0, 0,    0,    0, 0,    0,
+        0,    0, 0,    0, 0,    0,
+        0,    0,    0, 0, 0,    0,   
+        0,    0,    0,    0, 0,    0,   
+        0,    0,    0,    0, 0, 0,   
+        0,    0,    0,    0, 0, 0   
+      };
+    }
+    
     void timer_callback(){
       auto current_time = this->now();
       double dt = (current_time - past_time).seconds();
@@ -226,9 +241,12 @@ namespace drive_server
       getVelocityMessage(velocity_message, dt);
       geometry_msgs::msg::Pose pose_msg;
       getPoseMessage(velocity_message, pose_msg, dt);
+      geometry_msgs::msg::PoseWithCovarianceStamped pose_msg_covariance;
+      getPoseCovarianceMessage(pose_msg, pose_msg_covariance);
       
       velocity_publisher_->publish(velocity_message);
       pose_publisher_->publish(pose_msg);
+      pose_with_covariance_publisher_->publish(pose_msg_covariance);
       pastLeftPos = new_left_position;
       pastRightPos = new_right_position;
     }
