@@ -482,9 +482,17 @@ namespace dig_server
         angle = (double) r_link_cancoder_.GetAbsolutePosition().GetValue();
 	      if(angle < 0) {
 	      angle = 0;
-	      } 
+	      
+	      }
+	      if(pwr < 0 )
+	      {
+	      	pwr = pwr;
+	      }
+	      else if(angle > 0){
+	     	pwr = pwr * (1 - angle/(.25));
+	     } 
         RCLCPP_INFO(this->get_logger(), "link_pwr: sending power command");
-        controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr * cos(2* 3.141592 * angle)), 0 * 0_tr};
+        controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
         link_mech.SetControl(power_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
       }
     }
