@@ -1,8 +1,8 @@
 FROM ros:humble-ros-base-jammy
 
 # Basic ROS2 setup
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-desktop=0.10.0-1* \
+RUN apt update && apt install -y --no-install-recommends \
+    ros-humble-desktop \
     python3 \
     python3-pip \
     && pip3 install setuptools==58.2.0 \
@@ -43,8 +43,10 @@ ENV PICO_SDK_PATH=$HOME/pico-sdk
 # MicroROS dependencies
 RUN sudo apt install -y \
     gcc-arm-none-eabi \
-    doxygen \
-    && git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
+    doxygen
+
+# Clone MicroROS Pi Pico
+RUN git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
 
 # Rosdep update
 RUN rosdep update
@@ -58,18 +60,24 @@ RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 # Add dependencies below using RUN <command you used to install>              #
 #                                                                             #
 ###############################################################################
-# install clang-format version 16
-RUN sudo apt-get install -y lsb-release \
+# install clang-format dependencies (also add-apt-repository relies on software-properties-common)
+RUN sudo apt install -y \
+    lsb-release \
     wget \
     software-properties-common \
-    gnupg \
-    && sudo wget https://apt.llvm.org/llvm.sh \
-    && sudo chmod +x llvm.sh \
-    && sudo ./llvm.sh 16 \
-    && sudo apt-get install -y clang-format-16 \
-    && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
+    gnupg
 
-# install sparkcan
+# install clang-format and clang-tidy
+RUN sudo wget https://apt.llvm.org/llvm.sh \
+    && sudo chmod +x llvm.sh \
+    && sudo ./llvm.sh 21 \
+    # NOTICE: i have set the version to 21. over time you may choose to migrate
+    # to newer versions, but this may cause errors with the existing formatter
+    # rules (.clang-format and .clang-tidy).
+    && sudo apt update \
+    && sudo apt install -y clang-format clang-tidy
+
+# install sparkcan for sparkmax over can
 RUN sudo add-apt-repository ppa:graysonarendt/sparkcan
 RUN sudo apt update
 RUN sudo apt install sparkcan
@@ -82,13 +90,17 @@ RUN sudo apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup
 
+# For simulation
+RUN sudo apt install -y \
+    gazebo \
+    ros-humble-joint-state-publisher-gui \
+    ros-humble-xacro
+
 # install turtlebot demo, including gz, unless on a Jetson
 # i swear that it worked before but it doesnt anymore. So basically install this manually if you want nav stuff until i can figure this out.
 # RUN if ! grep -q "Jetson" /proc/device-tree/model; then \
 #         sudo apt install -y ros-humble-turtlebot3-gazebo; \
 #     fi
-
-RUN echo "test"
 
 # set environment variables for navigation
 ENV TURTLEBOT3_MODEL=waffle \
