@@ -36,6 +36,7 @@ def quaternion_from_euler(roll, pitch, yaw):
     q.y = sy * cp * sr + cy * sp * cr
     q.z = sy * cp * cr - cy * sp * sr
     return q 
+
 def to_float(x):
     return float(x)
 
@@ -93,15 +94,12 @@ class PosePublisher(Node):
     def image_callback(self, msg):
         self.get_logger().info("Received image")
 
-
         try:
             frame = self.bridge.imgmsg_to_cv2(msg, 'bgra8')
         except Exception as e:
             self.get_logger().error(f"Failed to convert image: {e}")
             return
-        
         # frame = self.bridge.imgmsg_to_cv2(msg, 'bgra8')
-
         if self.stop:
             return
         try:

@@ -33,6 +33,19 @@ ukf_node:
     pose0_queue_size: 5
     pose0_rejection_threshold: 2.0
 
+    pose1: /drive/pose
+    pose1_config: [true,  true,  true,     # x y z
+              false,  false,  false,     
+              false, false, false,    
+              false, false, false,    
+              false, false, false]
+    pose1_differential: true
+    pose1_relative: false
+    pose1_queue_size: 5
+    pose1_rejection_threshold: 2.0
+
+
+
     
       # queue_size:   5
       # rejection_threshold: 2.0 #rejection threshold, may not be needed
