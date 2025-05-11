@@ -40,6 +40,18 @@ find build/ -name compile_commands.json -exec jq -s 'add' {} + > compile_command
 echo "### Source"
 source install/setup.bash
 
+echo "##########################################################################"
+echo "CHECK VERSIONS"
+echo "machine"
+uname -a
+echo "format"
+clang-format --version
+echo "tidy"
+clang-tidy --version
+echo "apply-replacements"
+clang-apply-replacements --version
+echo "##########################################################################"
+
 echo "## Running clang-tidy on C/C++ src code"
 # this script is better than running clang-tidy manually, but has similar effect
 
