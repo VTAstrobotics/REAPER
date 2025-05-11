@@ -13,7 +13,7 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "std_msgs/msg/float32.hpp"
-
+#include "sensor_msgs/msg/imu.hpp"
 namespace drive_server
 {
   class DriveActionServer : public rclcpp::Node
@@ -34,35 +34,42 @@ namespace drive_server
           std::bind(&DriveActionServer::handle_cancel, this, _1),
           std::bind(&DriveActionServer::handle_accepted, this, _1));
 
-        left_motor.SetIdleMode(IdleMode::kBrake);
-        left_motor.SetMotorType(MotorType::kBrushless);
-        // left_motor.SetSmartCurrentFreeLimit(50.0);
-        left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
-        left_motor.BurnFlash();
+      left_motor.SetIdleMode(IdleMode::kBrake);
+      left_motor.SetMotorType(MotorType::kBrushless);
+      // left_motor.SetSmartCurrentFreeLimit(50.0);
+      left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
+      left_motor.BurnFlash();
 
-        right_motor.SetIdleMode(IdleMode::kBrake);
-        right_motor.SetMotorType(MotorType::kBrushless);
-        right_motor.SetInverted(true);
+      right_motor.SetIdleMode(IdleMode::kBrake);
+      right_motor.SetMotorType(MotorType::kBrushless);
+      right_motor.SetInverted(true);
+
+        this->create_subscription<sensor_msgs::msg::Imu>(
+          "imu",
+          0,
+          std::bind(&DriveActionServer
+        )
         // left_motor.SetSmartCurrentFreeLimit(50.0);
         left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
 
   private:
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
     rclcpp_action::Server<Drive>::SharedPtr action_server_;
     // hardware::TalonFX drive_left{20, "can0"};
     // hardware::TalonFX drive_right{21, "can0"};
     // controls::DutyCycleOut drive_left_duty{0.0};
     // controls::DutyCycleOut drive_right_duty{0.0};
-        double drive_left_duty = 0;
-        double drive_right_duty = 0;
-        SparkMax left_motor{"can1", 10};
-        SparkMax right_motor{"can1", 11};
-        // Motor 1
+    double drive_left_duty = 0;
+    double drive_right_duty = 0;
+    SparkMax left_motor{"can1", 10};
+    SparkMax right_motor{"can1", 11};
+    // Motor 1
     bool has_goal{false};
     int loop_rate_hz{120};
     double track_width{1.0};
-    double normalization_constant = 1; //change this during testing
+    double normalization_constant = 1; // change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
 
     rclcpp_action::GoalResponse handle_goal(
@@ -71,13 +78,15 @@ namespace drive_server
     {
       RCLCPP_INFO(this->get_logger(), "Received goal request with order %f", goal->velocity_goal.linear.x); // change to drive specific
       (void)uuid;
-      if(!has_goal){
-        RCLCPP_INFO(this->get_logger(),"Accepted Goal and Will soon Execute it");
+      if (!has_goal)
+      {
+        RCLCPP_INFO(this->get_logger(), "Accepted Goal and Will soon Execute it");
         has_goal = true;
         return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
       }
-      else{
-        RCLCPP_INFO(this->get_logger(),"rejected goal, there must be one still executing");
+      else
+      {
+        RCLCPP_INFO(this->get_logger(), "rejected goal, there must be one still executing");
         return rclcpp_action::GoalResponse::REJECT;
       }
     }
@@ -86,14 +95,20 @@ namespace drive_server
         const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
       RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-         // Stop motors immediately
-        left_motor.SetDutyCycle(0.0);
-        right_motor.SetDutyCycle(0.0);
-        RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
+      // Stop motors immediately
+      left_motor.SetDutyCycle(0.0);
+      right_motor.SetDutyCycle(0.0);
+      RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
-        has_goal = false;
-        (void)goal_handle;
+      has_goal = false;
+      (void)goal_handle;
       return rclcpp_action::CancelResponse::ACCEPT;
+    }
+
+    void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg){
+
+      
+
     }
 
     void handle_accepted(const std::shared_ptr<GoalHandleDrive> goal_handle)
@@ -103,24 +118,24 @@ namespace drive_server
       std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
     }
 
-    std::vector<double> curvatureDrive(double linear_speed, double z_rotation){
-    	linear_speed = std::clamp(linear_speed, -1.0, 1.0);
-	z_rotation = std::clamp(z_rotation, -1.0 , 1.0);
+    std::vector<double> curvatureDrive(double linear_speed, double z_rotation)
+    {
+      linear_speed = std::clamp(linear_speed, -1.0, 1.0);
+      z_rotation = std::clamp(z_rotation, -1.0, 1.0);
 
-	double left_speed = linear_speed - z_rotation;
-	double right_speed = linear_speed + z_rotation;
+      double left_speed = linear_speed - z_rotation;
+      double right_speed = linear_speed + z_rotation;
 
-	//this desaturates
-	//
-	double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
-	if(max_magnitude > 1){
-	left_speed /= max_magnitude;
-	right_speed /= max_magnitude; 
-	}
-	std::vector<double> speeds = {left_speed, right_speed};
-	return speeds;
-    
-    
+      // this desaturates
+      //
+      double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
+      if (max_magnitude > 1)
+      {
+        left_speed /= max_magnitude;
+        right_speed /= max_magnitude;
+      }
+      std::vector<double> speeds = {left_speed, right_speed};
+      return speeds;
     }
     void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
     {
@@ -132,20 +147,19 @@ namespace drive_server
 
       auto feedback = std::make_shared<Drive::Feedback>();
       auto result = std::make_shared<Drive::Result>();
-      double linear  = goal->velocity_goal.linear.x;
+      double linear = goal->velocity_goal.linear.x;
       double angular = goal->velocity_goal.angular.z;
 
-      double v_left  = linear  - angular;
-      double v_right = linear  + angular;
-
+      double v_left = linear - angular;
+      double v_right = linear + angular;
 
       auto start_time = this->now();
       auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
 
-
       while (rclcpp::ok() && this->now() < end_time)
       {
-        if (goal_handle->is_canceling()) {
+        if (goal_handle->is_canceling())
+        {
           RCLCPP_INFO(this->get_logger(), "Goal is canceling");
           goal_handle->canceled(result);
           RCLCPP_INFO(this->get_logger(), "Goal canceled");
@@ -153,12 +167,12 @@ namespace drive_server
           has_goal = false;
           return;
         }
-	left_motor.Heartbeat();
-	right_motor.Heartbeat();
+        left_motor.Heartbeat();
+        right_motor.Heartbeat();
         left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
         right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
         feedback->inst_velocity.linear.x = v_left;
-        feedback->inst_velocity.angular.z = v_right; //placeholders
+        feedback->inst_velocity.angular.z = v_right; // placeholders
         goal_handle->publish_feedback(feedback);
 
         loop_rate.sleep();
@@ -183,4 +197,3 @@ namespace drive_server
 } // namespace drive_server
 
 RCLCPP_COMPONENTS_REGISTER_NODE(drive_server::DriveActionServer)
-
