@@ -27,8 +27,32 @@ class MultiTopicSubscriber(Node):
         self.messages = {}
         self.bridge = CvBridge()
         self.camera_frames = {}
-        #self.camera_frames_lock = threading.Lock()
 
+        # ——— joystick “last seen” tracking ———
+        import time
+        self.joystick_last_seen = {
+            joystick_topic_1: 0.0,
+            joystick_topic_2: 0.0
+        }
+        self.joystick_subscriptions = {}
+
+        # subscribe once to each, to update last-seen timestamp
+        for topic in (joystick_topic_1, joystick_topic_2):
+            try:
+                sub = self.create_subscription(
+                    String, topic,
+                    lambda msg, t=topic: self._joystick_callback(t),
+                    10)
+                self.joystick_subscriptions[topic] = sub
+                self.get_logger().info(f"Listening for joystick on {topic}")
+            except Exception:
+                # if topic doesn't exist yet, we'll still create it once it appears
+                 pass
+
+    def _joystick_callback(self, topic_name: str):
+        import time
+        self.joystick_last_seen[topic_name] = time.time()
+   
     def subscribe_to_topic(self, topic_name):
 
         if topic_name in self.custom_subscriptions:
@@ -60,8 +84,6 @@ class MultiTopicSubscriber(Node):
             latency_ms = (now_time - msg_time) * 1e-9
                                    
             self.camera_frames[topic] = (cv_image, latency_ms)
-            #with self.camera_frames_lock:
-                #self.camera_frames[topic] = (cv_image, latency_ms)
 
         subscription = self.create_subscription(RosImage, camera_topic, callback, 10)
         self.custom_subscriptions[camera_topic] = subscription
@@ -411,21 +433,22 @@ class TkMultiTopicApp:
                     self.check_data_timeout(topic_name, label_message)
                     
     def update_camera_frames(self):
-
-        #with self.ros_node.camera_frames_lock:
-            #frames_copy = dict(self.ros_node.camera_frames) 
-    
-        for topic, data in self.ros_node.camera_frames.items():
-
+     
+        for topic, data in list(self.ros_node.camera_frames.items()):
+         
             if data is not None and topic in self.camera_labels:
+             
                 frame, latency_ms = data
                 cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 img = Image.fromarray(cv_image)
                 img_tk = ImageTk.PhotoImage(image=img)
 
-                # Update image
-                self.camera_labels[topic].config(image=img_tk, compound="bottom", text=f"Latency: {latency_ms:.1f} ms")
-                self.camera_labels[topic].image = img_tk  # Prevent garbage collection
+                self.camera_labels[topic].config(
+                    image=img_tk,
+                    compound="bottom",
+                    text=f"Latency: {latency_ms:.1f} ms"
+                )
+                self.camera_labels[topic].image = img_tk
 
         # Schedule the next update on the main thread
         self.root.after(100, self.update_camera_frames)
