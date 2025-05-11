@@ -7,6 +7,7 @@
 #include "action_interfaces/action/dig.hpp"
 #include "action_interfaces/action/drive.hpp"
 #include "action_interfaces/action/dump.hpp"
+#include "action_interfaces/action/fuser.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 
 #include "rclcpp/client.hpp"
@@ -36,6 +37,8 @@ class Distributor : public rclcpp::Node
   using DigGoalHandle = rclcpp_action::ClientGoalHandle<Dig>;
   using Drive = action_interfaces::action::Drive;
   using DriveGoalHandle = rclcpp_action::ClientGoalHandle<Drive>;
+  using Fuser = action_interfaces::action::Fuser;
+  using FuserGoalHandle = rclcpp_action::ClientGoalHandle<Fuser>;
 
   explicit Distributor(const rclcpp::NodeOptions& options) :
     Node("distributor", options)
@@ -43,6 +46,8 @@ class Distributor : public rclcpp::Node
     this->dump_ptr_ = rclcpp_action::create_client<Dump>(this, "dump");
     this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig");
     this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
+    this->driver_camera =
+      rclcpp_action::create_client<Fuser>(this, "change_image");
 
     this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
       "joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
@@ -59,6 +64,8 @@ class Distributor : public rclcpp::Node
   rclcpp_action::Client<Dump>::SharedPtr dump_ptr_;
   rclcpp_action::Client<Dig>::SharedPtr dig_ptr_;
   rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
+  rclcpp_action::Client<Fuser>::SharedPtr driver_camera;
+  rclcpp_action::Client<Fuser>::SharedPtr operator_camera;
 
   bool slow_turn_ = false; // toggle to slow drive turning
   const float SLOW_DRIVE_TURN_VAL_ = 0.5; // what rate to slow turning
@@ -173,6 +180,17 @@ class Distributor : public rclcpp::Node
       std::bind(&Distributor::dump_fb_cb, this, _1, _2);
     send_dump_goal_options.result_callback =
       std::bind(&Distributor::dump_result_cb, this, _1);
+
+    // CAMERA CONTROLLER
+    auto driver_camera_goal = Fuser::Goal();
+    auto send_fuser_goal_options =
+      rclcpp_action::Client<Fuser>::SendGoalOptions();
+    send_fuser_goal_options.goal_response_callback =
+      std::bind(&Distributor::fuser_response_cb, this, _1);
+    send_fuser_goal_options.feedback_callback =
+      std::bind(&Distributor::fuser_fb_cb, this, _1, _2);
+    send_fuser_goal_options.result_callback =
+      std::bind(&Distributor::fuser_result_cb, this, _1);
 
     /**********************************************************************
      *                                                                    *
@@ -410,6 +428,20 @@ class Distributor : public rclcpp::Node
                   dig_goal.vibr_pwr_goal);
     }
 
+    if (raw.axes[AXIS_DPAD_X] != 0.0F) {
+
+      RCLCPP_INFO(this->get_logger(), "x axis do nothing on the dpad");
+    }
+
+    if (valid_toggle_press(BUTTON_BACK, raw)) {
+      driver_camera_goal.command = -1;
+      RCLCPP_INFO(this->get_logger(), "OH YEAH THAT'S A NEW VIEW");
+    }
+
+    if (valid_toggle_press(BUTTON_START, raw)) {
+      driver_camera_goal.command = 1;
+      RCLCPP_INFO(this->get_logger(), "OH YEAH THAT'S A NEW VIEW");
+    }
     // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
     // float LSY = raw.axes[AXIS_LEFTY];
 
@@ -430,6 +462,8 @@ class Distributor : public rclcpp::Node
     this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
     this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
     this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+    this->driver_camera->async_send_goal(driver_camera_goal,
+                                         send_fuser_goal_options);
 
     // set up next iteration
     last_btns_ = raw.buttons;
@@ -566,6 +600,47 @@ class Distributor : public rclcpp::Node
   {
     RCLCPP_INFO(this->get_logger(), "Dump action %f%% completed",
                 FEEDBACK->percent_done);
+  }
+
+  /**
+   * @param goal_handle
+   */
+  void fuser_response_cb(const FuserGoalHandle::SharedPtr& goal_handle)
+  {
+    if (goal_handle) {
+      RCLCPP_INFO(this->get_logger(),
+                  "fuser goal accepted by server, waiting for result");
+    } else {
+      RCLCPP_ERROR(this->get_logger(), "Dump goal was rejected by server");
+    }
+  }
+
+  /**
+   * @param goal_handle
+   */
+  void fuser_fb_cb(const FuserGoalHandle::SharedPtr& /*unused*/,
+                   const std::shared_ptr<const Fuser::Feedback>& FEEDBACK)
+  {
+    RCLCPP_INFO(this->get_logger(), "Fuser action completed");
+  }
+
+  /**
+   * @param result
+   */
+  void fuser_result_cb(const FuserGoalHandle::WrappedResult& result)
+  {
+    switch (result.code) {
+      case rclcpp_action::ResultCode::SUCCEEDED: break;
+      case rclcpp_action::ResultCode::ABORTED:
+        RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
+        return;
+      case rclcpp_action::ResultCode::CANCELED:
+        RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
+        return;
+      default: RCLCPP_ERROR(this->get_logger(), "Unknown result code"); return;
+    }
+
+    RCLCPP_INFO(this->get_logger(), "Fuser changed Camera");
   }
 
   /**
