@@ -15,6 +15,7 @@ ros2 run camera_streamer usbCamStreamer --cam 0 &
 ros2 run camera_streamer usbCamStreamer --cam 2 &
 ros2 run joy joy_node
 ros2 run joy joy_node --ros-args -r /joy:=/joy_operator -p dev:=/dev/input/js1
+
 # Teardown
 echo "Shutting down..."
 pkill ros2
