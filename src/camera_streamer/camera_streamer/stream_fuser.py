@@ -9,7 +9,7 @@ class ImageSelectorNode(Node):
     def __init__(self):
         super().__init__('image_selector')
         self.get_logger().info('ImageSelector node starting up')
-        self.topic_pattern = re.compile(r'^/usbcam_image_[0-9A-Za-z_~{}]+$')
+        self.topic_pattern = re.compile(r'^/usbcam_image_.+')
         self.topic_prefix = "/usbcam_image_"
         self.topics = []
         self.index = 0
@@ -62,8 +62,8 @@ class ImageSelectorNode(Node):
 
     def goal_callback(self, goal_request):
         """Accept only valid goals."""
-        cmd = goal_request.command.lower()
-        if cmd not in ('increment', 'decrement'):
+        cmd = goal_request.command
+        if cmd not in (-1, 1):
             self.get_logger().warn(f'Rejecting invalid command: {cmd}')
             return GoalResponse.REJECT
         self.get_logger().info(f'Goal received: {cmd}')
@@ -71,24 +71,24 @@ class ImageSelectorNode(Node):
 
     async def execute_callback(self, goal_handle):
         """Execute an increment/decrement command."""
-        cmd = goal_handle.request.command.lower()
+        cmd = goal_handle.request.command
         num = len(self.topics)
         if num == 0:
             # No topics to cycle through
             goal_handle.succeed()
-            result = ChangeImage.Result()
+            result = Fuser.Result()
             result.success = False
             result.message = 'No image topics available'
             return result
         # Compute new index with wrap-around
-        if cmd == 'increment':
+        if cmd == 1:
             self.index = (self.index + 1) % num
-        else:
+        elif cmd == -1:
             self.index = (self.index - 1) % num
         new_topic = self.topics[self.index]
         self.get_logger().info(f'Image selection changed to {new_topic}')
         goal_handle.succeed()
-        result = ChangeImage.Result()
+        result = Fuser.Result()
         result.success = True
         result.message = f'Selected image: {new_topic}'
         return result
