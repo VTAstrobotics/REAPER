@@ -44,7 +44,7 @@ public:
         this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
 
         this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
-        this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy_operator", 10, std::bind(&Distributor::joy1_cb, this, _1));
+        this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("joy_operator", 10, std::bind(&Distributor::joy2_cb, this, _1));
 
         for (int i = 0; i < NUM_BTNS_; i++)
         {
