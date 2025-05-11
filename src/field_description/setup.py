@@ -24,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'field_description_publisher = field_description.field_description_publisher:main'
+            'field_description_publisher = field_description.field_description_publisher:main',
+            'tag_publisher = field_description.april_tag_locations:main'
         ],
     },
 )
