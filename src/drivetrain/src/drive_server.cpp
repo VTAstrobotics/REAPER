@@ -7,7 +7,6 @@
 #include "SparkMax.hpp"
 #include "SparkFlex.hpp"
 #include "SparkBase.hpp"
-
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/time.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -48,10 +47,13 @@ namespace drive_server
         // left_motor.SetSmartCurrentFreeLimit(50.0);
         right_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
         right_motor.BurnFlash();
-        velocity_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("drive/velocity", 10);
-        pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("drive/pose", 10);
-        imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>("imu/data", 10, std::bind(&DriveActionServer::imu_callback, this, _1));
+        velocity_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/drive/velocity", 10);
+        pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("/drive/pose", 10);
+        imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>("/imu/data", 10, std::bind(&DriveActionServer::imu_callback, this, _1));
         timer_ = this->create_wall_timer(std::chrono::milliseconds(8), std::bind(&DriveActionServer::timer_callback, this));
+        past_time = this->now();
+        pastLeftPos = left_motor.GetPosition();
+        pastRightPos = right_motor.GetPosition();
 
       RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
     }
@@ -78,9 +80,9 @@ namespace drive_server
     double x_     = 0.0;
     double y_     = 0.0;
     double theta_ = 0.0; 
-    rclcpp::Time past_time = this->now();
-    double pastLeftPos  = left_motor.GetPosition();
-    double pastRightPos = right_motor.GetPosition();
+    rclcpp::Time past_time;
+    double pastLeftPos;
+    double pastRightPos;
 
 
     //*****************NOTE***************
