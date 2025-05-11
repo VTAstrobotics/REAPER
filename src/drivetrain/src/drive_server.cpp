@@ -89,9 +89,9 @@ namespace drive_server
 
     //*****************NOTE***************
     //THESE VALUES NEED TO BE CHANGED TO THE ACTUAL ROBOT VALUES TO TEST
-    double wheelCircumference = 0.3; //placeholder
+    double wheelCircumference = 0.167; //placeholder
     double normalization_constant = 1; //change this during testing
-    double track_width{167};
+    double track_width{1};
 
 
     rclcpp_action::GoalResponse handle_goal(
@@ -220,7 +220,7 @@ namespace drive_server
     }
     void getPoseCovarianceMessage(geometry_msgs::msg::Pose &pose_msg, geometry_msgs::msg::PoseWithCovarianceStamped &pose_msg_covariance){
       pose_msg_covariance.header.stamp = this->now();
-      pose_msg_covariance.header.frame_id = "base_link";          
+      pose_msg_covariance.header.frame_id = "odom";          
       pose_msg_covariance.pose.pose = pose_msg;              
       pose_msg_covariance.pose.covariance =
       {

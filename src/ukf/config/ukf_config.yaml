@@ -24,22 +24,22 @@ ukf_node:
     #   relative:     false
     pose0: /arucopose
     pose0_config: [true,  true,  true,     # x y z
-              false,  false,  false,     
+              false,  false,  false,      #do we want yaw from aruco?
               false, false, false,    
               false, false, false,    
               false, false, false]
-    pose0_differential: true
+    pose0_differential: false
     pose0_relative: false
     pose0_queue_size: 5
     pose0_rejection_threshold: 2.0
 
-    pose1: /drive/pose
+    pose1: /drive/pose/covariance
     pose1_config: [true,  true,  true,     # x y z
-              false,  false,  false,     
+              false,  false,  true,     #only want yaw from drivetrain - IMU based
               false, false, false,    
               false, false, false,    
               false, false, false]
-    pose1_differential: true
+    pose1_differential: false
     pose1_relative: false
     pose1_queue_size: 5
     pose1_rejection_threshold: 2.0
