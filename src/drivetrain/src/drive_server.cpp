@@ -220,16 +220,16 @@ namespace drive_server
     }
     void getPoseCovarianceMessage(geometry_msgs::msg::Pose &pose_msg, geometry_msgs::msg::PoseWithCovarianceStamped &pose_msg_covariance){
       pose_msg_covariance.header.stamp = this->now();
-      pose_msg_covariance.header.frame_id = "odom";          
+      pose_msg_covariance.header.frame_id = "base_link";          
       pose_msg_covariance.pose.pose = pose_msg;              
       pose_msg_covariance.pose.covariance =
       {
-        0, 0,    0,    0, 0,    0,
-        0,    0, 0,    0, 0,    0,
-        0,    0,    0, 0, 0,    0,   
-        0,    0,    0,    0, 0,    0,   
-        0,    0,    0,    0, 0, 0,   
-        0,    0,    0,    0, 0, 0   
+        0.0004,  0,  0,  0, 0, 0, //x - higher numbers = ignore
+        0,  0.0004,  0,  0, 0, 0, //y
+        0,  0,  1e6,  0, 0, 0, //z
+        0,  0,  0,  1e6, 0, 0,   
+        0,  0,  0,  0, 1e6, 0,   
+        0,  0,  0,  0, 0, 0.00122   
       };
     }
     
