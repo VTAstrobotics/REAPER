@@ -22,7 +22,7 @@ ukf_node:
     #           false, false, false]    
     #   differential: false
     #   relative:     false
-    pose0: /arucopose
+    pose0: /pose_0
     pose0_config: [true,  true,  true,     # x y z
               false,  false,  false,      #do we want yaw from aruco?
               false, false, false,    
