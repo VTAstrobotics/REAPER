@@ -17,8 +17,7 @@
 #include "settings.h"
 #include "utils.h"
 
-using std::placeholders::_1;
-using std::placeholders::_2;
+using namespace std::placeholders;
 
 namespace teleop_control
 {
@@ -61,8 +60,9 @@ class Distributor : public rclcpp::Node
   rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
 
   bool slow_turn_ = false; // toggle to slow drive turning
-  const float SLOW_DRIVE_TURN_VAL_ = 0.5; // what rate to slow turning
-  const float SLOW_BCKT_ROT_VAL_ = 0.125;
+  const double SLOW_DRIVE_TURN_VAL_ = 0.5; // what rate to slow turning
+  const double SLOW_BCKT_ROT_VAL_ = 0.125;
+
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
@@ -96,14 +96,14 @@ class Distributor : public rclcpp::Node
    * @param raw pointer to the raw joy msg
    * @return true if all buttons were pressed AND none were duplicate presses
    */
-  bool valid_toggle_presses(const int buttons[], const int SIZE,
+  bool valid_toggle_presses(const std::vector<int>& buttons,
                             const sensor_msgs::msg::Joy& raw)
   {
     bool all_pressed = true;
 
-    for (int i = 0; i < SIZE; i++) {
-      if (raw.buttons[buttons[i]] == 0) { return false; }
-      if (last_btns_[buttons[i]] == 0) { all_pressed = false; }
+    for (const int BUTTON : buttons) {
+      if (raw.buttons[BUTTON] == 0) { return false; }
+      if (last_btns_[BUTTON] == 0) { all_pressed = false; }
     }
 
     return !all_pressed;
@@ -115,10 +115,10 @@ class Distributor : public rclcpp::Node
    */
   void joy1_cb(const sensor_msgs::msg::Joy& raw)
   {
-    const int STOP_SEQ_BTNS[] = {BUTTON_BACK, BUTTON_START,
-                                 BUTTON_MANUFACTURER};
-    if (valid_toggle_presses(
-          STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw)) {
+    const std::vector<int> STOP_SEQ_BTNS = {BUTTON_BACK, BUTTON_START,
+                                            BUTTON_MANUFACTURER};
+
+    if (valid_toggle_presses(STOP_SEQ_BTNS, raw)) {
       this->drive_ptr_->async_cancel_all_goals();
       this->dump_ptr_->async_cancel_all_goals();
       this->dig_ptr_->async_cancel_all_goals();
@@ -339,13 +339,13 @@ class Distributor : public rclcpp::Node
     // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
 
     // Cameron
-    float lsy = raw.axes[AXIS_LEFTY];
+    double lsy = raw.axes[AXIS_LEFTY];
     lsy = std::pow(lsy, 3);
     drive_vel.linear.x = -lsy;
 
     // Drive turning
     // float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
-    float rsx = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+    double rsx = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
 
     // Apply cubic function for better control
     rsx = std::pow(rsx, 3);
@@ -368,8 +368,8 @@ class Distributor : public rclcpp::Node
     // dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
 
     // Cameron
-    float lt = raw.axes[AXIS_LTRIGGER];
-    float rt = raw.axes[AXIS_RTRIGGER];
+    double ltrigger = raw.axes[AXIS_LTRIGGER];
+    double rtrigger = raw.axes[AXIS_RTRIGGER];
 
     /*
      * Shift triggers from [-1, 1], where
@@ -380,14 +380,15 @@ class Distributor : public rclcpp::Node
      *    0 = not pressed
      *    1 = fully pressed
      */
-    lt = ((-1 * lt) + 1) * 0.5;
-    rt = ((-1 * rt) + 1) * 0.5;
+    ltrigger = ((-1 * ltrigger) + 1) * 0.5;
+    rtrigger = ((-1 * rtrigger) + 1) * 0.5;
 
     // Apply cubic function for better control
-    lt = std::pow(lt, 3);
-    rt = std::pow(rt, 3);
+    ltrigger = std::pow(ltrigger, 3);
+    rtrigger = std::pow(rtrigger, 3);
 
-    dig_goal.bckt_pwr_goal = -0.1 * (rt - lt);
+    dig_goal.bckt_pwr_goal =
+      static_cast<float>(SLOW_BCKT_ROT_VAL_ * (ltrigger - rtrigger));
 
     // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f",
     // dig_goal.bckt_pwr_goal);
