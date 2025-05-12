@@ -14,6 +14,7 @@ ros2 run drivetrain DriveActionServer&
 ros2 launch camera_streamer camera.launch.py&
 ros2 run camera_streamer streamFuser&
 ros2 run aruco_pose_estimation aruco_node&
+ros2 launch ukf launch_ukf.py
 ros2 run joy joy_node
 
 # Teardown

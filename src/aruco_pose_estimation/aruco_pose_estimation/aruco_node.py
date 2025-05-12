@@ -42,10 +42,10 @@ def to_float(x):
 
 class PosePublisher(Node):
     def __init__(self, camera):
-        super().__init__(f'aruco_pose_publisher_{camera}')
+        super().__init__(f'pose_publisher_{camera}')
         
 
-        self.pose_publisher = self.create_publisher(PoseWithCovarianceStamped, f'pose_{camera}', 10)
+        self.pose_publisher = self.create_publisher(PoseWithCovarianceStamped, f'aruco_pose_{camera}', 10)
         self.annotated_publisher = self.create_publisher(Image, f"annotated_image_{camera}", 3)
         self.stop_subscription = self.create_subscription(
             Bool,
@@ -54,7 +54,7 @@ class PosePublisher(Node):
             10)
         self.image_subscription = self.create_subscription(
             Image,
-            f'/usbcam_image__dev_v4l_by_id_usb_046d_Brio_101_2441AP7CHQV8_video_index0',
+            f'/driver/selected_image',
             self.image_callback,
             10)
             
@@ -63,11 +63,11 @@ class PosePublisher(Node):
 
 
         self.arucoDict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_50)
-        self.arucoParams = cv2.aruco.DetectorParameters_create()
+        self.arucoParams = cv2.aruco.DetectorParameters()
         self.arucoDetector = cv2.aruco.ArucoDetector(self.arucoDict, self.arucoParams)
 
         # Load camera calibration data
-        datapath = "/home/astrobotics/Documents/REAPER/src/aruco_pose_estimation/config"
+        datapath = "/home/astrobotics/REAPER/src/aruco_pose_estimation/config/"
         paramPath = os.path.join(datapath, "matrixanddist.npz")
         if not os.path.exists(paramPath):
             self.get_logger().error(".npz path does not exist")

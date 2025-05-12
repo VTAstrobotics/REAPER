@@ -12,7 +12,7 @@ ukf_node:
     # debug_out_file: /home/astrobotics/Downloads/odom_out.txt
     print_diagnostics: true
 
-    pose0: /pose_0
+    pose0: /aruco_pose_0
     pose0_config: [true,  true,  true,     # x y z
               false,  false,  true,      #do we want yaw from aruco?
               false, false, false,    
