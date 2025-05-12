@@ -427,7 +427,7 @@ def main():
 
     # Declare initial topics and subscribe
     initial_topics = [("chatter", 100, 100), ("junk", 300, 100)]
-    initial_cameras = [("/driver/selected_image", 100, 300)]
+    initial_cameras = [("/driver/selected_image", 100, 300), ("/usbcam_image__dev_v4l_by_id_usb_046d_Brio_101_2441AP7CHQV8_video_index0", 400, 400), ("/usbcam_image__dev_v4l_by_id_usb_046d_Brio_101_2441APCCJLE8_video_index0", 800 ,800)]
     #initial_cameras = [("usbcam_image_2", 600, 600)]
     
     for topic_name, x, y in initial_topics:
