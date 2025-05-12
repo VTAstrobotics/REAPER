@@ -144,19 +144,13 @@ def check_clang_apply_replacements_binary(args):
 
 def apply_fixes(args, tmpdir):
   """Calls clang-apply-fixes on a given directory."""
-  print(f"apply_fixes(${args}, ${tmpdir})")
   invocation = [args.clang_apply_replacements_binary]
   if args.format:
-    print("args format")
     invocation.append('-format')
   if args.style:
-    print("args style")
     invocation.append('-style=' + args.style)
-  print("tmpdir")
   invocation.append(tmpdir)
-  print("call invocation")
   subprocess.call(invocation)
-  print("end apply_fixes")
 
 
 def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
@@ -299,6 +293,8 @@ def main():
     task_queue.join()
     if len(failed_files):
       return_code = 1
+      print(failed_files)
+      sys.exit(return_code)
 
   except KeyboardInterrupt:
     # This is a sad hack. Unfortunately subprocess goes
@@ -326,13 +322,10 @@ def main():
       traceback.print_exc()
       return_code=1
 
-    print("done applying")
 
   if tmpdir:
-    print("if tmpdir")
     shutil.rmtree(tmpdir)
 
-  print("sys exit")
   sys.exit(return_code)
 
 if __name__ == '__main__':
