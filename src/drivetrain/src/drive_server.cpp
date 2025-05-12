@@ -95,7 +95,6 @@ class DriveActionServer : public rclcpp::Node
   double pastRightPos;
 
   double wheelCircumference = 0.167; //placeholder
-  double normalization_constant = 1; //change this during testing
   double track_width{1};
 
   rclcpp_action::GoalResponse handle_goal(
@@ -241,15 +240,14 @@ class DriveActionServer : public rclcpp::Node
       pose_msg_covariance.header.stamp = this->now();
       pose_msg_covariance.header.frame_id = "odom";          
       pose_msg_covariance.pose.pose = pose_msg;              
-      pose_msg_covariance.pose.covariance =
-      {
-        0.0004,  0,  0,  0, 0, 0, //x - higher numbers = ignore
-        0,  0.0004,  0,  0, 0, 0, //y
-        0,  0,  1e6,  0, 0, 0, //z
-        0,  0,  0,  1e6, 0, 0,  
-        0,  0,  0,  0, 1e6, 0,  
-        0,  0,  0,  0, 0, 0.00122  
-      };
+      pose_msg_covariance.pose.covariance = { {
+          0.0004, 0,      0,      0,     0,     0,
+          0,      0.0004, 0,      0,     0,     0,
+          0,      0,      1e6,    0,     0,     0,
+          0,      0,      0,      1e6,   0,     0,
+          0,      0,      0,      0,     1e6,  0,
+          0,      0,      0,      0,     0,     0.00122
+      } };
     }
 
       void timer_callback(){
