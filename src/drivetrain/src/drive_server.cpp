@@ -1,4 +1,3 @@
-
 #include <cmath>
 #include <functional>
 #include <memory>
@@ -13,6 +12,10 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "std_msgs/msg/float32.hpp"
+
+#include "geometry_msgs/msg/pose.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
 namespace drive_server
 {
@@ -44,11 +47,27 @@ class DriveActionServer : public rclcpp::Node
     right_motor_.SetInverted(true);
     // left_motor.SetSmartCurrentFreeLimit(50.0);
     left_motor_.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
+
+    velocity_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/drive/velocity", 10);
+    pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("/drive/pose", 10);
+    pose_with_covariance_publisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/drive/pose/covariance", 10);
+    imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>("/imu/data", 10, std::bind(&DriveActionServer::imu_callback, this, _1));
+    timer_ = this->create_wall_timer(std::chrono::milliseconds(8), std::bind(&DriveActionServer::timer_callback, this));
+    past_time = this->now();
+    pastLeftPos = left_motor_.GetPosition();
+    pastRightPos = right_motor_.GetPosition();
+    
     RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
   }
 
  private:
   rclcpp_action::Server<Drive>::SharedPtr action_server_;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pose_with_covariance_publisher_;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
+    rclcpp::TimerBase::SharedPtr timer_;
+    sensor_msgs::msg::Imu current_imu;
   // hardware::TalonFX drive_left{20, "can0"};
   // hardware::TalonFX drive_right{21, "can0"};
   // controls::DutyCycleOut drive_left_duty{0.0};
@@ -63,6 +82,21 @@ class DriveActionServer : public rclcpp::Node
   double track_width_{1.0};
   double normalization_constant_ = 1; // change this during testing
   std::shared_ptr<GoalHandleDrive> drive_goal_handle_;
+
+  double currentLeftPos = 0;
+  double currentRightPos = 0;
+  double rightVelocity, leftVelocity, new_left_position,
+  new_right_position, left_dist, right_dist;
+  double x_     = 0.0;
+  double y_     = 0.0;
+  double theta_ = 0.0;
+  rclcpp::Time past_time;
+  double pastLeftPos;
+  double pastRightPos;
+
+  double wheelCircumference = 0.167; //placeholder
+  double normalization_constant = 1; //change this during testing
+  double track_width{1};
 
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID& uuid,
@@ -103,6 +137,138 @@ class DriveActionServer : public rclcpp::Node
     std::thread{std::bind(&DriveActionServer::execute, this, _1), GOAL_HANDLE}
       .detach();
   }
+
+  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg){
+  current_imu = *msg;
+  }
+
+    struct Quaterniond
+  {
+    double w;
+    double x;
+    double y;
+    double z;
+  };
+
+      Quaterniond toQuat(double yaw, double pitch, double roll)  
+    {
+      double cy = std::cos(yaw   * 0.5);
+      double sy = std::sin(yaw   * 0.5);
+      double cp = std::cos(pitch * 0.5);
+      double sp = std::sin(pitch * 0.5);
+      double cr = std::cos(roll  * 0.5);
+      double sr = std::sin(roll  * 0.5);
+   
+      Quaterniond q;
+      q.w = cy * cp * cr + sy * sp * sr;
+      q.x = cy * cp * sr - sy * sp * cr;
+      q.y = sy * cp * sr + cy * sp * cr;
+      q.z = sy * cp * cr - cy * sp * sr;
+      return q;
+    }
+
+        void getVelocityMessage(geometry_msgs::msg::Twist &velocity_message, double dt){
+      new_left_position  = left_motor_.GetPosition();  
+      new_right_position = right_motor_.GetPosition();
+
+
+      double delta_left_ticks  = (new_left_position  - pastLeftPos);
+      double delta_right_ticks = (new_right_position - pastRightPos);
+
+
+      double left_revs  = delta_left_ticks  / 42; //42 ticks per revolution
+      double right_revs = delta_right_ticks / 42;
+
+
+    left_dist  = left_revs  * wheelCircumference;  
+    right_dist = right_revs * wheelCircumference;  
+     
+      if(dt > 0){
+        leftVelocity  = left_dist  / dt;
+        rightVelocity = right_dist / dt;
+      }
+      else{
+        leftVelocity  = 0;
+        rightVelocity = 0;
+      }
+ 
+     
+      double v = (leftVelocity + rightVelocity) * 0.5;
+      double w = (rightVelocity - leftVelocity) / track_width;
+
+
+      velocity_message.linear.x = v;
+      velocity_message.angular.z = w;
+    }
+
+        void getPoseMessage(geometry_msgs::msg::Twist &velocity_message, geometry_msgs::msg::Pose &pose_message, double dt){
+      double v = velocity_message.linear.x;
+
+
+      auto q = current_imu.orientation;
+
+
+
+
+      double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+      double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+      double yaw = std::atan2(siny_cosp, cosy_cosp);
+
+
+      x_ += v * std::cos(yaw) * dt;
+      y_ += v * std::sin(yaw) * dt;
+
+
+      pose_message.position.x = x_;
+      pose_message.position.y = y_;
+      pose_message.position.z = 0.0;
+
+
+      Quaterniond quat = toQuat(yaw, 0.0, 0.0);
+
+
+      geometry_msgs::msg::Quaternion quat_msg;
+      quat_msg.w = quat.w;
+      quat_msg.x = quat.x;
+      quat_msg.y = quat.y;
+      quat_msg.z = quat.z;
+
+
+      pose_message.orientation = quat_msg;
+    }
+
+      void getPoseCovarianceMessage(geometry_msgs::msg::Pose &pose_msg, geometry_msgs::msg::PoseWithCovarianceStamped &pose_msg_covariance){
+      pose_msg_covariance.header.stamp = this->now();
+      pose_msg_covariance.header.frame_id = "odom";          
+      pose_msg_covariance.pose.pose = pose_msg;              
+      pose_msg_covariance.pose.covariance =
+      {
+        0.0004,  0,  0,  0, 0, 0, //x - higher numbers = ignore
+        0,  0.0004,  0,  0, 0, 0, //y
+        0,  0,  1e6,  0, 0, 0, //z
+        0,  0,  0,  1e6, 0, 0,  
+        0,  0,  0,  0, 1e6, 0,  
+        0,  0,  0,  0, 0, 0.00122  
+      };
+    }
+
+      void timer_callback(){
+      auto current_time = this->now();
+      double dt = (current_time - past_time).seconds();
+      past_time = current_time;
+      geometry_msgs::msg::Twist velocity_message;
+      getVelocityMessage(velocity_message, dt);
+      geometry_msgs::msg::Pose pose_msg;
+      getPoseMessage(velocity_message, pose_msg, dt);
+      geometry_msgs::msg::PoseWithCovarianceStamped pose_msg_covariance;
+      getPoseCovarianceMessage(pose_msg, pose_msg_covariance);
+     
+      velocity_publisher_->publish(velocity_message);
+      pose_publisher_->publish(pose_msg);
+      pose_with_covariance_publisher_->publish(pose_msg_covariance);
+      pastLeftPos = new_left_position;
+      pastRightPos = new_right_position;
+    }
 
   std::vector<double> curvature_drive(double linear_speed, double z_rotation)
   {
