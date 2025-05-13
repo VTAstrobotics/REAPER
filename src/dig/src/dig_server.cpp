@@ -67,7 +67,7 @@ namespace dig_server
       configs::TalonFXConfiguration link_configs{};
 
       // Slot 0 gains
-      float K_u = 1.0, T_u = 0.04;
+      // float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       link_configs.Slot0.kS = 0.003;
       link_configs.Slot0.kV = 0.80;
@@ -482,7 +482,7 @@ namespace dig_server
         angle = (double) r_link_cancoder_.GetAbsolutePosition().GetValue();
 	      if(angle < 0) {
 	      angle = 0;
-	      
+
 	      }
 	      if(pwr < 0 )
 	      {
@@ -490,7 +490,7 @@ namespace dig_server
 	      }
 	      else if(angle > 0){
 	     	pwr = pwr * (1 - angle/(.25));
-	     } 
+	     }
         RCLCPP_INFO(this->get_logger(), "link_pwr: sending power command");
         controls::DifferentialDutyCycle power_command{static_cast<units::dimensionless::scalar_t>(pwr), 0 * 0_tr};
         link_mech.SetControl(power_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
@@ -711,7 +711,6 @@ namespace dig_server
     void link_pos(double pos) {
 	    RCLCPP_DEBUG(this->get_logger(), "link_pos: pos = %lf", pos);
       if (!linkage_in_bounds(pos)) {
-	    RCLCPP_DEBUG(this->get_logger(), "link_pos: OUT OF BOUNDS! setting to %lf", l_link_cancoder_.GetAbsolutePosition().GetValue());
         controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
         link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;

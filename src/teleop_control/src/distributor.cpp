@@ -389,34 +389,22 @@ class Distributor : public rclcpp::Node
         //dig_goal.link_pwr_goal = -RSY * 0.4;
 
     /*
-     * Shift triggers from [-1, 1], where
-     *    1 = not pressed
-     *   -1 = fully pressed
-     *    0 = halfway
-     *    1 = not pressed
-     *   -1 = fully pressed
-     *    0 = halfway
-     * to [0, 1] where
+      * Shift triggers from [-1, 1], where
+      *    1 = not pressed
+      *   -1 = fully pressed
+      *    0 = halfway
+      * to [0, 1] where
+      *    0 = not pressed
+      *    1 = fully pressed
+      */
+    //LT = ((-1 * LT) + 1) * 0.5;
+    //RT = ((-1 * RT) + 1) * 0.5;
+
     // Apply cubic function for better control
-    lt = std::pow(lt, 3);
-    rt = std::pow(rt, 3);
-        /*
-         * Shift triggers from [-1, 1], where
-         *    1 = not pressed
-         *   -1 = fully pressed
-         *    0 = halfway
-         * to [0, 1] where
-         *    0 = not pressed
-         *    1 = fully pressed
-         */
-        //LT = ((-1 * LT) + 1) * 0.5;
-        //RT = ((-1 * RT) + 1) * 0.5;
+    //LT = std::pow(LT, 3);
+    //RT = std::pow(RT, 3);
 
-        // Apply cubic function for better control
-        //LT = std::pow(LT, 3);
-        //RT = std::pow(RT, 3);
-
-        //dig_goal.bckt_pwr_goal =- 0.1 * ( RT - LT);
+    //dig_goal.bckt_pwr_goal =- 0.1 * ( RT - LT);
 
     // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f",
     // dig_goal.bckt_pwr_goal);
