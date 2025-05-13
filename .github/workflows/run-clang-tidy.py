@@ -293,7 +293,9 @@ def main():
     task_queue.join()
     if len(failed_files):
       return_code = 1
+      print("okay, i failed clang-tidy on these files:")
       print(failed_files)
+      print("sad")
       sys.exit(return_code)
 
   except KeyboardInterrupt:
