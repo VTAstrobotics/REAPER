@@ -7,6 +7,7 @@
 #include "SparkMax.hpp"
 #include "action_interfaces/action/drive.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include <numbers>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -79,7 +80,7 @@ class DriveActionServer : public rclcpp::Node
   // Motor 1
   bool has_goal_{false};
   int loop_rate_hz_{120};
-  double track_width_{1.0};
+  double track_width_{0.5715};
   double normalization_constant_ = 1; // change this during testing
   std::shared_ptr<GoalHandleDrive> drive_goal_handle_;
 
@@ -94,7 +95,7 @@ class DriveActionServer : public rclcpp::Node
   double pastLeftPos;
   double pastRightPos;
 
-  double wheelCircumference = 0.167; //placeholder
+  double wheelCircumference = 0.167 * 2 * std::numbers::pi; //placeholder
   double track_width{1};
 
   rclcpp_action::GoalResponse handle_goal(
