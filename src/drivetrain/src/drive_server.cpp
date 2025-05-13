@@ -61,6 +61,7 @@ namespace drive_server
     SparkMax right_motor{"can1", 11};
     // Motor 1
     bool has_goal{false};
+    bool driving_dist{false};
     int loop_rate_hz{120};
     double track_width{1.0};
     double normalization_constant = 1; // change this during testing
@@ -106,15 +107,6 @@ namespace drive_server
       std::thread{std::bind(&DriveActionServer::execute, this, _1), goal_handle}.detach();
     }
 
-    void drive_auto(double linear_speed, double z_rotation)
-    {
-
-      double left_speed = linear_speed - z_rotation;
-      double right_speed = linear_speed + z_rotation;
-
-      left_motor.SetVelocity(left_speed);
-      right_motor.SetVelocity(right_speed);
-    }
 
     void drive_dist(double goal_dist){
       driven_dist += drive_factor * (left_motor.GetPosition() + right_motor.GetPosition())/2;
@@ -187,12 +179,13 @@ namespace drive_server
           feedback->inst_velocity.linear.x = v_left;
           feedback->inst_velocity.angular.z = v_right; // placeholders
         }
-        if (goal->drive_auto)
-        {
-          drive_auto(linear, angular);
-        }
+
         if(abs(goal->distance_meters) > 0 ){
           drive_dist(goal->distance_meters);
+          driving_dist = true;
+          if(){
+
+          }
         }
 
         goal_handle->publish_feedback(feedback);
