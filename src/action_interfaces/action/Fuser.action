@@ -1,0 +1,14 @@
+# Fuser.action
+#1 increments
+#-1 decrements
+# 1xx forward
+# 2xx back
+# 3xx right
+# 4xx left
+int64 command  # "increment" or "decrement"
+---
+bool success
+string message  # e.g. status or current selection info
+---
+string feedback  # (unused or could hold intermediate status)
+
