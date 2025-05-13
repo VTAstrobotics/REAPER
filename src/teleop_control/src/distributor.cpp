@@ -366,7 +366,7 @@ class Distributor : public rclcpp::Node
 
         // Apply cubic function for better control
         RSY = std::pow(RSY, 3);
-        dig_goal.bckt_pwr_goal = -RSY;
+        dig_goal.bckt_pwr_goal = RSY;
         dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
         //dig_goal.link_pwr_goal = -RSY * 0.4;
 
