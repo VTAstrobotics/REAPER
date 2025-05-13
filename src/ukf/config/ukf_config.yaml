@@ -4,12 +4,9 @@ ukf_node:
     sensor_timeout: 1.9
     two_d_mode: false
     publish_tf: false
-    # frames
-    # map_frame: "map"
+    # publish_tf: true #set to true if you want to launch the baselink-odom transformation.  The camera-base transformation is in the UKF launch file
     odom_frame: odom
     base_link_frame: base_link
-    # debug: true
-    # debug_out_file: /home/astrobotics/Downloads/odom_out.txt
     print_diagnostics: true
 
     pose0: /aruco_pose_0
