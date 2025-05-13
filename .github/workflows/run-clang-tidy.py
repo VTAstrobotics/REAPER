@@ -293,10 +293,7 @@ def main():
     task_queue.join()
     if len(failed_files):
       return_code = 1
-      print("okay, i failed clang-tidy on these files:")
-      print(failed_files)
-      print("sad")
-      sys.exit(return_code)
+      print("I found clang-tidy issues with these files:", failed_files)
 
   except KeyboardInterrupt:
     # This is a sad hack. Unfortunately subprocess goes
