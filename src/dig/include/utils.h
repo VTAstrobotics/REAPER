@@ -9,9 +9,9 @@
 constexpr float APPROX_FUDGE = 0.01;
 
 /**
- * @brief Determine if two floats are about equal
+ * @brief Determine if two doubles are about equal
  */
-constexpr bool approx(float f1, float f2)
+constexpr bool approx(double f1, double f2)
 {
   return ((f1) > (f2) ? (f1) - (f2) < APPROX_FUDGE
                       : (f2) - (f1) < APPROX_FUDGE);
