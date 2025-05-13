@@ -212,10 +212,10 @@ class Distributor : public rclcpp::Node
 
         if (valid_toggle_press(BUTTON_A, raw)) {
             RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		//dig_goal.link_pos_goal = -0.1;
-		//dig_goal.bckt_pos_goal = 0.1;
+		dig_goal.link_pos_goal = -0.1;
+		dig_goal.bckt_pos_goal = 0.1;
 		//dig_goal.link_pos_goal = 0;
-		//dig_goal.bckt_pos_goal = 0;
+		// dig_goal.bckt_pos_goal = 0;
 
 	        //vibration_on = !vibration_on;
         }
@@ -264,7 +264,7 @@ class Distributor : public rclcpp::Node
 
         if (raw.buttons[BUTTON_RBUMPER]) {
             RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal = 0.65;
+            dig_goal.link_pwr_goal = 0.10;
             //dig_goal.bckt_pwr_goal = 0.10;
     }
 
