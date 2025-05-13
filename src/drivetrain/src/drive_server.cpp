@@ -116,8 +116,17 @@ namespace drive_server
       left_motor.SetCtrlType(CtrlType::kPosition);
       left_motor.SetSetpoint(goal_dist);
       right_motor.SetSetpoint(goal_dist);
-
-
+      if(left_motor.GetPosition() > goal_dist && right_motor.GetPosition() > goal_dist){
+        left_motor.SetCtrlType(CtrlType::kDutyCycle);
+        right_motor.SetCtrlType(CtrlType::kDutyCycle);
+        left_motor.SetDutyCycle(0.0);
+        right_motor.SetDutyCycle(0.0);
+        driving_dist = false;
+      RCLCPP_INFO(this->get_logger(), "I'VE GONE FAR ENOUGH %f", driven_dist);
+        return;
+      }
+      driving_dist = true;
+      RCLCPP_INFO(this->get_logger(), "driving dist %f", driven_dist);
 
     }
 
