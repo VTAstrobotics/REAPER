@@ -48,7 +48,7 @@ class DumpActionServer : public rclcpp::Node
   controls::DutyCycleOut conveyor_duty_cycle_{0};
   float volume_deposited_{0};
   bool has_goal_{false};
-  int loop_rate_hz_{20};
+  const int LOOP_RATE_HZ_{20};
   std::shared_ptr<GoalHandleDump> dump_goal_handle_;
   rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description_ =
     this->create_subscription<std_msgs::msg::Float32>(
@@ -133,7 +133,7 @@ class DumpActionServer : public rclcpp::Node
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
-      loop_rate_hz_); // this should be 20 hz which I can't imagine not being
+      LOOP_RATE_HZ_); // this should be 20 hz which I can't imagine not being
                       // enough for the dump
     const auto GOAL = GOAL_HANDLE->get_goal();
     auto feedback = std::make_shared<Dump::Feedback>();
@@ -152,7 +152,7 @@ class DumpActionServer : public rclcpp::Node
       double const SPEED = GOAL->deposition_goal;
       auto result = std::make_shared<Dump::Result>();
       ctre::phoenix::unmanaged::FeedEnable(
-        pow(static_cast<float>(loop_rate_hz_), -1));
+        static_cast<int>(pow(static_cast<float>(LOOP_RATE_HZ_), -1)));
       conveyor_duty_cycle_.Output = SPEED;
       conveyor_motor_.SetControl(conveyor_duty_cycle_);
       RCLCPP_INFO(this->get_logger(), "The motor should be running");
@@ -177,7 +177,7 @@ class DumpActionServer : public rclcpp::Node
     // RCLCPP_DEBUG(this->get_logger(), "execute_pwr: executing...");
 
     const auto GOAL = GOAL_HANDLE->get_goal();
-    double const POWER_GOAL = GOAL->pwr_goal;
+    const float POWER_GOAL = GOAL->pwr_goal;
 
     auto feedback = std::make_shared<Dump::Feedback>();
     auto result = std::make_shared<Dump::Result>();
@@ -199,8 +199,7 @@ class DumpActionServer : public rclcpp::Node
       return;
     }
 
-    ctre::phoenix::unmanaged::FeedEnable(1000 *
-                                         (1.0 / (double)(loop_rate_hz_)));
+    ctre::phoenix::unmanaged::FeedEnable(1000 / (LOOP_RATE_HZ_));
 
     conveyor_duty_cycle_.Output = POWER_GOAL;
     conveyor_motor_.SetControl(conveyor_duty_cycle_);

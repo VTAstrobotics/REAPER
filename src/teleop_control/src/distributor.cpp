@@ -18,8 +18,7 @@
 #include "settings.h"
 #include "utils.h"
 
-using std::placeholders::_1;
-using std::placeholders::_2;
+using namespace std::placeholders;
 
 namespace teleop_control
 {
@@ -46,7 +45,7 @@ class Distributor : public rclcpp::Node
     this->dump_ptr_ = rclcpp_action::create_client<Dump>(this, "dump");
     this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig");
     this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
-    this->driver_camera =
+    this->driver_camera_ =
       rclcpp_action::create_client<Fuser>(this, "change_image");
 
     this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
@@ -64,12 +63,13 @@ class Distributor : public rclcpp::Node
   rclcpp_action::Client<Dump>::SharedPtr dump_ptr_;
   rclcpp_action::Client<Dig>::SharedPtr dig_ptr_;
   rclcpp_action::Client<Drive>::SharedPtr drive_ptr_;
-  rclcpp_action::Client<Fuser>::SharedPtr driver_camera;
-  rclcpp_action::Client<Fuser>::SharedPtr operator_camera;
+  rclcpp_action::Client<Fuser>::SharedPtr driver_camera_;
+  rclcpp_action::Client<Fuser>::SharedPtr operator_camera_;
 
   bool slow_turn_ = false; // toggle to slow drive turning
   const float SLOW_DRIVE_TURN_VAL_ = 0.5; // what rate to slow turning
   const float SLOW_BCKT_ROT_VAL_ = 0.125;
+
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
@@ -80,8 +80,8 @@ class Distributor : public rclcpp::Node
     last_btns_; // 1 if the button was pressed in the last joy message; else 0
   // TODO: toggle and hold button
 
-    bool teleop_disabled_ = false;
-    bool vibration_on = false;
+  bool teleop_disabled_ = false;
+  bool vibration_on_ = false;
 
   /**
    * Given the button index, returns true if there was a valid press.
@@ -104,14 +104,14 @@ class Distributor : public rclcpp::Node
    * @param raw pointer to the raw joy msg
    * @return true if all buttons were pressed AND none were duplicate presses
    */
-  bool valid_toggle_presses(const int buttons[], const int SIZE,
+  bool valid_toggle_presses(const std::vector<int>& buttons,
                             const sensor_msgs::msg::Joy& raw)
   {
     bool all_pressed = true;
 
-    for (int i = 0; i < SIZE; i++) {
-      if (raw.buttons[buttons[i]] == 0) { return false; }
-      if (last_btns_[buttons[i]] == 0) { all_pressed = false; }
+    for (const int BUTTON : buttons) {
+      if (raw.buttons[BUTTON] == 0) { return false; }
+      if (last_btns_[BUTTON] == 0) { all_pressed = false; }
     }
 
     return !all_pressed;
@@ -123,10 +123,10 @@ class Distributor : public rclcpp::Node
    */
   void joy1_cb(const sensor_msgs::msg::Joy& raw)
   {
-    const int STOP_SEQ_BTNS[] = {BUTTON_BACK, BUTTON_START,
-                                 BUTTON_MANUFACTURER};
-    if (valid_toggle_presses(
-          STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw)) {
+    const std::vector<int> STOP_SEQ_BTNS = {BUTTON_BACK, BUTTON_START,
+                                            BUTTON_MANUFACTURER};
+
+    if (valid_toggle_presses(STOP_SEQ_BTNS, raw)) {
       this->drive_ptr_->async_cancel_all_goals();
       this->dump_ptr_->async_cancel_all_goals();
       this->dig_ptr_->async_cancel_all_goals();
@@ -210,16 +210,16 @@ class Distributor : public rclcpp::Node
      *                                                                    *
      **********************************************************************/
 
-        if (valid_toggle_press(BUTTON_A, raw)) {
-            RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		//dig_goal.link_pos_goal = -0.1;
-		//dig_goal.bckt_pos_goal = 0.1;
-		//dig_goal.link_pos_goal = 0;
-		//dig_goal.bckt_pos_goal = 0;
+    if (valid_toggle_press(BUTTON_A, raw)) {
+      RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
+      // dig_goal.link_pos_goal = -0.1;
+      // dig_goal.bckt_pos_goal = 0.1;
+      // dig_goal.link_pos_goal = 0;
+      // dig_goal.bckt_pos_goal = 0;
 
-	        //vibration_on = !vibration_on;
-        }
-		if (vibration_on) {dig_goal.vibr_pwr_goal = 0.1;}
+      // vibration_on = !vibration_on;
+    }
+    if (vibration_on_) { dig_goal.vibr_pwr_goal = 0.1; }
 
     if (valid_toggle_press(BUTTON_X, raw)) {
       RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
@@ -252,20 +252,20 @@ class Distributor : public rclcpp::Node
     if (valid_toggle_press(BUTTON_Y, raw)) {
       RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
-            dig_goal.link_pos_goal = 0.35;
-            dig_goal.bckt_pos_goal = 0.22;
-        }
+      dig_goal.link_pos_goal = 0.35;
+      dig_goal.bckt_pos_goal = 0.22;
+    }
 
-        if (raw.buttons[BUTTON_LBUMPER]) {
-            RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
-            dig_goal.link_pwr_goal = -0.1;
-            //dig_goal.bckt_pwr_goal = -0.1;
-        }
+    if (raw.buttons[BUTTON_LBUMPER] != 0) {
+      RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
+      dig_goal.link_pwr_goal = -0.1;
+      // dig_goal.bckt_pwr_goal = -0.1;
+    }
 
-        if (raw.buttons[BUTTON_RBUMPER]) {
-            RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-            dig_goal.link_pwr_goal = 0.65;
-            //dig_goal.bckt_pwr_goal = 0.10;
+    if (raw.buttons[BUTTON_RBUMPER] != 0) {
+      RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
+      dig_goal.link_pwr_goal = 0.65;
+      // dig_goal.bckt_pwr_goal = 0.10;
     }
 
     if (valid_toggle_press(BUTTON_START, raw)) {
@@ -324,91 +324,89 @@ class Distributor : public rclcpp::Node
      *                                                                    *
      **********************************************************************/
 
-        // Drive throttle
-        float LT = raw.axes[AXIS_LTRIGGER];
-        float RT = raw.axes[AXIS_RTRIGGER];
+    // Drive throttle
+    double ltrigger = raw.axes[AXIS_LTRIGGER];
+    double rtrigger = raw.axes[AXIS_RTRIGGER];
 
-        /*
-         * Shift triggers from [-1, 1], where
-         *    1 = not pressed
-         *   -1 = fully pressed
-         *    0 = halfway
-         * to [0, 1] where
-         *    0 = not pressed
-         *    1 = fully pressed
-         */
-        LT = ((-1 * LT) + 1) * 0.5;
-        RT = ((-1 * RT) + 1) * 0.5;
+    /*
+     * Shift triggers from [-1, 1], where
+     *    1 = not pressed
+     *   -1 = fully pressed
+     *    0 = halfway
+     * to [0, 1] where
+     *    0 = not pressed
+     *    1 = fully pressed
+     */
+    ltrigger = ((-1 * ltrigger) + 1) * 0.5;
+    rtrigger = ((-1 * rtrigger) + 1) * 0.5;
 
-        // Apply cubic function for better control
-        LT = std::pow(LT, 3);
-        RT = std::pow(RT, 3);
+    // Apply cubic function for better control
+    ltrigger = std::pow(ltrigger, 3);
+    rtrigger = std::pow(rtrigger, 3);
 
-        //drive_vel.linear.x  = RT - LT; // [-1, 1]
-        drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some reason. temporary fix, make sure all spark max inversion settings are same. TODO!
+    // drive_vel.linear.x  = RT - LT; // [-1, 1]
+    drive_vel.linear.x =
+      ltrigger -
+      rtrigger; // [-1, 1] // if motors inverted for some reason. temporary fix,
+                // make sure all spark max inversion settings are same. TODO!
 
-        // Drive turning
-        float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+    // Drive turning
+    double lsx = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
 
-        // Apply cubic function for better control
-        LSX = std::pow(LSX, 3);
+    // Apply cubic function for better control
+    lsx = std::pow(lsx, 3);
 
-        drive_vel.angular.z = LSX; // [-1, 1]
+    drive_vel.angular.z = lsx; // [-1, 1]
 
-        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+    if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
 
+    // Cameron
+    // float LSY = raw.axes[AXIS_LEFTY];
+    // LSY = std::pow(LSY, 3);
+    // drive_vel.linear.x = -LSY;
 
-        // Cameron
-        //float LSY = raw.axes[AXIS_LEFTY];
-        //LSY = std::pow(LSY, 3);
-        //drive_vel.linear.x = -LSY;
+    // Drive turning
+    // float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
+    // float RSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
 
-        // Drive turning
-        //float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
-        // float RSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+    // Apply cubic function for better control
+    // RSX = std::pow(RSX, 3);
 
-        // Apply cubic function for better control
-        // RSX = std::pow(RSX, 3);
+    // drive_vel.angular.z = RSX; // [-1, 1]
 
-        // drive_vel.angular.z = RSX; // [-1, 1]
+    // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
 
-        // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
+    /**********************************************************************
+     *                                                                    *
+     * DIG SYSTEM CONTROLS                                                *
+     *                                                                    *
+     **********************************************************************/
+    // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
+    double rsy = raw.axes[AXIS_RIGHTY];
 
-        /**********************************************************************
-         *                                                                    *
-         * DIG SYSTEM CONTROLS                                                *
-         *                                                                    *
-         **********************************************************************/
-        // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-        float RSY = raw.axes[AXIS_RIGHTY];
+    // Apply cubic function for better control
+    rsy = std::pow(rsy, 3);
+    dig_goal.bckt_pwr_goal = static_cast<float>(rsy);
+    dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
+    // dig_goal.link_pwr_goal = -RSY * 0.4;
 
-        // Apply cubic function for better control
-        RSY = std::pow(RSY, 3);
-        dig_goal.bckt_pwr_goal = RSY;
-        dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
-        //dig_goal.link_pwr_goal = -RSY * 0.4;
+    /*
+     * Shift triggers from [-1, 1], where
+     *    1 = not pressed
+     *   -1 = fully pressed
+     *    0 = halfway
+     * to [0, 1] where
+     *    0 = not pressed
+     *    1 = fully pressed
+     */
+    // ltrigger = ((-1 * ltrigger) + 1) * 0.5;
+    // rtrigger = ((-1 * rtrigger) + 1) * 0.5;
 
-        // Cameron
-        //float LT = raw.axes[AXIS_LTRIGGER];
-        //float RT = raw.axes[AXIS_RTRIGGER];
+    // Apply cubic function for better control
+    // ltrigger = std::pow(ltrigger, 3);
+    // rtrigger = std::pow(rtrigger, 3);
 
-        /*
-         * Shift triggers from [-1, 1], where
-         *    1 = not pressed
-         *   -1 = fully pressed
-         *    0 = halfway
-         * to [0, 1] where
-         *    0 = not pressed
-         *    1 = fully pressed
-         */
-        //LT = ((-1 * LT) + 1) * 0.5;
-        //RT = ((-1 * RT) + 1) * 0.5;
-
-        // Apply cubic function for better control
-        //LT = std::pow(LT, 3);
-        //RT = std::pow(RT, 3);
-
-        //dig_goal.bckt_pwr_goal =- 0.1 * ( RT - LT);
+    // dig_goal.bckt_pwr_goal =- 0.1 * ( rtrigger - ltrigger);
 
     // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f",
     // dig_goal.bckt_pwr_goal);
@@ -425,14 +423,13 @@ class Distributor : public rclcpp::Node
     // send_dump_goal_options);
     // }
 
-        if (raw.axes[AXIS_DPAD_Y]){
-            //dig_goal.vibr_pwr_goal = 0.1 * raw.axes[AXIS_DPAD_Y];
-            RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
-
-        }
+    if (raw.axes[AXIS_DPAD_Y] != 0.0F) {
+      // dig_goal.vibr_pwr_goal = 0.1 * raw.axes[AXIS_DPAD_Y];
+      RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f",
+                  dig_goal.vibr_pwr_goal);
+    }
 
     if (raw.axes[AXIS_DPAD_X] != 0.0F) {
-
       RCLCPP_INFO(this->get_logger(), "x axis do nothing on the dpad");
     }
 
@@ -465,8 +462,8 @@ class Distributor : public rclcpp::Node
     this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
     this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
     this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
-    this->driver_camera->async_send_goal(driver_camera_goal,
-                                         send_fuser_goal_options);
+    this->driver_camera_->async_send_goal(driver_camera_goal,
+                                          send_fuser_goal_options);
 
     // set up next iteration
     last_btns_ = raw.buttons;

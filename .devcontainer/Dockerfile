@@ -75,7 +75,7 @@ RUN sudo wget https://apt.llvm.org/llvm.sh \
     # to newer versions, but this may cause errors with the existing formatter
     # rules (.clang-format and .clang-tidy).
     && sudo apt update \
-    && sudo apt install -y clang-format clang-tidy
+    && sudo apt install -y clang-format clang-tidy clang-tools
 
 # install sparkcan for sparkmax over can
 RUN sudo add-apt-repository ppa:graysonarendt/sparkcan

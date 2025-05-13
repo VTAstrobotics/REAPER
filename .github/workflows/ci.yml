@@ -93,7 +93,7 @@ jobs:
     - name: Get Docker tag
       run: echo "CUR_DOCKER_TAG=${{ secrets.DOCKER_USERNAME }}${{ needs.build-dev-container.outputs.cur_docker_tag }}" >> $GITHUB_ENV
 
-    - name: Run code formatting (clang-format and clang-tidy)
+    - name: Run linter and formatter (clang-tidy and clang-format)
       run: |
         docker run \
           --rm \

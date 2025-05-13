@@ -39,13 +39,13 @@ state_messages_utils::kraken_to_msg::~kraken_to_msg() = default;
 
 void kraken_to_msg::publish_state()
 {
-  float const POSITION = this->motor->GetPosition().GetValueAsDouble();
-  float const CURRENT = this->motor->GetTorqueCurrent().GetValueAsDouble();
-  float const OUTPUT_VOLTAGE =
+  const double POSITION = this->motor->GetPosition().GetValueAsDouble();
+  const double CURRENT = this->motor->GetTorqueCurrent().GetValueAsDouble();
+  const double OUTPUT_VOLTAGE =
     this->motor->GetMotorVoltage().GetValueAsDouble();
-  float const INPUT_VOLTAGE =
+  const double INPUT_VOLTAGE =
     this->motor->GetSupplyVoltage().GetValueAsDouble();
-  float const VELOCITY = this->motor->GetVelocity().GetValueAsDouble();
+  const double VELOCITY = this->motor->GetVelocity().GetValueAsDouble();
 
   this->msg.current_applied_voltage = OUTPUT_VOLTAGE;
   this->msg.input_voltage = INPUT_VOLTAGE;

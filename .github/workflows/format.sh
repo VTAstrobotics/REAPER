@@ -48,13 +48,28 @@ echo "## Running clang-tidy on C/C++ src code"
 # it would probably work if we update the dev container to ubuntu 24, which you need to
 # update ros from humble, then you can get the most updated version of the run-clang-tidy script
 # and clang-format and clang-tools and it would be fine
+{
+touch tidy-fixes.yaml
+
+set +e
 python3 .github/workflows/run-clang-tidy.py \
+    -export-fixes=tidy-fixes.yaml \
     -extra-arg=-v \
     -fix \
     -header-filter="$SRC_HEADERS" \
     -p=. \
     -style=none \
     src/
+
+if [ $? -ne 0 ]; then
+    cat tidy-fixes.yaml
+    echo "You need to fix the above clang-tidy (linter) warnings to pass this check."
+    echo "You can use the goto command in vim to find the code using the offsets, or you can scroll much further up and it has in-line suggestions."
+    exit 1
+fi
+
+set -e
+}
 
 echo "## Run clang-format on C/C++ src code"
 clang-format -style=file -i $SRC_HEADERS $SRC_IMPLEMENTATION

@@ -293,6 +293,7 @@ def main():
     task_queue.join()
     if len(failed_files):
       return_code = 1
+      print("I found clang-tidy issues with these files:", failed_files)
 
   except KeyboardInterrupt:
     # This is a sad hack. Unfortunately subprocess goes
@@ -320,8 +321,10 @@ def main():
       traceback.print_exc()
       return_code=1
 
+
   if tmpdir:
     shutil.rmtree(tmpdir)
+
   sys.exit(return_code)
 
 if __name__ == '__main__':

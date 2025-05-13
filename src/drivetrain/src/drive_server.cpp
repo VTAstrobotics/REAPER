@@ -49,19 +49,12 @@ class DriveActionServer : public rclcpp::Node
 
  private:
   rclcpp_action::Server<Drive>::SharedPtr action_server_;
-  // hardware::TalonFX drive_left{20, "can0"};
-  // hardware::TalonFX drive_right{21, "can0"};
-  // controls::DutyCycleOut drive_left_duty{0.0};
-  // controls::DutyCycleOut drive_right_duty{0.0};
-  double drive_left_duty_ = 0;
-  double drive_right_duty_ = 0;
   SparkMax left_motor_{"can1", 10};
   SparkMax right_motor_{"can1", 11};
-  // Motor 1
   bool has_goal_{false};
-  int loop_rate_hz_{120};
-  double track_width_{1.0};
-  double normalization_constant_ = 1; // change this during testing
+  const int LOOP_RATE_HZ_{120};
+  // const double TRACK_WIDTH_{1.0}; // TODO tune
+  // const double NORMALIZATION_CONSTANT_ = 1; // TODO tune
   std::shared_ptr<GoalHandleDrive> drive_goal_handle_;
 
   rclcpp_action::GoalResponse handle_goal(
@@ -85,6 +78,7 @@ class DriveActionServer : public rclcpp::Node
     const std::shared_ptr<GoalHandleDrive>& GOAL_HANDLE)
   {
     RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+
     // Stop motors immediately
     left_motor_.SetDutyCycle(0.0);
     right_motor_.SetDutyCycle(0.0);
@@ -113,7 +107,6 @@ class DriveActionServer : public rclcpp::Node
     double right_speed = linear_speed + z_rotation;
 
     // this desaturates
-    //
     double const MAX_MAGNITUDE =
       std::max(std::abs(left_speed), std::abs(right_speed));
     if (MAX_MAGNITUDE > 1) {
@@ -128,18 +121,19 @@ class DriveActionServer : public rclcpp::Node
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
-      loop_rate_hz_); // this should be 20 hz which I can't imagine not being
+      LOOP_RATE_HZ_); // this should be 20 hz which I can't imagine not being
                       // enough for the dump
 
     const auto GOAL = GOAL_HANDLE->get_goal();
 
     auto feedback = std::make_shared<Drive::Feedback>();
     auto result = std::make_shared<Drive::Result>();
-    double const LINEAR = GOAL->velocity_goal.linear.x;
-    double const ANGULAR = GOAL->velocity_goal.angular.z;
 
-    double const V_LEFT = LINEAR - ANGULAR;
-    double const V_RIGHT = LINEAR + ANGULAR;
+    const double LINEAR = static_cast<float>(GOAL->velocity_goal.linear.x);
+    const double ANGULAR = static_cast<float>(GOAL->velocity_goal.angular.z);
+
+    const double V_LEFT = LINEAR - ANGULAR;
+    const double V_RIGHT = LINEAR + ANGULAR;
 
     auto start_time = this->now();
     auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
@@ -148,31 +142,36 @@ class DriveActionServer : public rclcpp::Node
       if (GOAL_HANDLE->is_canceling()) {
         RCLCPP_INFO(this->get_logger(), "Goal is canceling");
         GOAL_HANDLE->canceled(result);
+
         RCLCPP_INFO(this->get_logger(), "Goal canceled");
+
         drive_goal_handle_ = nullptr;
         has_goal_ = false;
         return;
       }
+
       left_motor_.Heartbeat();
       right_motor_.Heartbeat();
-      left_motor_.SetDutyCycle(std::min(std::max(V_LEFT, -1.), 1.));
-      right_motor_.SetDutyCycle(std::min(std::max(V_RIGHT, -1.), 1.));
+
+      left_motor_.SetDutyCycle(
+        static_cast<float>(std::min(std::max(V_LEFT, -1.), 1.)));
+      right_motor_.SetDutyCycle(
+        static_cast<float>(std::min(std::max(V_RIGHT, -1.), 1.)));
+
       feedback->inst_velocity.linear.x = V_LEFT;
       feedback->inst_velocity.angular.z = V_RIGHT; // placeholders
+
       GOAL_HANDLE->publish_feedback(feedback);
 
       loop_rate.sleep();
     }
 
-    // drive_left_duty.Output = 0.0;
-    // drive_right_duty.Output = 0.0;
-    // drive_left.SetControl(drive_left_duty);
-    // drive_right.SetControl(drive_right_duty);
-
     if (rclcpp::ok()) {
+      RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+
       result->curr_velocity = GOAL->velocity_goal;
       GOAL_HANDLE->succeed(result);
-      RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+
       drive_goal_handle_ = nullptr;
       has_goal_ = false;
     }
