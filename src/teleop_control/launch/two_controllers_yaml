@@ -7,7 +7,7 @@ launch:
       param:
       -
         name : "device_name"
-        value : "0e6f:0501"
+        value : "Xbox One Elite 2 Controller"
 
       remap:
       -
@@ -21,7 +21,7 @@ launch:
       param:
       -
         name : "device_name"
-        value : "045e:0b00"
+        value : "PDP Xbox 360 Controller"
 
       remap:
       -
