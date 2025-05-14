@@ -22,13 +22,13 @@ using namespace ctre::phoenix6;
 using namespace std::placeholders;
 namespace dig_server
 {
-  class DigActionServer : public rclcpp::Node
+  class DigActionServerNoCancoder : public rclcpp::Node
   {
   public:
     using Dig = action_interfaces::action::Dig;
     using GoalHandleDig = rclcpp_action::ServerGoalHandle<Dig>;
 
-    explicit DigActionServer(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+    explicit DigActionServerNoCancoder(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
         : Node("dig_action_server", options)
     {
       l_link_mtr_.ClearStickyFaults();
@@ -39,9 +39,9 @@ namespace dig_server
       this->action_server_ = rclcpp_action::create_server<Dig>(
           this,
           "dig",
-          std::bind(&DigActionServer::handle_goal, this, _1, _2),
-          std::bind(&DigActionServer::handle_cancel, this, _1),
-          std::bind(&DigActionServer::handle_accepted, this, _1));
+          std::bind(&DigActionServerNoCancoder::handle_goal, this, _1, _2),
+          std::bind(&DigActionServerNoCancoder::handle_cancel, this, _1),
+          std::bind(&DigActionServerNoCancoder::handle_accepted, this, _1));
 
       // RCLCPP_INFO(get_logger(), "Setting severity threshold to DEBUG");
       // auto ret = rcutils_logging_set_logger_level(get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
@@ -93,39 +93,9 @@ namespace dig_server
       // Set leader (left) linkage motor to clockwise positive
       link_configs.MotorOutput.Inverted = signals::InvertedValue::Clockwise_Positive;
 
-      // Soft limits
-
-      // Individual configs for the left linkage motor
-      // Left link cancoder configs
-      configs::CANcoderConfiguration l_link_cancoder_config_;
-      l_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      l_link_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("left_linkage_offset").as_double();
-
-      l_link_cancoder_.GetConfigurator().Apply(l_link_cancoder_config_);
-
-      // Use absolute cancoder on the left linkage motor
-      link_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
-      link_configs.Feedback.FeedbackRemoteSensorID = l_link_cancoder_.GetDeviceID();
-      link_configs.Feedback.RotorToSensorRatio = 100;
-
-      // Differential sensor (for left, we compare to the right encoder!)
-
-
       // Apply left linkage configs
       r_link_mtr_.SetControl(controls::Follower{l_link_mtr_.GetDeviceID(), true});
       l_link_mtr_.GetConfigurator().Apply(link_configs);
-
-      // Individual configs for the right linkage motor
-      // Right linkage cancoder configs
-      configs::CANcoderConfiguration r_link_cancoder_config_;
-      r_link_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive;
-      r_link_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_linkage_offset").as_double();
-
-      r_link_cancoder_.GetConfigurator().Apply(r_link_cancoder_config_);
-
-      // Use absolute cancoder on the right linkage motor
-
-      // Differential sensor (for right, we compare to the left encoder!)
 
       // Invert because right motor is mounted inverted to the left (leader)
       link_configs.MotorOutput.Inverted = signals::InvertedValue::CounterClockwise_Positive;
@@ -182,39 +152,11 @@ namespace dig_server
       bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitEnable = false;
       bckt_configs.SoftwareLimitSwitch.ReverseSoftLimitThreshold = BCKT_MIN_POS_;
 
-      // Individual configs for the left bucket motor
-      // Left bckt cancoder configs
-      configs::CANcoderConfiguration l_bckt_cancoder_config_;
-      l_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::Clockwise_Positive;
-      l_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("left_bucket_offset").as_double();
-
-      l_bckt_cancoder_.GetConfigurator().Apply(l_bckt_cancoder_config_);
-
-      // Use absolute cancoder on the left bucket motor
-      bckt_configs.Feedback.FeedbackSensorSource = signals::FeedbackSensorSourceValue::RemoteCANcoder;
-      bckt_configs.Feedback.FeedbackRemoteSensorID = l_bckt_cancoder_.GetDeviceID();
-      bckt_configs.Feedback.RotorToSensorRatio = 75;
-
-      // Differential sensor (for left, we compare to the right encoder!)
-
-
       // Apply left bucket configs
       l_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
       r_bckt_mtr_.SetControl(controls::Follower{l_bckt_mtr_.GetDeviceID(), false});
 
       // Individual configs for the right bucket motor
-      // Right bckt cancoder configs
-      configs::CANcoderConfiguration r_bckt_cancoder_config_;
-      r_bckt_cancoder_config_.MagnetSensor.SensorDirection = signals::SensorDirectionValue::CounterClockwise_Positive; // INVERTED BECAUSE THE CANCODER IS MOUNTED INVERTED, EVEN THOUGH THE MOTOR IS NOT!
-      r_bckt_cancoder_config_.MagnetSensor.MagnetOffset = this->get_parameter("right_bucket_offset").as_double();
-
-      r_bckt_cancoder_.GetConfigurator().Apply(r_bckt_cancoder_config_);
-
-      // Use absolute cancoder on the right bucket motor
-      bckt_configs.Feedback.FeedbackRemoteSensorID = r_bckt_cancoder_.GetDeviceID();
-
-      // Differential sensor (for right, we compare to the left encoder!)
-      
       // Apply right bucket configs
       r_bckt_mtr_.GetConfigurator().Apply(bckt_configs);
 
@@ -247,16 +189,12 @@ namespace dig_server
 
     // linkage actuators
     hardware::TalonFX l_link_mtr_{20, "can1"}; // canid (each motor), can interface (same for all)
-    hardware::CANcoder l_link_cancoder_{1, "can1"};
     hardware::TalonFX r_link_mtr_{23, "can1"};
-    hardware::CANcoder r_link_cancoder_{2, "can1"};
     controls::PositionDutyCycle l_link_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
 
     // bucket rotators
     hardware::TalonFX l_bckt_mtr_{21, "can1"};
-    hardware::CANcoder l_bckt_cancoder_{3, "can1"};
     hardware::TalonFX r_bckt_mtr_{24, "can1"};
-    hardware::CANcoder r_bckt_cancoder_{4, "can1"};
     controls::PositionDutyCycle l_bckt_pos_duty_cycle_{0 * 0_tr}; // absolute position to reach (in rotations)
 
 
@@ -359,7 +297,7 @@ namespace dig_server
     {
       using namespace std::placeholders;
       // this needs to return quickly to avoid blocking the executor, so spin up a new thread
-      std::thread{std::bind(&DigActionServer::execute, this, _1), goal_handle}.detach();
+      std::thread{std::bind(&DigActionServerNoCancoder::execute, this, _1), goal_handle}.detach();
     }
 
     /**
@@ -385,22 +323,22 @@ namespace dig_server
         // linkage
         if (!APPROX(goal->link_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: linkage position control");
-          threads.emplace_back(std::thread{std::bind(&DigActionServer::exe_link_pos, this, _1, _2, _3), goal_handle, feedback, result});
+          threads.emplace_back(std::thread{std::bind(&DigActionServerNoCancoder::exe_link_pos, this, _1, _2, _3), goal_handle, feedback, result});
 
         } else {
           RCLCPP_DEBUG(this->get_logger(), "execute: linkage power control");
-          threads.emplace_back(std::thread{std::bind(&DigActionServer::exe_link_pwr, this, _1, _2, _3), goal_handle, feedback, result});
+          threads.emplace_back(std::thread{std::bind(&DigActionServerNoCancoder::exe_link_pwr, this, _1, _2, _3), goal_handle, feedback, result});
 
         }
 
         // bucket
         if (!APPROX(goal->bckt_pos_goal, DEFAULT_VAL_)) {
           RCLCPP_DEBUG(this->get_logger(), "execute: bucket position control");
-          threads.emplace_back(std::thread{std::bind(&DigActionServer::exe_bckt_pos, this, _1, _2, _3), goal_handle, feedback, result});
+          threads.emplace_back(std::thread{std::bind(&DigActionServerNoCancoder::exe_bckt_pos, this, _1, _2, _3), goal_handle, feedback, result});
 
         } else {
           RCLCPP_DEBUG(this->get_logger(), "execute: bucket power control");
-          threads.emplace_back(std::thread{std::bind(&DigActionServer::exe_bckt_pwr, this, _1, _2, _3), goal_handle, feedback, result});
+          threads.emplace_back(std::thread{std::bind(&DigActionServerNoCancoder::exe_bckt_pwr, this, _1, _2, _3), goal_handle, feedback, result});
 
         }
 
@@ -441,10 +379,6 @@ namespace dig_server
         RCLCPP_ERROR(this->get_logger(), "link_pwr: %f was out of bounds. Power goals should always be in [-1, 1]", pwr);
         pwr = 0;
       }
-
-      RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-        "link_pwr: link_ptr %lf | %lf", (double) l_link_cancoder_.GetAbsolutePosition().GetValue(),
-        (double) r_link_cancoder_.GetAbsolutePosition().GetValue());
 
       RCLCPP_INFO(this->get_logger(), "link_pwr: = %lf", pwr);
 
@@ -499,28 +433,6 @@ namespace dig_server
       // r_vib_mtr_.SetDutyCycle(pwr);
     }
 
-    void set_left_linkage_offset(const rclcpp::Parameter &p){
-      configs::CANcoderConfiguration config_;
-      config_.MagnetSensor.MagnetOffset = p.as_double();
-      l_link_cancoder_.GetConfigurator().Apply(config_);
-    }
-
-    void set_right_linkage_offset(const rclcpp::Parameter &p){
-      configs::CANcoderConfiguration config_;
-      config_.MagnetSensor.MagnetOffset = p.as_double();
-      r_link_cancoder_.GetConfigurator().Apply(config_);
-    }
-    void set_left_bucket_offset(const rclcpp::Parameter &p){
-      configs::CANcoderConfiguration config_;
-      config_.MagnetSensor.MagnetOffset = p.as_double();
-      l_bckt_cancoder_.GetConfigurator().Apply(config_);
-    }
-
-    void set_right_bucket_offset(const rclcpp::Parameter &p){
-      configs::CANcoderConfiguration config_;
-      config_.MagnetSensor.MagnetOffset = p.as_double();
-      r_bckt_cancoder_.GetConfigurator().Apply(config_);
-    }
     /**
      *
      */
@@ -561,7 +473,7 @@ namespace dig_server
         result,
         linkage_goal,
         link_percent_done,
-        std::bind(&DigActionServer::link_pwr, this, _1),
+        std::bind(&DigActionServerNoCancoder::link_pwr, this, _1),
         result->est_link_goal,
         __func__
       );
@@ -584,7 +496,7 @@ namespace dig_server
         result,
         bucket_goal,
         bckt_percent_done,
-        std::bind(&DigActionServer::bckt_pwr, this, _1),
+        std::bind(&DigActionServerNoCancoder::bckt_pwr, this, _1),
         result->est_bckt_goal,
         __func__
       );
@@ -606,7 +518,7 @@ namespace dig_server
         result,
         vibration_goal,
         vibr_percent_done,
-        std::bind(&DigActionServer::vibr_pwr, this, _1),
+        std::bind(&DigActionServerNoCancoder::vibr_pwr, this, _1),
         result->est_vibr_goal,
         __func__
       );
@@ -662,24 +574,9 @@ namespace dig_server
      * @param pos the position for the linkage to go to
      */
     void link_pos(double pos, double vel = 1) {
-      if (!linkage_in_bounds(pos)) {
-        controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
+        (void)pos, (void)vel; // for unused warning
         RCLCPP_ERROR(this->get_logger(), "IN NO ENCODER FALL BACK MODE, THERE IS NO POSITION CONTROL");
-      //  link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
-      }
-
-      (void)vel; // for unused warning
-
-
-      units::angle::turn_t angle{pos * 1_tr};
-      units::angular_velocity::turns_per_second_t speed{vel};
-
-      // controls::MotionMagicVoltage link_req{0_tr};
-      // l_link_mtr_.SetControl(link_req);
-      // l_link_mtr_.SetControl(l_link_pos_duty_cycle_);
-
-      controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
     }
 
     /**
@@ -687,20 +584,9 @@ namespace dig_server
      * @param pos the position for the linkage to go to
      */
     void bckt_pos(double pos, double vel = 1) {
-      if (!bucket_in_bounds(pos)) { return; }
-      (void)vel; // for unused warning
-
-      
+        (void)pos, (void)vel; // for unused warning
         RCLCPP_ERROR(this->get_logger(), "IN NO ENCODER FALL BACK MODE, THERE IS NO POSITION CONTROL");
-
-      units::angle::turn_t angle{pos * 1_tr};
-      units::angular_velocity::turns_per_second_t speed{vel};
-
-      // l_link_pos_duty_cycle_.Velocity = speed; // rotations per sec
-      // l_bckt_pos_duty_cycle_.Position = angle;
-      // l_bckt_mtr_.SetControl(l_bckt_pos_duty_cycle_);
-
-      controls::DifferentialMotionMagicDutyCycle position_command{angle, 0_tr};
+        return;
     }
 
     /**
@@ -768,7 +654,7 @@ namespace dig_server
         LINK_MIN_POS_,
         LINK_MAX_POS_,
         link_percent_done,
-        std::bind(&DigActionServer::link_pos, this, _1, _2),
+        std::bind(&DigActionServerNoCancoder::link_pos, this, _1, _2),
         result->est_link_goal,
         __func__
       );
@@ -794,7 +680,7 @@ namespace dig_server
         BCKT_MIN_POS_,
         BCKT_MAX_POS_,
         bckt_percent_done,
-        std::bind(&DigActionServer::bckt_pos, this, _1, _2),
+        std::bind(&DigActionServerNoCancoder::bckt_pos, this, _1, _2),
         result->est_bckt_goal,
         __func__
       );
@@ -864,7 +750,7 @@ namespace dig_server
                   LINK_MIN_POS_,
                   LINK_MAX_POS_,
                   link_percent_done,
-                  std::bind(&DigActionServer::link_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
+                  std::bind(&DigActionServerNoCancoder::link_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
                   result->est_link_goal,
                   __func__);
           });
@@ -880,7 +766,7 @@ namespace dig_server
                   BCKT_MIN_POS_,
                   BCKT_MAX_POS_,
                   bckt_percent_done,
-                  std::bind(&DigActionServer::bckt_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
+                  std::bind(&DigActionServerNoCancoder::bckt_pos, this, std::placeholders::_1, std::placeholders::_2), // Keep the bind for link_pos
                   result->est_bckt_goal,
                   __func__);
           });
@@ -916,8 +802,8 @@ namespace dig_server
       // has_goal_ = false;
     }
 
-  }; // class DigActionServer
+  }; // class DigActionServerNoCancoder
 
 } // namespace dig_server
 
-RCLCPP_COMPONENTS_REGISTER_NODE(dig_server::DigActionServer)
+RCLCPP_COMPONENTS_REGISTER_NODE(dig_server::DigActionServerNoCancoder)

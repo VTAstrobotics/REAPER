@@ -73,7 +73,7 @@ ament_target_dependencies(Dig_action_no_cancoder
   )
 
 rclcpp_components_register_node(Dig_action PLUGIN "dig_server::DigActionServer" EXECUTABLE DigActionServer)
-rclcpp_components_register_node(Dig_action_no_cancoder PLUGIN "dig_server::no_abs_dig_server" EXECUTABLE DIG_NO_ABS_ENCODER)
+rclcpp_components_register_node(Dig_action_no_cancoder PLUGIN "dig_server::DigActionServerNoCancoder" EXECUTABLE DIG_NO_ABS_ENCODER)
 
 add_definitions(-DUNIT_LIB_DISABLE_FMT -DUNIT_LIB_ENABLE_IOSTREAM)
 if(BUILD_TESTING)
@@ -83,7 +83,7 @@ if(BUILD_TESTING)
   set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
+  # a copyright and license is added to all source file
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
