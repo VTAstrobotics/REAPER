@@ -54,8 +54,10 @@ class Distributor : public rclcpp::Node
     this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
       "/operator/joy", 10, std::bind(&Distributor::joy2_cb, this, _1));
 
-    for (int i = 0; i < NUM_BTNS_; i++) { last_btns_.emplace_back(0); }
-    RCLCPP_INFO(this->get_logger(), "size = %ld", last_btns_.size());
+    for (int i = 0; i < NUM_BTNS_; i++) { last_btns_1_.emplace_back(0); }
+    RCLCPP_INFO(this->get_logger(), "size = %ld", last_btns_1_.size());
+    for (int i = 0; i < NUM_BTNS_; i++) { last_btns_2_.emplace_back(0); }
+    RCLCPP_INFO(this->get_logger(), "size = %ld", last_btns_2_.size());
   }
 
  private:
@@ -80,7 +82,9 @@ class Distributor : public rclcpp::Node
    */
   const int NUM_BTNS_ = 11;
   std::vector<int>
-    last_btns_; // 1 if the button was pressed in the last joy message; else 0
+    last_btns_1_; // 1 if the button was pressed in the last joy message; else 0
+  std::vector<int>
+    last_btns_2_; // 1 if the button was pressed in the last joy message; else 0
   // TODO: toggle and hold button
   // TODO: 2 of these for 2 controllers
 
@@ -96,9 +100,9 @@ class Distributor : public rclcpp::Node
    * @return true if button was pressed AND if it wasn't a duplicate press (i.e.
    * 1 press shouldnt count as 2)
    */
-  bool valid_toggle_press(const int button, const sensor_msgs::msg::Joy& raw)
+  bool valid_toggle_press(const int button, const sensor_msgs::msg::Joy& raw, std::vector<int> last_btns)
   {
-    return (raw.buttons[button] && (!last_btns_[button]));
+    return (raw.buttons[button] && (!last_btns[button]));
   }
 
   /**
@@ -109,13 +113,13 @@ class Distributor : public rclcpp::Node
    * @return true if all buttons were pressed AND none were duplicate presses
    */
   bool valid_toggle_presses(const int buttons[], const int size,
-                            const sensor_msgs::msg::Joy& raw)
+                            const sensor_msgs::msg::Joy& raw, std::vector<int> last_btns)
   {
     bool all_pressed = true;
 
     for (int i = 0; i < size; i++) {
       if (!raw.buttons[buttons[i]]) { return false; }
-      if (!last_btns_[buttons[i]]) { all_pressed = false; }
+      if (!last_btns[buttons[i]]) { all_pressed = false; }
     }
 
     return !all_pressed;
@@ -130,19 +134,19 @@ class Distributor : public rclcpp::Node
     const int STOP_SEQ_BTNS[] = {BUTTON_BACK, BUTTON_START,
                                  BUTTON_MANUFACTURER};
     if (valid_toggle_presses(
-          STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw)) {
+          STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw, last_btns_1_)) {
       this->drive_ptr_->async_cancel_all_goals();
       this->dump_ptr_->async_cancel_all_goals();
       this->dig_ptr_->async_cancel_all_goals();
       teleop_disabled_ = !teleop_disabled_;
       RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. TOGGLING TO %s",
                   teleop_disabled_ ? "DISABLED" : "ENABLED");
-      last_btns_ = raw.buttons;
+      last_btns_1_ = raw.buttons;
       return;
     }
 
     if (teleop_disabled_) {
-      last_btns_ = raw.buttons;
+      last_btns_1_ = raw.buttons;
       return;
     }
 
@@ -177,7 +181,7 @@ class Distributor : public rclcpp::Node
       std::bind(&Distributor::dump_result_cb, this, _1);
 
     // CAMERA CONTROLLER
-    auto driver_camera_goal = Fuser::Goal();
+    //auto driver_camera_goal = Fuser::Goal();
     auto send_fuser_goal_options =
       rclcpp_action::Client<Fuser>::SendGoalOptions();
     send_fuser_goal_options.goal_response_callback =
@@ -204,11 +208,11 @@ class Distributor : public rclcpp::Node
      *                                                                    *
      **********************************************************************/
 
-        if (valid_toggle_press(BUTTON_A, raw)) {
+        if (valid_toggle_press(BUTTON_A, raw, last_btns_1_)) {
             RCLCPP_INFO(this->get_logger(), "A: Not implemented.");
         }
 
-           if (valid_toggle_press(BUTTON_X, raw)) {
+           if (valid_toggle_press(BUTTON_X, raw, last_btns_1_)) {
                slow_turn_ = !slow_turn_;
            }
 
@@ -219,7 +223,7 @@ class Distributor : public rclcpp::Node
       this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
     }
 
-    if (valid_toggle_press(BUTTON_Y, raw)) {
+    if (valid_toggle_press(BUTTON_Y, raw, last_btns_1_)) {
       RCLCPP_INFO(this->get_logger(), "Y: Not implemented.");
         }
 
@@ -231,12 +235,12 @@ class Distributor : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "RB: Not implemented.");
     }
 
-    if (valid_toggle_press(BUTTON_START, raw)) {
+    if (valid_toggle_press(BUTTON_START, raw, last_btns_1_)) {
       RCLCPP_INFO(this->get_logger(),
                   "Start: Not yet implemented. Doing nothing...");
     }
 
-    if (valid_toggle_press(BUTTON_MANUFACTURER, raw)) {
+    if (valid_toggle_press(BUTTON_MANUFACTURER, raw, last_btns_1_)) {
       RCLCPP_INFO(this->get_logger(),
                   "Xbox: Canceling all goals. Robot should stop. To re-enable "
                   "robot, press stop sequence (BACK, START, AND XBOX).");
@@ -247,12 +251,12 @@ class Distributor : public rclcpp::Node
       return;
     }
 
-    if (valid_toggle_press(BUTTON_LSTICK, raw)) {
+    if (valid_toggle_press(BUTTON_LSTICK, raw, last_btns_1_)) {
       RCLCPP_INFO(this->get_logger(),
                   "LS (down): Not yet implemented. Doing nothing...");
     }
 
-    if (valid_toggle_press(BUTTON_RSTICK, raw)) {
+    if (valid_toggle_press(BUTTON_RSTICK, raw, last_btns_1_)) {
       RCLCPP_INFO(this->get_logger(),
                   "RS (down): Not yet implemented. Doing nothing...");
     }
@@ -335,7 +339,7 @@ class Distributor : public rclcpp::Node
     this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
 
     // set up next iteration
-    last_btns_ = raw.buttons;
+    last_btns_1_ = raw.buttons;
   }
 
   void joy2_cb(const sensor_msgs::msg::Joy& raw)
@@ -343,18 +347,18 @@ class Distributor : public rclcpp::Node
     const int STOP_SEQ_BTNS[] = {BUTTON_BACK, BUTTON_START,
                                  BUTTON_MANUFACTURER};
     if (valid_toggle_presses(
-          STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw)) {
+          STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw, last_btns_2_)) {
       this->drive_ptr_->async_cancel_all_goals();
       this->dig_ptr_->async_cancel_all_goals();
       teleop_disabled_ = !teleop_disabled_;
       RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. TOGGLING TO %s",
                   teleop_disabled_ ? "DISABLED" : "ENABLED");
-      last_btns_ = raw.buttons;
+      last_btns_2_ = raw.buttons;
       return;
     }
 
     if (teleop_disabled_) {
-      last_btns_ = raw.buttons;
+      last_btns_2_ = raw.buttons;
       return;
     }
 
@@ -392,7 +396,7 @@ class Distributor : public rclcpp::Node
      *                                                                    *
      **********************************************************************/
 
-    if (valid_toggle_press(BUTTON_A, raw)) {
+    if (valid_toggle_press(BUTTON_A, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
       // dig_goal.link_pos_goal = -0.1;
       // dig_goal.bckt_pos_goal = 0.1;
@@ -404,14 +408,14 @@ class Distributor : public rclcpp::Node
 
     if (vibration_on) { dig_goal.vibr_pwr_goal = 0.3; }
 
-    if (valid_toggle_press(BUTTON_X, raw)) {
+    if (valid_toggle_press(BUTTON_X, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
 
       // dig_goal.scoop = true;
       // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
     }
 
-    //        if (valid_toggle_press(BUTTON_X, raw)) {
+    //        if (valid_toggle_press(BUTTON_X, raw, last_btns_2_)) {
     // dig_goal.link_pos_goal = 0;
     // dig_goal.bckt_pos_goal = 0;
     //            slow_turn_ = !slow_turn_;
@@ -429,7 +433,7 @@ class Distributor : public rclcpp::Node
       RCLCPP_INFO(this->get_logger(), "B: does nothing ");
     }
 
-    if (valid_toggle_press(BUTTON_Y, raw)) {
+    if (valid_toggle_press(BUTTON_Y, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
 
       // dig_goal.link_pos_goal = 0.35;
@@ -449,12 +453,12 @@ class Distributor : public rclcpp::Node
       // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
     }
 
-    if (valid_toggle_press(BUTTON_START, raw)) {
+    if (valid_toggle_press(BUTTON_START, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(),
                   "Start: Not yet implemented. Doing nothing...");
     }
 
-    if (valid_toggle_press(BUTTON_MANUFACTURER, raw)) {
+    if (valid_toggle_press(BUTTON_MANUFACTURER, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(),
                   "Xbox: Canceling all goals. Robot should stop. To re-enable "
                   "robot, press stop sequence (BACK, START, AND XBOX).");
@@ -465,12 +469,12 @@ class Distributor : public rclcpp::Node
       return;
     }
 
-    if (valid_toggle_press(BUTTON_LSTICK, raw)) {
+    if (valid_toggle_press(BUTTON_LSTICK, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(),
                   "LS (down): Not yet implemented. Doing nothing...");
     }
 
-    if (valid_toggle_press(BUTTON_RSTICK, raw)) {
+    if (valid_toggle_press(BUTTON_RSTICK, raw, last_btns_2_)) {
       RCLCPP_INFO(this->get_logger(),
                   "RS (down): Not yet implemented. Doing nothing...");
     }
@@ -601,7 +605,7 @@ class Distributor : public rclcpp::Node
 
 
     // set up next iteration
-    last_btns_ = raw.buttons;
+    last_btns_2_ = raw.buttons;
   }
     /**
      * Sending Goals (dump, dig, drive)

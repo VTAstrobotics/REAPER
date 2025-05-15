@@ -8,6 +8,9 @@ launch:
       -
         name : "device_name"
         value : "Xbox One Elite 2 Controller"
+      -
+        name: "autorepeat_rate"
+        value: 50.0
 
       remap:
       -
@@ -22,6 +25,9 @@ launch:
       -
         name : "device_name"
         value : "PDP Xbox 360 ControllerMicrosoft Corp. Xbox Wireless Controller (model 1914)"
+      -
+        name: "autorepeat_rate"
+        value: 50.0
 
       remap:
       -
