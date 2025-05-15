@@ -81,22 +81,7 @@ class DriveActionServer : public rclcpp::Node
     return rclcpp_action::GoalResponse::REJECT;
   }
 
-  private:
-    rclcpp_action::Server<Drive>::SharedPtr action_server_;
-    // hardware::TalonFX drive_left{20, "can0"};
-    // hardware::TalonFX drive_right{21, "can0"};
-    // controls::DutyCycleOut drive_left_duty{0.0};
-    // controls::DutyCycleOut drive_right_duty{0.0};
-        double drive_left_duty = 0;
-        double drive_right_duty = 0;
-        SparkMax left_motor{"can1", 10};
-        SparkMax right_motor{"can1", 11};
-        // Motor 1
-    bool has_goal{false};
-    int loop_rate_hz{120};
-    double track_width{1.0};
-    double normalization_constant = 1; //change this during testing
-    std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
+ 
   rclcpp_action::CancelResponse handle_cancel(
     const std::shared_ptr<GoalHandleDrive>& GOAL_HANDLE)
   {

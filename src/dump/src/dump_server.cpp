@@ -60,19 +60,6 @@ class DumpActionServer : public rclcpp::Node
               // reseeded the starting volume for the run. Note that even the
               // absolute value is an entirely unrealistic volume
 
-  void dump_volume_callback(const std_msgs::msg::Float32 MSG)
-  {
-    RCLCPP_INFO(this->get_logger(), "I have recived %f", MSG.data);
-    if (abs(abs(starting_volume_) - 802000) < 2) {
-      starting_volume_ = MSG.data;
-      RCLCPP_INFO(this->get_logger(), "starting volume is now %f", MSG.data);
-
-    } else {
-      volume_deposited_ = starting_volume_ - MSG.data;
-      RCLCPP_INFO(this->get_logger(), "I have deposited %f", volume_deposited_);
-    }
-  }
-
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID& uuid,
     const std::shared_ptr<const Dump::Goal>& goal)
@@ -118,34 +105,22 @@ class DumpActionServer : public rclcpp::Node
     if (GOAL->auton) {
       RCLCPP_DEBUG(this->get_logger(), "execute: control using force sensor");
       execute_with_force(GOAL_HANDLE);
-    }
-
-  private:
-    rclcpp_action::Server<Dump>::SharedPtr action_server_;
-    hardware::TalonFX conveyorMotor{30, "can1"};
-    controls::DutyCycleOut conveyorDutyCycle{0};
-    float volume_deposited{0};
-    bool has_goal{false};
-    int loop_rate_hz{20};
-    std::shared_ptr<GoalHandleDump> Dump_Goal_Handle;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description = this->create_subscription<std_msgs::msg::Float32>(
-      "/dump/volume", 2, std::bind(&DumpActionServer::dump_volume_callback, this, std::placeholders::_1));
-    float starting_volume{-802000};// if this is negative 8020 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
-
-    void dump_volume_callback(const std_msgs::msg::Float32 msg){
-      RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
-      if(abs(abs(starting_volume) - 802000) < 2){
-        starting_volume = msg.data;
-        RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
-
-      }
-    else {
+    } else {
       RCLCPP_DEBUG(this->get_logger(), "execute: manual power control");
       execute_pwr_dump(GOAL_HANDLE);
     }
     double const AMPS = conveyor_motor_.GetTorqueCurrent().GetValueAsDouble();
     RCLCPP_INFO(this->get_logger(), "OUTPUT CURRENT: %f",
                 AMPS * 19.26 * pow(10, -3));
+  }
+
+  void dump_volume_callback(const std_msgs::msg::Float32 msg)
+  {
+    RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
+    if (abs(abs(starting_volume_) - 802000) < 2) {
+      starting_volume_ = msg.data;
+      RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
+    }
   }
 
   void execute_with_force(const std::shared_ptr<GoalHandleDump>& GOAL_HANDLE)
