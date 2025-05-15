@@ -50,9 +50,9 @@ class Distributor : public rclcpp::Node
       rclcpp_action::create_client<Fuser>(this, "change_image");
 
     this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
-      "joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
+      "/driver/joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
     this->joy2_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
-      "joy_operator", 10, std::bind(&Distributor::joy2_cb, this, _1));
+      "/operator/joy", 10, std::bind(&Distributor::joy2_cb, this, _1));
 
     for (int i = 0; i < NUM_BTNS_; i++) { last_btns_.emplace_back(0); }
     RCLCPP_INFO(this->get_logger(), "size = %ld", last_btns_.size());
