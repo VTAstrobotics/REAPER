@@ -80,7 +80,7 @@ namespace dig_server
       // Slot 1 gains
       link_configs.Slot1.GravityType = signals::GravityTypeValue::Arm_Cosine;
       link_configs.Slot1.kP = 3; // 0.8 * K_u;
-      // link_configs.Slot1.kI = 0; // 0; PD controller
+      link_configs.Slot1.kI = 0.01; // 0; PD controller
       //link_configs.Slot1.kD = 0.5; //0.1 * K_u * T_u;
 
       // Set linkage current limits

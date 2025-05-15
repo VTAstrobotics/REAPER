@@ -219,7 +219,7 @@ class Distributor : public rclcpp::Node
 
 	        vibration_on = !vibration_on;
         }
-		if (vibration_on) {dig_goal.vibr_pwr_goal = 0.3;}
+		if (vibration_on) {dig_goal.vibr_pwr_goal = 0.5;}
 
     if (valid_toggle_press(BUTTON_X, raw)) {
       RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
