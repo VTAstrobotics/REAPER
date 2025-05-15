@@ -67,7 +67,7 @@ namespace dig_server
       configs::TalonFXConfiguration link_configs{};
 
       // Slot 0 gains
-      float K_u = 1.0, T_u = 0.04;
+      //float K_u = 1.0, T_u = 0.04;
       link_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       link_configs.Slot0.kS = 0.003;
       link_configs.Slot0.kV = 0.80;
@@ -157,7 +157,7 @@ namespace dig_server
       configs::TalonFXConfiguration bckt_configs{};
 
       // Slot 0 gains
-      K_u = 0.5, T_u = 0.04;
+      //K_u = 0.5, T_u = 0.04;
       // not an arm but the gravity changes based on the angle
       bckt_configs.Slot0.GravityType = signals::GravityTypeValue::Arm_Cosine;
       bckt_configs.Slot0.kS = 0.008;
@@ -478,8 +478,8 @@ namespace dig_server
         controls::DifferentialVelocityVoltage velocity_command{0_tps, 0_tr}; // velocity turns per second
         link_mech.SetControl(velocity_command);
       } else {
-	      double angle = 0;
-        angle = (double) r_link_cancoder_.GetAbsolutePosition().GetValue();
+	      //double angle = 0;
+        //angle = (double) r_link_cancoder_.GetAbsolutePosition().GetValue();
 	    //   if(angle < 0) {
 	    //   angle = 0;
 	      
@@ -711,7 +711,7 @@ namespace dig_server
     void link_pos(double pos) {
 	    RCLCPP_DEBUG(this->get_logger(), "link_pos: pos = %lf", pos);
       if (!linkage_in_bounds(pos)) {
-	    RCLCPP_DEBUG(this->get_logger(), "link_pos: OUT OF BOUNDS! setting to %lf", l_link_cancoder_.GetAbsolutePosition().GetValue());
+	    RCLCPP_DEBUG(this->get_logger(), "link_pos: OUT OF BOUNDS! setting to %lf", (double)l_link_cancoder_.GetAbsolutePosition().GetValue());
         controls::DifferentialMotionMagicDutyCycle position_command{l_link_cancoder_.GetAbsolutePosition().GetValue(), 0_tr};
         link_mech.SetControl(position_command); // SLOW IF NOT CONNECTED TO THE MOTOR.
         return;
