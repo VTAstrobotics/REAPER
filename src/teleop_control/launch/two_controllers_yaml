@@ -21,7 +21,7 @@ launch:
       param:
       -
         name : "device_name"
-        value : "PDP Xbox 360 Controller"
+        value : "PDP Xbox 360 ControllerMicrosoft Corp. Xbox Wireless Controller (model 1914)"
 
       remap:
       -
