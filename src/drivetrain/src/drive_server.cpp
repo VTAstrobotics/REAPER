@@ -82,14 +82,15 @@ namespace drive_server
       }
     }
 
-    rclcpp_action::CancelResponse handle_cancel(
-        const std::shared_ptr<GoalHandleDrive> goal_handle)
-    {
-      RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-         // Stop motors immediately
-        left_motor.SetDutyCycle(0.0);
-        right_motor.SetDutyCycle(0.0);
-        RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
+ 
+  rclcpp_action::CancelResponse handle_cancel(
+    const std::shared_ptr<GoalHandleDrive>& GOAL_HANDLE)
+  {
+    RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+    // Stop motors immediately
+    left_motor_.SetDutyCycle(0.0);
+    right_motor_.SetDutyCycle(0.0);
+    RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
         has_goal = false;
         (void)goal_handle;

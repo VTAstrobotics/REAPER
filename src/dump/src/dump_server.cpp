@@ -55,36 +55,23 @@ namespace dump_server
       "/dump/volume", 2, std::bind(&DumpActionServer::dump_volume_callback, this, std::placeholders::_1));
     float starting_volume{-802000};// if this is negative 8020 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
 
-    void dump_volume_callback(const std_msgs::msg::Float32 msg){
-      RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
-      if(abs(abs(starting_volume) - 802000) < 2){
-        starting_volume = msg.data;
-        RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
-
-      }
-      else{
-        volume_deposited = starting_volume - msg.data;
-        RCLCPP_INFO(this->get_logger(), "I have deposited %f", volume_deposited);
-
-      }
+  rclcpp_action::GoalResponse handle_goal(
+    const rclcpp_action::GoalUUID& uuid,
+    const std::shared_ptr<const Dump::Goal>& goal)
+  {
+    RCLCPP_INFO(this->get_logger(),
+                "Received goal request with order %f m^3 or %f power",
+                goal->deposition_goal, goal->pwr_goal);
+    (void)uuid;
+    if (!has_goal_) {
+      RCLCPP_INFO(this->get_logger(), "Accepted Goal and Will soon Execute it");
+      has_goal_ = true;
+      return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
-
-    rclcpp_action::GoalResponse handle_goal(
-        const rclcpp_action::GoalUUID &uuid,
-        std::shared_ptr<const Dump::Goal> goal)
-    {
-      RCLCPP_INFO(this->get_logger(), "Received goal request with order %f m^3 or %f power", goal->deposition_goal, goal->pwr_goal);
-      (void)uuid;
-      if(!has_goal){
-        RCLCPP_INFO(this->get_logger(),"Accepted Goal and Will soon Execute it");
-        has_goal = true;
-        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-      }
-      else{
-        RCLCPP_INFO(this->get_logger(),"rejected goal, there must be one still executing");
-        return rclcpp_action::GoalResponse::REJECT;
-      }
-    }
+    RCLCPP_INFO(this->get_logger(),
+                "rejected goal, there must be one still executing");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
 
     rclcpp_action::CancelResponse handle_cancel(
         const std::shared_ptr<GoalHandleDump> goal_handle)
@@ -107,37 +94,46 @@ namespace dump_server
     {
       const auto goal = goal_handle->get_goal();
 
-      if (goal->auton) {
-        RCLCPP_DEBUG(this->get_logger(), "execute: control using force sensor");
-        execute_withForce(goal_handle);}
-
-      else{
-        RCLCPP_DEBUG(this->get_logger(), "execute: manual power control");
-        execute_pwr_dump(goal_handle);
-
-      }
-      double amps = conveyorMotor.GetTorqueCurrent().GetValueAsDouble();
-      RCLCPP_INFO(this->get_logger(), "OUTPUT CURRENT: %f", amps * 19.26 * pow(10, -3));
-
+    if (GOAL->auton) {
+      RCLCPP_DEBUG(this->get_logger(), "execute: control using force sensor");
+      execute_with_force(GOAL_HANDLE);
+    } else {
+      RCLCPP_DEBUG(this->get_logger(), "execute: manual power control");
+      execute_pwr_dump(GOAL_HANDLE);
     }
-    void execute_withForce(const std::shared_ptr<GoalHandleDump> goal_handle)
-    {
-      RCLCPP_INFO(this->get_logger(), "Executing goal");
-      rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
-      const auto goal = goal_handle->get_goal();
-      auto feedback = std::make_shared<Dump::Feedback>();
-      auto result = std::make_shared<Dump::Result>();
-      auto &amountDone = feedback->percent_done;
-      while (volume_deposited <= goal->deposition_goal)
-      {
-        if (goal_handle->is_canceling()) {
-                RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-                goal_handle->canceled(result);
-                RCLCPP_INFO(this->get_logger(), "Goal canceled");
-                Dump_Goal_Handle = nullptr;  // Reset the active goal
-                has_goal = false;
-                return;
-            }
+    double const AMPS = conveyor_motor_.GetTorqueCurrent().GetValueAsDouble();
+    RCLCPP_INFO(this->get_logger(), "OUTPUT CURRENT: %f",
+                AMPS * 19.26 * pow(10, -3));
+  }
+
+  void dump_volume_callback(const std_msgs::msg::Float32 msg)
+  {
+    RCLCPP_INFO(this->get_logger(), "I have recived %f", msg.data);
+    if (abs(abs(starting_volume_) - 802000) < 2) {
+      starting_volume_ = msg.data;
+      RCLCPP_INFO(this->get_logger(), "starting volume is now %f", msg.data);
+    }
+  }
+
+  void execute_with_force(const std::shared_ptr<GoalHandleDump>& GOAL_HANDLE)
+  {
+    RCLCPP_INFO(this->get_logger(), "Executing goal");
+    rclcpp::Rate loop_rate(
+      loop_rate_hz_); // this should be 20 hz which I can't imagine not being
+                      // enough for the dump
+    const auto GOAL = GOAL_HANDLE->get_goal();
+    auto feedback = std::make_shared<Dump::Feedback>();
+    auto result = std::make_shared<Dump::Result>();
+    auto& amount_done = feedback->percent_done;
+    while (volume_deposited_ <= GOAL->deposition_goal) {
+      if (GOAL_HANDLE->is_canceling()) {
+        RCLCPP_INFO(this->get_logger(), "Goal is canceling");
+        GOAL_HANDLE->canceled(result);
+        RCLCPP_INFO(this->get_logger(), "Goal canceled");
+        dump_goal_handle_ = nullptr; // Reset the active goal
+        has_goal_ = false;
+        return;
+      }
 
         double speed = goal->deposition_goal;
         auto result = std::make_shared<Dump::Result>();
