@@ -111,23 +111,24 @@ namespace drive_server
 	double left_speed = linear_speed - z_rotation;
 	double right_speed = linear_speed + z_rotation;
 
-	//this desaturates
-	//
-	double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
-	if(max_magnitude > 1){
-	left_speed /= max_magnitude;
-	right_speed /= max_magnitude; 
-	}
-	std::vector<double> speeds = {left_speed, right_speed};
-	return speeds;
-    
-    
+    // this desaturates
+    //
+    double const MAX_MAGNITUDE =
+      std::max(std::abs(left_speed), std::abs(right_speed));
+    if (MAX_MAGNITUDE > 1) {
+      left_speed /= MAX_MAGNITUDE;
+      right_speed /= MAX_MAGNITUDE;
     }
-    void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
-    {
+    std::vector<double> speeds = {left_speed, right_speed};
+    return speeds;
+  }
 
-      RCLCPP_INFO(this->get_logger(), "Executing goal");
-      rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
+  void execute(const std::shared_ptr<GoalHandleDrive>& GOAL_HANDLE)
+  {
+    RCLCPP_INFO(this->get_logger(), "Executing goal");
+    rclcpp::Rate loop_rate(
+      loop_rate_hz_); // this should be 20 hz which I can't imagine not being
+                      // enough for the dump
 
       const auto goal = goal_handle->get_goal();
 

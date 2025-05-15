@@ -71,7 +71,7 @@ public:
   const float SLOW_BCKT_ROT_VAL_ = 0.125;
   const float SLOW_LINK_VAL_ = 0.25;
   bool dig_full_pwr_ = false;
-	  
+
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
@@ -677,8 +677,8 @@ dig_full_pwr_ = !dig_full_pwr_;
       RCLCPP_INFO(this->get_logger(),
                   "Dig linkage at %f and bucket at %f (estimated)",
                   result.result->est_link_goal, result.result->est_bckt_goal);
-    } 
-  
+    }
+
 
   /**
    * @param goal_handle
