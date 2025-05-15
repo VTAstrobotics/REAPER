@@ -82,6 +82,7 @@ class Distributor : public rclcpp::Node
   std::vector<int>
     last_btns_; // 1 if the button was pressed in the last joy message; else 0
   // TODO: toggle and hold button
+  // TODO: 2 of these for 2 controllers
 
     bool teleop_disabled_ = false;
     bool vibration_on = false;
@@ -286,8 +287,8 @@ class Distributor : public rclcpp::Node
      **********************************************************************/
 
     // Drive throttle
-    // float LT = raw.axes[AXIS_LTRIGGER];
-    // float RT = raw.axes[AXIS_RTRIGGER];
+    float LT = raw.axes[AXIS_LTRIGGER];
+    float RT = raw.axes[AXIS_RTRIGGER];
 
     /*
      * Shift triggers from [-1, 1], where
@@ -298,41 +299,25 @@ class Distributor : public rclcpp::Node
      *    0 = not pressed
      *    1 = fully pressed
      */
-    // LT = ((-1 * LT) + 1) * 0.5;
-    // RT = ((-1 * RT) + 1) * 0.5;
+    LT = ((-1 * LT) + 1) * 0.5;
+    RT = ((-1 * RT) + 1) * 0.5;
 
     // Apply cubic function for better control
-    // LT = std::pow(LT, 3);
-    // RT = std::pow(RT, 3);
+    LT = std::pow(LT, 3);
+    RT = std::pow(RT, 3);
 
     // drive_vel.linear.x  = RT - LT; // [-1, 1]
-    // drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some
+    drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some
     // reason. temporary fix, make sure all spark max inversion settings are
     // same. TODO!
 
     // Drive turning
-    // float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
+    float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
 
     // Apply cubic function for better control
-    // LSX = std::pow(LSX, 3);
+    LSX = std::pow(LSX, 3);
 
-    // drive_vel.angular.z = LSX; // [-1, 1]
-
-    // if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-    // Cameron
-    float lsy = raw.axes[AXIS_LEFTY];
-    lsy = std::pow(lsy, 3);
-    drive_vel.linear.x = -lsy;
-
-    // Drive turning
-    // float RSX = raw.axes[AXIS_RIGHTX]; // [-1 ,1] where -1 = left, 1 = right
-    float rsx = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
-
-    // Apply cubic function for better control
-    rsx = std::pow(rsx, 3);
-
-    drive_vel.angular.z = rsx; // [-1, 1]
+    drive_vel.angular.z = LSX; // [-1, 1]
 
     if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
 
