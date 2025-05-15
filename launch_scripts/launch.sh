@@ -13,7 +13,6 @@ ros2 run dump DumpActionServer&
 ros2 run drivetrain DriveActionServer&
 ros2 launch camera_streamer camera.launch.py&
 ros2 run camera_streamer streamFuser
-#ros2 run joy joy_node
 
 # Teardown
 echo "Shutting down..."
