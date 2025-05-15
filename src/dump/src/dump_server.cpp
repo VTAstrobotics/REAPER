@@ -43,17 +43,23 @@ namespace dump_server
 
     }
 
-  private:
-    rclcpp_action::Server<Dump>::SharedPtr action_server_;
-    hardware::TalonFX conveyorMotor{30, "can1"};
-    controls::DutyCycleOut conveyorDutyCycle{0};
-    float volume_deposited{0};
-    bool has_goal{false};
-    int loop_rate_hz{20};
-    std::shared_ptr<GoalHandleDump> Dump_Goal_Handle;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description = this->create_subscription<std_msgs::msg::Float32>(
-      "/dump/volume", 2, std::bind(&DumpActionServer::dump_volume_callback, this, std::placeholders::_1));
-    float starting_volume{-802000};// if this is negative 8020 then it means that we have not reseeded the starting volume for the run. Note that even the absolute value is an entirely unrealistic volume
+ private:
+  rclcpp_action::Server<Dump>::SharedPtr action_server_;
+  hardware::TalonFX conveyor_motor_{30, "can1"};
+  controls::DutyCycleOut conveyor_duty_cycle_{0};
+  float volume_deposited_{0};
+  bool has_goal_{false};
+  int loop_rate_hz_{50};
+  std::shared_ptr<GoalHandleDump> dump_goal_handle_;
+  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr volume_description_ =
+    this->create_subscription<std_msgs::msg::Float32>(
+      "/dump/volume", 2,
+      std::bind(&DumpActionServer::dump_volume_callback, this,
+                std::placeholders::_1));
+  float starting_volume_{
+    -802000}; // if this is negative 8020 then it means that we have not
+              // reseeded the starting volume for the run. Note that even the
+              // absolute value is an entirely unrealistic volume
 
   rclcpp_action::GoalResponse handle_goal(
     const rclcpp_action::GoalUUID& uuid,
