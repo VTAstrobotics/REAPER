@@ -164,16 +164,6 @@ class Distributor : public rclcpp::Node
     send_drive_goal_options.result_callback =
       std::bind(&Distributor::drive_result_cb, this, _1);
 
-    // Dig action server
-    auto dig_goal = Dig::Goal();
-    auto send_dig_goal_options = rclcpp_action::Client<Dig>::SendGoalOptions();
-    send_dig_goal_options.goal_response_callback =
-      std::bind(&Distributor::dig_response_cb, this, _1);
-    send_dig_goal_options.feedback_callback =
-      std::bind(&Distributor::dig_fb_cb, this, _1, _2);
-    send_dig_goal_options.result_callback =
-      std::bind(&Distributor::dig_result_cb, this, _1);
-
     // Dump action server
     auto dump_goal = Dump::Goal();
     auto send_dump_goal_options =
@@ -214,36 +204,12 @@ class Distributor : public rclcpp::Node
      **********************************************************************/
 
         if (valid_toggle_press(BUTTON_A, raw)) {
-            RCLCPP_INFO(this->get_logger(), "A: Go to dig positions");
-		//dig_goal.link_pos_goal = -0.1;
-		//dig_goal.bckt_pos_goal = 0.1;
-		//dig_goal.link_pos_goal = 0;
-		// dig_goal.bckt_pos_goal = 0;
-
-	        vibration_on = !vibration_on;
+            RCLCPP_INFO(this->get_logger(), "A: Not implemented.");
         }
-		if (vibration_on) {dig_goal.vibr_pwr_goal = 0.3;}
 
-    if (valid_toggle_press(BUTTON_X, raw)) {
-      RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
-
-      // dig_goal.scoop = true;
-      // this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
-    }
-
-    //        if (valid_toggle_press(BUTTON_X, raw)) {
-    // dig_goal.link_pos_goal = 0;
-    // dig_goal.bckt_pos_goal = 0;
-    //            slow_turn_ = !slow_turn_;
-    //            if (slow_turn_) {
-    //                RCLCPP_INFO(this->get_logger(), "Y: Decreasing the max
-    //                turning rate");
-    //            } else {
-    //                RCLCPP_INFO(this->get_logger(), "Y: Turning back to full
-    //                speed");
-    //            }
-    //
-    //        }
+           if (valid_toggle_press(BUTTON_X, raw)) {
+               slow_turn_ = !slow_turn_;
+           }
 
     if (raw.buttons[BUTTON_B] != 0) {
       dump_goal.pwr_goal = 0.25;
@@ -253,24 +219,15 @@ class Distributor : public rclcpp::Node
     }
 
     if (valid_toggle_press(BUTTON_Y, raw)) {
-      RCLCPP_INFO(this->get_logger(), "Y: Go to travel position");
-
-            //dig_goal.link_pos_goal = 0.35;
-            //dig_goal.bckt_pos_goal = 0.22;
+      RCLCPP_INFO(this->get_logger(), "Y: Not implemented.");
         }
 
         if (raw.buttons[BUTTON_LBUMPER]) {
-            RCLCPP_INFO(this->get_logger(), "LB: Lowering the dig linkage");
-            dig_goal.link_pwr_goal = -0.1;
-            //dig_goal.bckt_pwr_goal = -0.1;
+            RCLCPP_INFO(this->get_logger(), "LB: Not implemented.");
         }
 
     if (raw.buttons[BUTTON_RBUMPER] != 0) {
-      RCLCPP_INFO(this->get_logger(), "RB: Raising the dig linkage");
-      dig_goal.link_pwr_goal = 0.60;
-
-      // dump_goal.deposition_goal = 0.1;
-      // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+      RCLCPP_INFO(this->get_logger(), "RB: Not implemented.");
     }
 
     if (valid_toggle_press(BUTTON_START, raw)) {
@@ -285,7 +242,6 @@ class Distributor : public rclcpp::Node
 
       this->drive_ptr_->async_cancel_all_goals();
       this->dump_ptr_->async_cancel_all_goals();
-      this->dig_ptr_->async_cancel_all_goals();
       teleop_disabled_ = true;
       return;
     }
@@ -382,69 +338,6 @@ class Distributor : public rclcpp::Node
 
     /**********************************************************************
      *                                                                    *
-     * DIG SYSTEM CONTROLS                                                *
-     *                                                                    *
-     **********************************************************************/
-    // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-    // float RSY = raw.axes[AXIS_RIGHTY];
-
-    // Apply cubic function for better control
-    // RSY = std::pow(RSY, 3);
-    // dig_goal.bckt_pwr_goal = -RSY;
-    // dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_;
-
-    // Cameron
-    float lt = raw.axes[AXIS_LTRIGGER];
-    float rt = raw.axes[AXIS_RTRIGGER];
-
-    /*
-     * Shift triggers from [-1, 1], where
-     *    1 = not pressed
-     *   -1 = fully pressed
-     *    0 = halfway
-     * to [0, 1] where
-     *    0 = not pressed
-     *    1 = fully pressed
-     */
-    lt = ((-1 * lt) + 1) * 0.5;
-    rt = ((-1 * rt) + 1) * 0.5;
-
-    // Apply cubic function for better control
-    lt = std::pow(lt, 3);
-    rt = std::pow(rt, 3);
-
-    dig_goal.bckt_pwr_goal = -0.1 * (rt - lt);
-
-    // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f",
-    // dig_goal.bckt_pwr_goal);
-
-    /**********************************************************************
-     *                                                                    *
-     * DUMP SYSTEM CONTROLS                                               *
-     *                                                                    *
-     **********************************************************************/
-    // if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right,
-    // 0 = none dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
-    // RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f",
-    // dump_goal.pwr_goal); this->dump_ptr_->async_send_goal(dump_goal,
-    // send_dump_goal_options);
-    // }
-
-    if (raw.axes[AXIS_DPAD_Y] != 0.0F) {
-      dig_goal.vibr_pwr_goal = -0.2;
-      RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f",
-                  dig_goal.vibr_pwr_goal);
-    }
-
-    // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-    // float LSY = raw.axes[AXIS_LEFTY];
-
-    // Apply cubic function for better control
-    // LSY = std::pow(LSY, 3);
-    // dump_goal.pwr_goal = LSY;
-
-    /**********************************************************************
-     *                                                                    *
      * SEND ACTION SERVER GOALS                                           *
      * always send a goal for now because autonomy goals would have       *
      * already been sent, so this will be disregarded by the server       *
@@ -454,7 +347,6 @@ class Distributor : public rclcpp::Node
      **********************************************************************/
     drive_goal.velocity_goal = drive_vel;
     this->drive_ptr_->async_send_goal(drive_goal, send_drive_goal_options);
-    this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
     this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
 
     // set up next iteration
@@ -468,7 +360,6 @@ class Distributor : public rclcpp::Node
     if (valid_toggle_presses(
           STOP_SEQ_BTNS, sizeof(STOP_SEQ_BTNS) / sizeof(*STOP_SEQ_BTNS), raw)) {
       this->drive_ptr_->async_cancel_all_goals();
-      this->dump_ptr_->async_cancel_all_goals();
       this->dig_ptr_->async_cancel_all_goals();
       teleop_disabled_ = !teleop_disabled_;
       RCLCPP_INFO(this->get_logger(), "STOP SEQUENCE DETECTED. TOGGLING TO %s",
@@ -489,18 +380,6 @@ class Distributor : public rclcpp::Node
      * control can modify the goal for that iteration to send a goal      *
      *                                                                    *
      **********************************************************************/
-    // Drive action server
-    auto drive_goal = Drive::Goal();
-    geometry_msgs::msg::Twist drive_vel;
-    auto send_drive_goal_options =
-      rclcpp_action::Client<Drive>::SendGoalOptions();
-    send_drive_goal_options.goal_response_callback =
-      std::bind(&Distributor::drive_response_cb, this, _1);
-    send_drive_goal_options.feedback_callback =
-      std::bind(&Distributor::drive_fb_cb, this, _1, _2);
-    send_drive_goal_options.result_callback =
-      std::bind(&Distributor::drive_result_cb, this, _1);
-
     // Dig action server
     auto dig_goal = Dig::Goal();
     auto send_dig_goal_options = rclcpp_action::Client<Dig>::SendGoalOptions();
@@ -510,17 +389,6 @@ class Distributor : public rclcpp::Node
       std::bind(&Distributor::dig_fb_cb, this, _1, _2);
     send_dig_goal_options.result_callback =
       std::bind(&Distributor::dig_result_cb, this, _1);
-
-    // Dump action server
-    auto dump_goal = Dump::Goal();
-    auto send_dump_goal_options =
-      rclcpp_action::Client<Dump>::SendGoalOptions();
-    send_dump_goal_options.goal_response_callback =
-      std::bind(&Distributor::dump_response_cb, this, _1);
-    send_dump_goal_options.feedback_callback =
-      std::bind(&Distributor::dump_fb_cb, this, _1, _2);
-    send_dump_goal_options.result_callback =
-      std::bind(&Distributor::dump_result_cb, this, _1);
 
     /**********************************************************************
      *                                                                    *
@@ -569,10 +437,7 @@ class Distributor : public rclcpp::Node
     //        }
 
     if (raw.buttons[BUTTON_B] != 0) {
-      dump_goal.pwr_goal = 0.25;
-      RCLCPP_INFO(this->get_logger(), "B: Dump with power %f",
-                  dump_goal.pwr_goal);
-      this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+      RCLCPP_INFO(this->get_logger(), "B: does nothing ");
     }
 
     if (valid_toggle_press(BUTTON_Y, raw)) {
@@ -606,7 +471,6 @@ class Distributor : public rclcpp::Node
                   "robot, press stop sequence (BACK, START, AND XBOX).");
 
       this->drive_ptr_->async_cancel_all_goals();
-      this->dump_ptr_->async_cancel_all_goals();
       this->dig_ptr_->async_cancel_all_goals();
       teleop_disabled_ = true;
       return;
@@ -650,41 +514,6 @@ class Distributor : public rclcpp::Node
      * drive_vel.angular.z; // turn (positive left, negative right)       *
      *                                                                    *
      **********************************************************************/
-
-        // Drive throttle
-        float LT = raw.axes[AXIS_LTRIGGER];
-        float RT = raw.axes[AXIS_RTRIGGER];
-
-        /*
-         * Shift triggers from [-1, 1], where
-         *    1 = not pressed
-         *   -1 = fully pressed
-         *    0 = halfway
-         * to [0, 1] where
-         *    0 = not pressed
-         *    1 = fully pressed
-         */
-        LT = ((-1 * LT) + 1) * 0.5;
-        RT = ((-1 * RT) + 1) * 0.5;
-
-        // Apply cubic function for better control
-        LT = std::pow(LT, 3);
-        RT = std::pow(RT, 3);
-
-        //drive_vel.linear.x  = RT - LT; // [-1, 1]
-        drive_vel.linear.x  = LT - RT; // [-1, 1] // if motors inverted for some reason. temporary fix, make sure all spark max inversion settings are same. TODO!
-
-        // Drive turning
-        float LSX = raw.axes[AXIS_LEFTX]; // [-1 ,1] where -1 = left, 1 = right
-
-        // Apply cubic function for better control
-        LSX = std::pow(LSX, 3);
-
-        drive_vel.angular.z = LSX; // [-1, 1]
-
-        if (slow_turn_) { drive_vel.angular.z *= SLOW_DRIVE_TURN_VAL_; }
-
-
         // Cameron
         //float LSY = raw.axes[AXIS_LEFTY];
         //LSY = std::pow(LSY, 3);
@@ -780,7 +609,6 @@ class Distributor : public rclcpp::Node
      *                                                                    *
      **********************************************************************/
     this->dig_ptr_->async_send_goal(dig_goal, send_dig_goal_options);
-    this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
 
 
     // set up next iteration

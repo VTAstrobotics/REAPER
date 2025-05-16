@@ -10,9 +10,7 @@ echo "Launching nodes..."
 ros2 run teleop_control Distributor&
 ros2 run dig DigActionServer --ros-args --params-file src/dig/config/reaper.yaml&
 ros2 run dump DumpActionServer&
-ros2 run drivetrain DriveActionServer&
-ros2 launch camera_streamer camera.launch.py&
-ros2 run camera_streamer streamFuser
+ros2 run drivetrain DriveActionServer
 
 # Teardown
 echo "Shutting down..."
