@@ -6,8 +6,8 @@ launch:
       name: "controller1"
       param:
       -
-        name : "device_id"
-        value : "045e:0b00"
+        name : "device_name"
+        value : "Xbox One Elite 2 Controller"
 
       remap:
       -
@@ -20,11 +20,11 @@ launch:
       name: "controller2"
       param:
       -
-        name : "device_id
-        value : "0e6f:0501"
-
+        name : "device_name"
+        value : "PDP Xbox 360 ControllerMicrosoft Corp. Xbox Wireless Controller (model 1914)"
 
       remap:
       -
           from: "/joy"
-          to: "/controller/joy"
+          to: "/operator/joy"
+  

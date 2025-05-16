@@ -7,7 +7,7 @@
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
     ],
-    "cmake.sourceDirectory": "/home/cameron/Astrobotics/REAPER/state_messages_utils",
+    "cmake.sourceDirectory": "/workspace/src/teleop_control",
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "array": "cpp",

@@ -2,17 +2,18 @@ name: astrodev
 
 services:
   dev-container:
+    image: vtastrobotics/astro-dev:main
     build:
       dockerfile: "Dockerfile"
     privileged: true
     network_mode: "host"
-    cap_add: 
+    cap_add:
       - NET_ADMIN
     volumes:
       - ..:/workspace:cached
       - /dev:/dev:bind
     command: sleep infinity
-    
+
     #  "runArgs": [
 		#  "--cap-add=SYS_PTRACE", // Allows the container to trace processes using ptrace system call
 		#  "--security-opt=seccomp=unconfined", // Disables seccomp security profiles for the container
