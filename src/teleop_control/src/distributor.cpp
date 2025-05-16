@@ -412,8 +412,12 @@ class Distributor : public rclcpp::Node
       // dig_goal.link_pos_goal = -0.1;
       // dig_goal.bckt_pos_goal = 0.1;
       // dig_goal.link_pos_goal = 0;
-      dig_goal.bckt_pos_goal = 0;
+      // dig_goal.bckt_pos_goal = 0;
+
+      vibration_on = !vibration_on;
     }
+
+    if (vibration_on) { dig_goal.vibr_pwr_goal = 0.3; }
 
     if (valid_toggle_press(BUTTON_X, raw)) {
       RCLCPP_INFO(this->get_logger(), "X: Auto scoop");
