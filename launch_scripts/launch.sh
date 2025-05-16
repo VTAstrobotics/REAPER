@@ -21,5 +21,4 @@ pkill Distributor
 pkill DigActionServer
 pkill DumpActionServer
 pkill DriveActionServer
-pkill usbCamStreamer
 echo "Killed background processes"
