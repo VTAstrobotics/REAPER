@@ -111,14 +111,12 @@ namespace drive_server
     void drive_dist(double goal_dist){
       driven_dist += drive_factor * (left_motor.GetPosition() + right_motor.GetPosition())/2;
       
+        left_motor.SetDutyCycle(0.3);
+        right_motor.SetDutyCycle(0.3);
       
-      left_motor.SetCtrlType(CtrlType::kPosition);
-      left_motor.SetCtrlType(CtrlType::kPosition);
       left_motor.SetSetpoint(goal_dist);
       right_motor.SetSetpoint(goal_dist);
       if(left_motor.GetPosition() > goal_dist && right_motor.GetPosition() > goal_dist){
-        left_motor.SetCtrlType(CtrlType::kDutyCycle);
-        right_motor.SetCtrlType(CtrlType::kDutyCycle);
         left_motor.SetDutyCycle(0.0);
         right_motor.SetDutyCycle(0.0);
         driving_dist = false;
