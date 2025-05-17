@@ -43,10 +43,8 @@ ENV PICO_SDK_PATH=$HOME/pico-sdk
 # MicroROS dependencies
 RUN sudo apt install -y \
     gcc-arm-none-eabi \
-    doxygen
-
-# Clone MicroROS Pi Pico
-RUN git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
+    doxygen \
+    && git clone --recurse-submodules https://github.com/raspberrypi/pico-sdk.git $HOME/pico-sdk
 
 # Rosdep update
 RUN rosdep update
@@ -60,24 +58,18 @@ RUN echo "source /workspaces/REAPER/install/setup.bash" >> ~/.bashrc
 # Add dependencies below using RUN <command you used to install>              #
 #                                                                             #
 ###############################################################################
-# install clang-format dependencies (also add-apt-repository relies on software-properties-common)
-RUN sudo apt install -y \
-    lsb-release \
+# install clang-format version 16
+RUN sudo apt-get install -y lsb-release \
     wget \
     software-properties-common \
-    gnupg
-
-# install clang-format and clang-tidy
-RUN sudo wget https://apt.llvm.org/llvm.sh \
+    gnupg \
+    && sudo wget https://apt.llvm.org/llvm.sh \
     && sudo chmod +x llvm.sh \
-    && sudo ./llvm.sh 21 \
-    # NOTICE: i have set the version to 21. over time you may choose to migrate
-    # to newer versions, but this may cause errors with the existing formatter
-    # rules (.clang-format and .clang-tidy).
-    && sudo apt update \
-    && sudo apt install -y clang-format clang-tidy
+    && sudo ./llvm.sh 16 \
+    && sudo apt-get install -y clang-format-16 \
+    && sudo ln -s $(which clang-format-16) /usr/local/bin/clang-format
 
-# install sparkcan for sparkmax over can
+# install sparkcan
 RUN sudo add-apt-repository ppa:graysonarendt/sparkcan
 RUN sudo apt update
 RUN sudo apt install sparkcan
@@ -101,6 +93,8 @@ RUN sudo apt install -y \
 # RUN if ! grep -q "Jetson" /proc/device-tree/model; then \
 #         sudo apt install -y ros-humble-turtlebot3-gazebo; \
 #     fi
+
+RUN echo "test"
 
 # set environment variables for navigation
 ENV TURTLEBOT3_MODEL=waffle \
