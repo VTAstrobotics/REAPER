@@ -65,31 +65,32 @@ namespace drive_server
     double normalization_constant = 1; //change this during testing
     std::shared_ptr<GoalHandleDrive> Drive_Goal_Handle;
 
-    rclcpp_action::GoalResponse handle_goal(
-        const rclcpp_action::GoalUUID &uuid,
-        std::shared_ptr<const Drive::Goal> goal)
-    {
-      RCLCPP_INFO(this->get_logger(), "Received goal request with order %f", goal->velocity_goal.linear.x); // change to drive specific
-      (void)uuid;
-      if(!has_goal){
-        RCLCPP_INFO(this->get_logger(),"Accepted Goal and Will soon Execute it");
-        has_goal = true;
-        return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-      }
-      else{
-        RCLCPP_INFO(this->get_logger(),"rejected goal, there must be one still executing");
-        return rclcpp_action::GoalResponse::REJECT;
-      }
+  rclcpp_action::GoalResponse handle_goal(
+    const rclcpp_action::GoalUUID& uuid,
+    const std::shared_ptr<const Drive::Goal>& goal)
+  {
+    RCLCPP_INFO(this->get_logger(), "Received goal request with order %f",
+                goal->velocity_goal.linear.x); // change to drive specific
+    (void)uuid;
+    if (!has_goal_) {
+      RCLCPP_INFO(this->get_logger(), "Accepted Goal and Will soon Execute it");
+      has_goal_ = true;
+      return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
+    RCLCPP_INFO(this->get_logger(),
+                "rejected goal, there must be one still executing");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
 
-    rclcpp_action::CancelResponse handle_cancel(
-        const std::shared_ptr<GoalHandleDrive> goal_handle)
-    {
-      RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
-         // Stop motors immediately
-        left_motor.SetDutyCycle(0.0);
-        right_motor.SetDutyCycle(0.0);
-        RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
+
+  rclcpp_action::CancelResponse handle_cancel(
+    const std::shared_ptr<GoalHandleDrive>& GOAL_HANDLE)
+  {
+    RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
+    // Stop motors immediately
+    left_motor_.SetDutyCycle(0.0);
+    right_motor_.SetDutyCycle(0.0);
+    RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
         has_goal = false;
         (void)goal_handle;
@@ -110,23 +111,24 @@ namespace drive_server
 	double left_speed = linear_speed - z_rotation;
 	double right_speed = linear_speed + z_rotation;
 
-	//this desaturates
-	//
-	double max_magnitude = std::max(std::abs(left_speed), std::abs(right_speed));
-	if(max_magnitude > 1){
-	left_speed /= max_magnitude;
-	right_speed /= max_magnitude; 
-	}
-	std::vector<double> speeds = {left_speed, right_speed};
-	return speeds;
-    
-    
+    // this desaturates
+    //
+    double const MAX_MAGNITUDE =
+      std::max(std::abs(left_speed), std::abs(right_speed));
+    if (MAX_MAGNITUDE > 1) {
+      left_speed /= MAX_MAGNITUDE;
+      right_speed /= MAX_MAGNITUDE;
     }
-    void execute(const std::shared_ptr<GoalHandleDrive> goal_handle)
-    {
+    std::vector<double> speeds = {left_speed, right_speed};
+    return speeds;
+  }
 
-      RCLCPP_INFO(this->get_logger(), "Executing goal");
-      rclcpp::Rate loop_rate(loop_rate_hz); // this should be 20 hz which I can't imagine not being enough for the dump
+  void execute(const std::shared_ptr<GoalHandleDrive>& GOAL_HANDLE)
+  {
+    RCLCPP_INFO(this->get_logger(), "Executing goal");
+    rclcpp::Rate loop_rate(
+      loop_rate_hz_); // this should be 20 hz which I can't imagine not being
+                      // enough for the dump
 
       const auto goal = goal_handle->get_goal();
 

@@ -1,0 +1,36 @@
+launch:
+
+  - node:
+      pkg: "joy"
+      exec: "joy_node"
+      name: "controller1"
+      param:
+      -
+        name : "device_name"
+        value : "Xbox One Elite 2 Controller"
+      -
+        name: "autorepeat_rate"
+        value: 50.0
+
+      remap:
+      -
+          from: "/joy"
+          to: "/driver/joy"
+
+  - node:
+      pkg: "joy"
+      exec: "joy_node"
+      name: "controller2"
+      param:
+      -
+        name : "device_name"
+        value : "PDP Xbox 360 ControllerMicrosoft Corp. Xbox Wireless Controller (model 1914)"
+      -
+        name: "autorepeat_rate"
+        value: 50.0
+
+      remap:
+      -
+          from: "/joy"
+          to: "/operator/joy"
+  
