@@ -204,7 +204,8 @@ class Distributor : public rclcpp::Node
      **********************************************************************/
 
         if (valid_toggle_press(BUTTON_A, raw)) {
-            RCLCPP_INFO(this->get_logger(), "A: Not implemented.");
+            drive_goal.distance_meters = 1.5;
+            RCLCPP_INFO(this->get_logger(), "A: AUTO DRIVE.");
         }
 
            if (valid_toggle_press(BUTTON_X, raw)) {
