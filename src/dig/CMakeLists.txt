@@ -29,12 +29,23 @@ include_directories(
 message(STATUS "Include directories: ${CMAKE_INCLUDE_PATH}")
 
 add_library(Dig_action SHARED src/dig_server.cpp)
-target_include_directories(Dig_action PRIVATE
+add_library(Dig_action_no_cancoder SHARED src/no_abs_dig_server.cpp)
+
+target_include_directories(Dig_action_no_cancoder PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+target_include_directories(Dig_action_no_cancoder PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 target_compile_definitions(Dig_action PRIVATE
 "DIG_ACTION_CPP_BUILDING_DLL")
+
+target_compile_definitions(Dig_action_no_cancoder PRIVATE
+"DIG_ACTION_CPP_BUILDING_DLL")
+
+
 
 ament_target_dependencies(Dig_action
   "action_interfaces"
@@ -47,7 +58,22 @@ ament_target_dependencies(Dig_action
   "state_messages_utils"
   "std_msgs"
   )
+
+
+ament_target_dependencies(Dig_action_no_cancoder
+  "action_interfaces"
+  "phoenix6"
+  "rclcpp"
+  "rclcpp_action"
+  "rclcpp_components"
+  "sparkcan"
+  "state_messages"
+  "state_messages_utils"
+  "std_msgs"
+  )
+
 rclcpp_components_register_node(Dig_action PLUGIN "dig_server::DigActionServer" EXECUTABLE DigActionServer)
+rclcpp_components_register_node(Dig_action_no_cancoder PLUGIN "dig_server::DigActionServerNoCancoder" EXECUTABLE DIG_NO_ABS_ENCODER)
 
 add_definitions(-DUNIT_LIB_DISABLE_FMT -DUNIT_LIB_ENABLE_IOSTREAM)
 if(BUILD_TESTING)
@@ -57,7 +83,7 @@ if(BUILD_TESTING)
   set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
+  # a copyright and license is added to all source file
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
@@ -69,6 +95,11 @@ DESTINATION share/${PROJECT_NAME}/
 
 install(TARGETS
   Dig_action
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
+install(TARGETS
+Dig_action_no_cancoder
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)

@@ -1,18 +1,17 @@
 #include <functional>
 #include <future>
 #include <memory>
-#include <sstream>
 #include <string>
+#include <sstream>
 
+#include "sensor_msgs/msg/joy.hpp"
+#include "action_interfaces/action/dump.hpp"
 #include "action_interfaces/action/dig.hpp"
 #include "action_interfaces/action/drive.hpp"
-#include "action_interfaces/action/dump.hpp"
-#include "action_interfaces/action/fuser.hpp"
-#include "sensor_msgs/msg/joy.hpp"
 
-#include "rclcpp/client.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
+#include "rclcpp/client.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
 #include "settings.h"
@@ -25,29 +24,24 @@ namespace teleop_control
 {
 
 /*
- * Takes in controller inputs and sends a goal to the various action servers
- * (ex. drive, dump, etc)
- */
+ * Takes in controller inputs and sends a goal to the various action servers (ex. drive, dump, etc)
+*/
 class Distributor : public rclcpp::Node
 {
- public:
-  using Dump = action_interfaces::action::Dump;
-  using DumpGoalHandle = rclcpp_action::ClientGoalHandle<Dump>;
-  using Dig = action_interfaces::action::Dig;
-  using DigGoalHandle = rclcpp_action::ClientGoalHandle<Dig>;
-  using Drive = action_interfaces::action::Drive;
-  using DriveGoalHandle = rclcpp_action::ClientGoalHandle<Drive>;
-  using Fuser = action_interfaces::action::Fuser;
-  using FuserGoalHandle = rclcpp_action::ClientGoalHandle<Fuser>;
+public:
+    using Dump = action_interfaces::action::Dump;
+    using DumpGoalHandle = rclcpp_action::ClientGoalHandle<Dump>;
+    using Dig = action_interfaces::action::Dig;
+    using DigGoalHandle = rclcpp_action::ClientGoalHandle<Dig>;
+    using Drive = action_interfaces::action::Drive;
+    using DriveGoalHandle = rclcpp_action::ClientGoalHandle<Drive>;
 
-  explicit Distributor(const rclcpp::NodeOptions& options) :
-    Node("distributor", options)
-  {
-    this->dump_ptr_ = rclcpp_action::create_client<Dump>(this, "dump");
-    this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig");
-    this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
-    this->driver_camera =
-      rclcpp_action::create_client<Fuser>(this, "change_image");
+    explicit Distributor(const rclcpp::NodeOptions& options)
+        : Node("distributor", options)
+    {
+        this->dump_ptr_ = rclcpp_action::create_client<Dump>(this, "dump");
+        this->dig_ptr_ = rclcpp_action::create_client<Dig>(this, "dig");
+        this->drive_ptr_ = rclcpp_action::create_client<Drive>(this, "drive");
 
     this->joy1_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
       "/driver/joy", 10, std::bind(&Distributor::joy1_cb, this, _1));
@@ -77,7 +71,7 @@ class Distributor : public rclcpp::Node
   const float SLOW_BCKT_ROT_VAL_ = 0.125;
   const float SLOW_LINK_VAL_ = 0.25;
   bool dig_full_pwr_ = false;
-	  
+
   /*
    * store the last time each button was pressed.
    * if the button was JUST pressed we ignore it to avoid unwanted/dup presses
@@ -92,7 +86,6 @@ class Distributor : public rclcpp::Node
   // TODO: 2 of these for 2 controllers
 
     bool teleop_disabled_ = false;
-    bool vibration_on = false;
 
   /**
    * Given the button index, returns true if there was a valid press.
@@ -125,8 +118,8 @@ class Distributor : public rclcpp::Node
       if (!last_btns[buttons[i]]) { all_pressed = false; }
     }
 
-    return !all_pressed;
-  }
+        return !all_pressed;
+    }
 
   /**
    * Joystick 1
@@ -153,24 +146,20 @@ class Distributor : public rclcpp::Node
       return;
     }
 
-    /**********************************************************************
-     *                                                                    *
-     * ACTION SERVER GOALS                                                *
-     * You can only send one goal per action server at a time, so each    *
-     * control can modify the goal for that iteration to send a goal      *
-     *                                                                    *
-     **********************************************************************/
-    // Drive action server
-    auto drive_goal = Drive::Goal();
-    geometry_msgs::msg::Twist drive_vel;
-    auto send_drive_goal_options =
-      rclcpp_action::Client<Drive>::SendGoalOptions();
-    send_drive_goal_options.goal_response_callback =
-      std::bind(&Distributor::drive_response_cb, this, _1);
-    send_drive_goal_options.feedback_callback =
-      std::bind(&Distributor::drive_fb_cb, this, _1, _2);
-    send_drive_goal_options.result_callback =
-      std::bind(&Distributor::drive_result_cb, this, _1);
+        /**********************************************************************
+         *                                                                    *
+         * ACTION SERVER GOALS                                                *
+         * You can only send one goal per action server at a time, so each    *
+         * control can modify the goal for that iteration to send a goal      *
+         *                                                                    *
+         **********************************************************************/
+        // Drive action server
+        auto drive_goal = Drive::Goal();
+        geometry_msgs::msg::Twist drive_vel;
+        auto send_drive_goal_options = rclcpp_action::Client<Drive>::SendGoalOptions();
+        send_drive_goal_options.goal_response_callback = std::bind(&Distributor::drive_response_cb, this, _1);
+        send_drive_goal_options.feedback_callback = std::bind(&Distributor::drive_fb_cb, this, _1, _2);
+        send_drive_goal_options.result_callback = std::bind(&Distributor::drive_result_cb, this, _1);
 
     // Dump action server
     auto dump_goal = Dump::Goal();
@@ -194,22 +183,22 @@ class Distributor : public rclcpp::Node
     send_fuser_goal_options.result_callback =
       std::bind(&Distributor::fuser_result_cb, this, _1);
 
-    /**********************************************************************
-     *                                                                    *
-     * BUTTON CONTROLS                                                    *
-     * raw.buttons[BUTTON_A] // Dig to ground pos
-     * raw.buttons[BUTTON_B] // Dig auto scoop                            *
-     * raw.buttons[BUTTON_X] //
-     * raw.buttons[BUTTON_Y] // dig to stow/deposit pos
-     * raw.buttons[BUTTON_LBUMPER] // Lower dig linkage                   *
-     * raw.buttons[BUTTON_RBUMPER] // Raise dig linkage                   *
-     * raw.buttons[BUTTON_BACK] //                                        *
-     * raw.buttons[BUTTON_START] //                                       *
-     * raw.buttons[BUTTON_MANUFACTURER] //                                *
-     * raw.buttons[BUTTON_LSTICK] //                                      *
-     * raw.buttons[BUTTON_RSTICK] //                                      *
-     *                                                                    *
-     **********************************************************************/
+        /**********************************************************************
+         *                                                                    *
+         * BUTTON CONTROLS                                                    *
+         * raw.buttons[BUTTON_A] // Dig to ground pos
+         * raw.buttons[BUTTON_B] // Dig auto scoop                            *
+         * raw.buttons[BUTTON_X] //
+         * raw.buttons[BUTTON_Y] // dig to stow/deposit pos
+         * raw.buttons[BUTTON_LBUMPER] // Lower dig linkage                   *
+         * raw.buttons[BUTTON_RBUMPER] // Raise dig linkage                   *
+         * raw.buttons[BUTTON_BACK] //                                        *
+         * raw.buttons[BUTTON_START] //                                       *
+         * raw.buttons[BUTTON_MANUFACTURER] //                                *
+         * raw.buttons[BUTTON_LSTICK] //                                      *
+         * raw.buttons[BUTTON_RSTICK] //                                      *
+         *                                                                    *
+         **********************************************************************/
 
         if (raw.buttons[BUTTON_A]) {
             RCLCPP_INFO(this->get_logger(), "A: Not implemented.");
@@ -264,34 +253,34 @@ class Distributor : public rclcpp::Node
                   "RS (down): Not yet implemented. Doing nothing...");
     }
 
-    /**********************************************************************
-     *                                                                    *
-     * PRIMARY DRIVER AXIS CONTROLS                                       *
-     *                                                                    *
-     * raw.axes[AXIS_LEFTX] // Drive turn                                 *
-     * raw.axes[AXIS_LEFTY] // Dump (up = dump)                           *
-     *                                                                    *
-     * raw.axes[AXIS_RIGHTX] //                                           *
-     * raw.axes[AXIS_RIGHTY] // Dig bucket rotation (up lifts front)      *
-     * raw.axes[AXIS_LTRIGGER] // Drive reverse throttle                  *
-     * raw.axes[AXIS_RTRIGGER] // Drive forward throttle                  *
-     * raw.axes[AXIS_DPAD_X] // Dump constant speed (left = dump)         *
-     * raw.axes[AXIS_DPAD_Y] //                                           *
-     *                                                                    *
-     **********************************************************************/
+        /**********************************************************************
+         *                                                                    *
+         * PRIMARY DRIVER AXIS CONTROLS                                       *
+         *                                                                    *
+         * raw.axes[AXIS_LEFTX] // Drive turn                                 *
+         * raw.axes[AXIS_LEFTY] // Dump (up = dump)                           *
+         *                                                                    *
+         * raw.axes[AXIS_RIGHTX] //                                           *
+         * raw.axes[AXIS_RIGHTY] // Dig bucket rotation (up lifts front)      *
+         * raw.axes[AXIS_LTRIGGER] // Drive reverse throttle                  *
+         * raw.axes[AXIS_RTRIGGER] // Drive forward throttle                  *
+         * raw.axes[AXIS_DPAD_X] // Dump constant speed (left = dump)         *
+         * raw.axes[AXIS_DPAD_Y] //                                           *
+         *                                                                    *
+         **********************************************************************/
 
-    /**********************************************************************
-     *                                                                    *
-     * DRIVETRAIN CONTROLS                                                *
-     *                                                                    *
-     * drive_vel.linear.x; // straight                                    *
-     * drive_vel.linear.y; //                                             *
-     * drive_vel.linear.z; //                                             *
-     * drive_vel.angular.x; //                                            *
-     * drive_vel.angular.y; //                                            *
-     * drive_vel.angular.z; // turn (positive left, negative right)       *
-     *                                                                    *
-     **********************************************************************/
+        /**********************************************************************
+         *                                                                    *
+         * DRIVETRAIN CONTROLS                                                *
+         *                                                                    *
+         * drive_vel.linear.x; // straight                                    *
+         * drive_vel.linear.y; //                                             *
+         * drive_vel.linear.z; //                                             *
+         * drive_vel.angular.x; //                                            *
+         * drive_vel.angular.y; //                                            *
+         * drive_vel.angular.z; // turn (positive left, negative right)       *
+         *                                                                    *
+         **********************************************************************/
 
     // Drive throttle
     float LT = raw.axes[AXIS_LTRIGGER];
@@ -498,7 +487,7 @@ dig_full_pwr_ = !dig_full_pwr_;
          **********************************************************************/
         // Linkage actuation
         // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
-        float RSY = raw.axes[AXIS_RIGHTY];
+        // float RSY = raw.axes[AXIS_RIGHTY];
 
         // Apply cubic function for better control
         RSY = std::pow(RSY, 3);
@@ -530,23 +519,21 @@ dig_full_pwr_ = !dig_full_pwr_;
         dig_goal.bckt_pwr_goal = RT - LT;
 	if (!dig_full_pwr_) { dig_goal.bckt_pwr_goal *= SLOW_BCKT_ROT_VAL_; }
 
-    // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f",
-    // dig_goal.bckt_pwr_goal);
+        // RCLCPP_INFO(this->get_logger(), "welcome to the dig rotation  nation %f", dig_goal.bckt_pwr_goal);
 
-    /**********************************************************************
-     *                                                                    *
-     * DUMP SYSTEM CONTROLS                                               *
-     *                                                                    *
-     **********************************************************************/
-    // if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right,
-    // 0 = none dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
-    // RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f",
-    // dump_goal.pwr_goal); this->dump_ptr_->async_send_goal(dump_goal,
-    // send_dump_goal_options);
-    // }
+        /**********************************************************************
+         *                                                                    *
+         * DUMP SYSTEM CONTROLS                                               *
+         *                                                                    *
+         **********************************************************************/
+        // if (raw.axes[AXIS_DPAD_X]) { // in (-1, 0, 1) where -1 = left, 1 = right, 0 = none
+        // dump_goal.pwr_goal = 0.25 * raw.axes[AXIS_DPAD_X];
+        // RCLCPP_INFO(this->get_logger(), "Dpad X: Dump with power %f", dump_goal.pwr_goal);
+        // this->dump_ptr_->async_send_goal(dump_goal, send_dump_goal_options);
+        // }
 
         if (raw.axes[AXIS_DPAD_Y]){
-            //dig_goal.vibr_pwr_goal = 0.1 * raw.axes[AXIS_DPAD_Y];
+            dig_goal.vibr_pwr_goal = -0.2;
             RCLCPP_INFO(this->get_logger(), "welcome to the vibration nation %f", dig_goal.vibr_pwr_goal);
 
         }
@@ -559,9 +546,9 @@ dig_full_pwr_ = !dig_full_pwr_;
     // [-1, 1] where -1 = the leading edge of the bucket up, 1 = down
     // float LSY = raw.axes[AXIS_LEFTY];
 
-    // Apply cubic function for better control
-    // LSY = std::pow(LSY, 3);
-    // dump_goal.pwr_goal = LSY;
+        // Apply cubic function for better control
+        // LSY = std::pow(LSY, 3);
+        // dump_goal.pwr_goal = LSY;
 
     /**********************************************************************
      *                                                                    *
@@ -690,8 +677,8 @@ dig_full_pwr_ = !dig_full_pwr_;
       RCLCPP_INFO(this->get_logger(),
                   "Dig linkage at %f and bucket at %f (estimated)",
                   result.result->est_link_goal, result.result->est_bckt_goal);
-    } 
-  
+    }
+
 
   /**
    * @param goal_handle

@@ -3,9 +3,5 @@ build/
 install/
 log/
 
-# only useful locally
+# git will ignore build.log
 build.log
-usbcam_node.py.lprof
-
-# prevent accidental overwrites
-.vscode

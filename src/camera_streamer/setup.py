@@ -26,7 +26,6 @@ setup(
         'console_scripts': [
             'usbCamStreamer = camera_streamer.usb_camera_streamer:main',
             'usbCamStreamerParam = camera_streamer.usb_camera_streamer_param:main',
-            'streamFuser = camera_streamer.stream_fuser:main'
         ],
     },
 )
