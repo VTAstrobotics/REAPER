@@ -8,9 +8,6 @@
 #include "SparkMax.hpp"
 #include "action_interfaces/action/drive.hpp"
 #include "geometry_msgs/msg/twist.hpp"
-#include "SparkMax.hpp"
-#include "SparkFlex.hpp"
-#include "SparkBase.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
@@ -36,17 +33,19 @@ class DriveActionServer : public rclcpp::Node
       std::bind(&DriveActionServer::handle_cancel, this, _1),
       std::bind(&DriveActionServer::handle_accepted, this, _1));
 
-    left_motor_.SetIdleMode(IdleMode::kBrake);
-    left_motor_.SetMotorType(MotorType::kBrushless);
+    left_motor.SetIdleMode(IdleMode::kBrake);
+    left_motor.SetMotorType(MotorType::kBrushless);
     // left_motor.SetSmartCurrentFreeLimit(50.0);
-    left_motor_.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
-    left_motor_.BurnFlash();
+    left_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
+    left_motor.BurnFlash();
+    left_motor.SetPositionConversionFactor(drive_factor);
 
-    right_motor_.SetIdleMode(IdleMode::kBrake);
-    right_motor_.SetMotorType(MotorType::kBrushless);
-    right_motor_.SetInverted(true);
+    right_motor.SetIdleMode(IdleMode::kBrake);
+    right_motor.SetMotorType(MotorType::kBrushless);
+    right_motor.SetInverted(true);
     // left_motor.SetSmartCurrentFreeLimit(50.0);
-    left_motor_.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
+    right_motor.SetSmartCurrentStallLimit(80.0); // 0.8 Nm
+    right_motor.SetPositionConversionFactor(drive_factor);
     RCLCPP_INFO(this->get_logger(), "Drive action server is ready");
   }
 
@@ -59,7 +58,7 @@ class DriveActionServer : public rclcpp::Node
     double drive_left_duty = 0;
     double drive_right_duty = 0;
     double driven_dist = 0;
-    double drive_factor = 0; //TODO: set this constant
+    double drive_factor = 3.141592 * 0.31 / 100.0; //TODO: set this constant
     SparkMax left_motor{"can1", 10};
     SparkMax right_motor{"can1", 11};
     // Motor 1
@@ -77,9 +76,9 @@ class DriveActionServer : public rclcpp::Node
     RCLCPP_INFO(this->get_logger(), "Received goal request with order %f",
                 goal->velocity_goal.linear.x); // change to drive specific
     (void)uuid;
-    if (!has_goal_) {
+    if (!has_goal) {
       RCLCPP_INFO(this->get_logger(), "Accepted Goal and Will soon Execute it");
-      has_goal_ = true;
+      has_goal = true;
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
     RCLCPP_INFO(this->get_logger(),
@@ -93,11 +92,11 @@ class DriveActionServer : public rclcpp::Node
   {
     RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
     // Stop motors immediately
-    left_motor_.SetDutyCycle(0.0);
-    right_motor_.SetDutyCycle(0.0);
+    left_motor.SetDutyCycle(0.0);
+    right_motor.SetDutyCycle(0.0);
     RCLCPP_INFO(this->get_logger(), "MOTORS STOPPED");
 
-    has_goal_ = false;
+    has_goal = false;
     (void)GOAL_HANDLE;
     return rclcpp_action::CancelResponse::ACCEPT;
   }
@@ -118,8 +117,6 @@ class DriveActionServer : public rclcpp::Node
         left_motor.SetDutyCycle(0.3);
         right_motor.SetDutyCycle(0.3);
       
-      left_motor.SetSetpoint(goal_dist);
-      right_motor.SetSetpoint(goal_dist);
       if(left_motor.GetPosition() > goal_dist && right_motor.GetPosition() > goal_dist){
         left_motor.SetDutyCycle(0.0);
         right_motor.SetDutyCycle(0.0);
@@ -156,7 +153,7 @@ class DriveActionServer : public rclcpp::Node
   {
     RCLCPP_INFO(this->get_logger(), "Executing goal");
     rclcpp::Rate loop_rate(
-      loop_rate_hz_); // this should be 20 hz which I can't imagine not being
+      loop_rate_hz); // this should be 20 hz which I can't imagine not being
                       // enough for the dump
 
     const auto GOAL = GOAL_HANDLE->get_goal();
@@ -166,19 +163,18 @@ class DriveActionServer : public rclcpp::Node
     double const LINEAR= GOAL->velocity_goal.linear.x;
     double const ANGULAR = GOAL->velocity_goal.angular.z;
 
-      double v_left  = linear  - angular;
-      double v_right = linear  + angular;
-
+    double const V_LEFT = LINEAR - ANGULAR;
+    double const V_RIGHT = LINEAR + ANGULAR;
 
       auto start_time = this->now();
       auto end_time = start_time + rclcpp::Duration::from_seconds(0.1);
 
       while (rclcpp::ok() && this->now() < end_time)
       {
-        if (goal_handle->is_canceling())
+        if (Drive_Goal_Handle->is_canceling())
         {
           RCLCPP_INFO(this->get_logger(), "Goal is canceling");
-          goal_handle->canceled(result);
+          GOAL_HANDLE->canceled(result);
           RCLCPP_INFO(this->get_logger(), "Goal canceled");
           Drive_Goal_Handle = nullptr;
           has_goal = false;
@@ -186,23 +182,21 @@ class DriveActionServer : public rclcpp::Node
         }
         left_motor.Heartbeat();
         right_motor.Heartbeat();
-        if (!goal->drive_auto)
+        if (!GOAL->drive_auto)
         {
-          left_motor.SetDutyCycle(std::min(std::max(v_left, -1.), 1.));
-          right_motor.SetDutyCycle(std::min(std::max(v_right, -1.), 1.));
-          feedback->inst_velocity.linear.x = v_left;
-          feedback->inst_velocity.angular.z = v_right; // placeholders
+          left_motor.SetDutyCycle(std::min(std::max(V_LEFT, -1.), 1.));
+          right_motor.SetDutyCycle(std::min(std::max(V_RIGHT, -1.), 1.));
+          feedback->inst_velocity.linear.x = V_LEFT;
+          feedback->inst_velocity.angular.z = V_RIGHT; // placeholders
         }
 
-        if(abs(goal->distance_meters) > 0 ){
-          drive_dist(goal->distance_meters);
+        if(abs(GOAL->distance_meters) > 0 ){
+          drive_dist(GOAL->distance_meters);
           driving_dist = true;
-          if(){
 
-          }
         }
 
-        goal_handle->publish_feedback(feedback);
+        GOAL_HANDLE->publish_feedback(feedback);
 
       loop_rate.sleep();
     }
@@ -216,8 +210,8 @@ class DriveActionServer : public rclcpp::Node
       result->curr_velocity = GOAL->velocity_goal;
       GOAL_HANDLE->succeed(result);
       RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-      drive_goal_handle_ = nullptr;
-      has_goal_ = false;
+      Drive_Goal_Handle = nullptr;
+      has_goal = false;
     }
   }
 }; // class DriveActionServer
