@@ -44,9 +44,8 @@ class MultiTopicSubscriber(Node):
                     lambda msg, t=topic: self._joystick_callback(t),
                     10)
                 self.joystick_subscriptions[topic] = sub
-                self.get_logger().info(f"Listening for joystick on {topic}")
             except Exception:
-                # if topic doesn't exist yet, we'll still create it once it appears
+                 messagebox.showerror("Connection Error", "Joysticks might not be connected. Double check.")
                  pass
 
     def _joystick_callback(self, topic_name: str):
@@ -283,8 +282,18 @@ class TkMultiTopicApp:
 
     def check_joystick_topics(self):
 
-        joy1_detected = self.ros_node.joystick_topic_exists(joystick_topic_1)
-        joy2_detected = self.ros_node.joystick_topic_exists(joystick_topic_2)
+        #joy1_detected = self.ros_node.joystick_topic_exists(joystick_topic_1)
+        #joy2_detected = self.ros_node.joystick_topic_exists(joystick_topic_2)
+     
+        if joystick_topic_1 in self.messages_widgets:
+            joy1_detected = true
+        else:
+            joy1_detected = false
+
+        if joystick_topic_2 in self.messages_widgets:
+            joy2_detected = true
+        else:
+            joy2_detected = false
 
         status_text = f"Joystick 1: {'✔' if joy1_detected else '✖'} | Joystick 2: {'✔' if joy2_detected else '✖'}"
         status_color = "green" if joy1_detected and joy2_detected else "red"
@@ -293,7 +302,6 @@ class TkMultiTopicApp:
 
         # Re-check 
         self.root.after(3000, self.check_joystick_topics)
-
 
     # Labeling logic
     def add_topic_label(self, topic_name, x, y):
