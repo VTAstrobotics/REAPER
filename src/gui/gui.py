@@ -17,7 +17,7 @@ from functools import partial
 # ros2 run camera_streamer usbCamStreamer --cam 0
 
 # Joystick topics
-joystick_topic_1 = "/joy"
+joystick_topic_1 = "/driver/joy"
 joystick_topic_2 = "/operator/joy"
  
 class MultiTopicSubscriber(Node):
