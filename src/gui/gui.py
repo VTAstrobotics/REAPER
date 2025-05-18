@@ -435,7 +435,12 @@ class TkMultiTopicApp:
                     if widgets["timeout_timer"]:
                         widgets["timeout_timer"].cancel()
 
-                    self.check_data_timeout(topic_name, label_message)
+                # New check for stale topics
+                time_since_last_msg = (topic_name.get_clock().now() - topic_name.last_msg_time).to_msg().nanosec / 1e9
+
+                if time_since_last_msg > 3:
+
+                    new_message = "Topic is stale"
                     
     def update_camera_frames(self):
      
@@ -454,19 +459,23 @@ class TkMultiTopicApp:
                     text=f"Latency: {latency_ms:.1f} ms"
                 )
                 self.camera_labels[topic].image = img_tk
+                # New check for stale topics
+                time_since_last_msg = (topic.get_clock().now() - topic.last_msg_time).to_msg().nanosec / 1e9
+
+                if time_since_last_msg > 3:
+
+                    self.camera_labels[topic].config(
+                    image=img_tk,
+                    compound="bottom",
+                    text=f"Topic is stale"
+                )
 
         # Schedule the next update on the main thread
         self.root.after(100, self.update_camera_frames)
- 
-    def check_data_timeout(self, topic_name, label_message):
- 
-        def timeout_action():
-            if label_message.cget("text") != "No data received yet":
-                label_message.config(text="Data timed out")
 
-        timer = threading.Timer(3, timeout_action)
-        self.messages_widgets[topic_name]["timeout_timer"] = timer
-        timer.start()
+    # Useful function for checking lopic times
+    def topic_callback(self, msg):
+        self.last_msg_time = self.get_clock().now()
 
     def format_time(self, seconds):
         return f"{seconds // 60}:{seconds % 60:02}"
