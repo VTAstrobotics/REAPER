@@ -5,18 +5,20 @@ import threading
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from sensor_msgs.msg import Joy
 from sensor_msgs.msg import Image as RosImage
 import cv2
 from cv_bridge import CvBridge
 import time
+from functools import partial
 
 # Test Talker Node
 # ros2 run demo_nodes_cpp talker
 # ros2 run camera_streamer usbCamStreamer --cam 0
 
 # Joystick topics
-joystick_topic_1 = "/chatter"
-joystick_topic_2 = "/junk"
+joystick_topic_1 = "/joy"
+joystick_topic_2 = "/operator/joy"
  
 class MultiTopicSubscriber(Node):
 
@@ -40,8 +42,9 @@ class MultiTopicSubscriber(Node):
         for topic in (joystick_topic_1, joystick_topic_2):
             try:
                 sub = self.create_subscription(
-                    String, topic,
-                    lambda msg, t=topic: self._joystick_callback(t),
+                    Joy, topic,
+                    partial(self._joystick_callback, topic_name=topic),
+                    #lambda msg, t=topic: self._joystick_callback(msg, t),
                     10)
                 self.joystick_subscriptions[topic] = sub
                 self.get_logger().info(f"Listening for joystick on {topic}")
@@ -49,10 +52,9 @@ class MultiTopicSubscriber(Node):
                 # if topic doesn't exist yet, we'll still create it once it appears
                  pass
 
-    def _joystick_callback(self, topic_name: str):
-        import time
+    def _joystick_callback(self, msg, topic_name: str):
         self.joystick_last_seen[topic_name] = time.time()
-   
+
     def subscribe_to_topic(self, topic_name):
 
         if topic_name in self.custom_subscriptions:
@@ -61,10 +63,9 @@ class MultiTopicSubscriber(Node):
             return
 
         def callback(msg, topic=topic_name):
+            self.messages[topic] = msg
 
-            self.messages[topic] = msg.data
-
-        subscription = self.create_subscription(String, topic_name, callback, 10)
+        subscription = self.create_subscription(Joy, topic_name, callback, 10)
         self.custom_subscriptions[topic_name] = subscription
         self.messages[topic_name] = "No data received yet"
         self.get_logger().info(f"Subscribed to topic: {topic_name}")
@@ -91,9 +92,8 @@ class MultiTopicSubscriber(Node):
         self.get_logger().info(f"Subscribed to camera topic: {camera_topic}")
 
     def joystick_topic_exists(self, topic_name):
-        topic_list = self.get_topic_names_and_types()
-        return any(name == topic_name for name, _ in topic_list)
-
+        last_seen = self.joystick_last_seen.get(topic_name, 0)
+        return (time.time() - last_seen < 1)
 
     def unsubscribe_from_topic(self, topic_name):
         if topic_name in self.custom_subscriptions:
@@ -212,7 +212,7 @@ class TkMultiTopicApp:
             messagebox.showerror("Invalid Input", "Please enter a valid topic name.")
 
     # Subscription logic 
-    def subscribe_to_topic_init(self, topic_name2, x, y):
+    def subscribe_to_topic_init(self, topic_name2, x, y, display=True):
 
         topic_name = topic_name2
 
@@ -226,7 +226,7 @@ class TkMultiTopicApp:
             try:
 
                 self.ros_node.subscribe_to_topic(topic_name)
-                self.add_topic_label(topic_name, x, y)
+                if (display): self.add_topic_label(topic_name, x, y)
 
             except Exception as e:
 
@@ -287,7 +287,12 @@ class TkMultiTopicApp:
         joy2_detected = self.ros_node.joystick_topic_exists(joystick_topic_2)
 
         status_text = f"Joystick 1: {'✔' if joy1_detected else '✖'} | Joystick 2: {'✔' if joy2_detected else '✖'}"
-        status_color = "green" if joy1_detected and joy2_detected else "red"
+        if (joy1_detected and joy2_detected):
+            status_color = "green"
+        elif (joy1_detected or joy2_detected):
+            status_color = "black"
+        else:
+            status_color = "red"
 
         self.joystick_status.config(text=status_text, fg=status_color)
 
@@ -501,12 +506,12 @@ def main():
     app = TkMultiTopicApp(root, ros_node)
 
     # Declare initial topics and subscribe
-    initial_topics = [("chatter", 100, 100), ("junk", 300, 100)]
+    initial_topics = [(joystick_topic_1, 100, 100), (joystick_topic_2, 300, 100)]
     initial_cameras = [("/driver/selected_image", 100, 300)]
     #initial_cameras = [("usbcam_image_2", 600, 600)]
     
     for topic_name, x, y in initial_topics:
-        threading.Thread(target=app.subscribe_to_topic_init, args=(topic_name, x, y), daemon=True).start()
+        threading.Thread(target=app.subscribe_to_topic_init, args=(topic_name, x, y, False), daemon=True).start()
     
     for camera_name, x, y in initial_cameras:
         threading.Thread(target=app.subscribe_to_camera_topic_init, args=(camera_name, x, y), daemon=True).start()
